@@ -20,8 +20,9 @@ namespace Petalfell.Player;
 /// </summary>
 public sealed class Navigation
 {
-	public const float MaxStep = 3.35f;
-	public const float MaxDrop = 3.35f;
+	// Route planning and physical movement must agree on a normal terrace.
+	public const float MaxStep = Terrain.Step + 0.35f;
+	public const float MaxDrop = Terrain.Step + 0.35f;
 	private const int MaxExpansions = 260000;
 
 	private readonly Terrain _t;

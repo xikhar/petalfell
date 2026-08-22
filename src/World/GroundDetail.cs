@@ -221,9 +221,7 @@ public static class GroundDetail
 			float fx = x + 0.5f, fz = z + 0.5f;
 			var rng = new Draw(x, z, 0x5EED);
 
-			bool grassy = cap is Palette.GRASS or Palette.GRASS_LIGHT or Palette.GRASS_DEEP
-				or Palette.GRASS_STONE or Palette.GRASS_LIGHT_STONE or Palette.GRASS_DEEP_STONE
-				or Palette.MOSS or Palette.BLOSSOM_DRIFT;
+			bool grassy = Palette.IsGrassSurface(cap) || cap is Palette.MOSS or Palette.BLOSSOM_DRIFT;
 			bool muddy = cap == Palette.MUD;
 			// Snow and scree carry their own marks, not grass ones.
 			bool snowy = cap == Palette.SNOW;

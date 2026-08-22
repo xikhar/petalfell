@@ -18,8 +18,10 @@ public partial class Main : Node3D
 	[Export] public int Seed = 20260820;
 	[Export] public int WorldSize = 768;
 	[Export] public int StreamRadius = 8;
+	[Export(PropertyHint.File, "*.json")] public string MapDefinitionPath = "res://content/chapter_01/map.json";
 
 	public Terrain Terrain { get; private set; }
+	public MapDefinition Map { get; private set; }
 	public Planner Plan { get; private set; }
 	public BuiltProps Props { get; private set; }
 	public Controller Player { get; private set; }
@@ -35,9 +37,12 @@ public partial class Main : Node3D
 	public override void _Ready()
 	{
 		SetupInput();
+		Map = MapDefinition.Load(MapDefinitionPath);
+		if (Seed == 0) Seed = Map.DefaultSeed;
+		if (WorldSize <= 0) WorldSize = Map.DefaultWorldSize;
 
 		var t0 = Time.GetTicksMsec();
-		Plan = new Planner(Seed, WorldSize);
+		Plan = new Planner(Seed, WorldSize, Map);
 		var t1 = Time.GetTicksMsec();
 		Terrain = new Terrain(Seed, WorldSize, Plan);
 		var t2 = Time.GetTicksMsec();
@@ -45,7 +50,7 @@ public partial class Main : Node3D
 		var tProps = Time.GetTicksMsec();
 		Vegetation.Populate(Terrain, Seed);
 		var t3 = Time.GetTicksMsec();
-		GD.Print($"[petalfell] plan {t1 - t0}ms  terrain {t2 - t1}ms  props {tProps - t2}ms  flora {t3 - tProps}ms  " +
+		GD.Print($"[petalfell] map {Map.Id}  plan {t1 - t0}ms  terrain {t2 - t1}ms  props {tProps - t2}ms  flora {t3 - tProps}ms  " +
 		         $"regions {Plan.Regions.Count}  rivers {Plan.Rivers.Count}  bridges {Props.Bridges.Count}");
 		ReportTerrain();
 
@@ -63,19 +68,11 @@ public partial class Main : Node3D
 
 		AddChild(BuildWater());
 
-		Vector3 spawn;
-		if (Props.Bridges.Count > 0)
-		{
-			var bridge = Props.Bridges[0];
-			spawn = new Vector3(bridge.X + 0.5f, bridge.DeckY + 1.2f, bridge.Z + 0.5f);
-		}
-		else
-		{
-			var (sx, sz) = Terrain.FindSpawn();
-			// Level is the surface plane (first empty voxel), so 0.2 puts the
-			// capsule where the reference's top-solid + 1.2 does.
-			spawn = new Vector3(sx + 0.5f, Terrain.Level[sz * WorldSize + sx] + 0.2f, sz + 0.5f);
-		}
+		MapPoint start = Map.Spawns.Count > 0 ? Map.Spawns[0].Centre : null;
+		var (sx, sz) = Terrain.FindSpawn(start);
+		// Level is the surface plane (first empty voxel), so 0.2 places the
+		// capsule just above its authored starting ground.
+		Vector3 spawn = new(sx + 0.5f, Terrain.Level[sz * WorldSize + sx] + 0.2f, sz + 0.5f);
 
 		// Ground under the player has to exist before the player does, or the
 		// first frame drops them through the world.
@@ -141,6 +138,25 @@ public partial class Main : Node3D
 		}
 		GD.Print($"[terrain] height {min}..{max}  water {water * 100f / n:F1}%  terraces {sb}");
 
+		int detailEdges = 0, terraceEdges = 0, tallEdges = 0;
+		for (int z = 0; z < WorldSize; z++)
+		for (int x = 0; x < WorldSize; x++)
+		{
+			int i = z * WorldSize + x;
+			if (Terrain.Land[i] == 0) continue;
+			void Count(int j)
+			{
+				if (Terrain.Land[j] == 0) return;
+				int d = Math.Abs(Terrain.Level[i] - Terrain.Level[j]);
+				if (d == 1) detailEdges++;
+				else if (d == Terrain.Step) terraceEdges++;
+				else if (d > Terrain.Step) tallEdges++;
+			}
+			if (x + 1 < WorldSize) Count(i + 1);
+			if (z + 1 < WorldSize) Count(i + WorldSize);
+		}
+		GD.Print($"[ledges] one-block {detailEdges}  standard-{Terrain.Step} {terraceEdges}  tall-cliff {tallEdges}");
+
 		// What the player actually stands on, and what the canopy pass wrote.
 		var caps = new Dictionary<byte, int>();
 		int leaves = 0, trunks = 0;
@@ -199,6 +215,7 @@ public partial class Main : Node3D
 		Palette.GRASS_STONE => "grassS", Palette.GRASS_LIGHT_STONE => "grassLS",
 		Palette.GRASS_DEEP_STONE => "grassDS", Palette.SOIL => "soil", Palette.SAND => "sand",
 		Palette.STONE => "stone", Palette.STONE_PALE => "stoneP", Palette.PATH => "path",
+		Palette.SNOW => "snow", Palette.MUD => "mud", Palette.MOSS => "moss", Palette.SCREE => "scree",
 		_ => id.ToString(),
 	};
 

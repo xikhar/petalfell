@@ -36,6 +36,16 @@ public static class Vegetation
 			Canopy = new[] { Palette.LEAF_CREAM, Palette.LEAF_BLUSH, Palette.LEAF_LILAC },
 			ScaleLo = 0.20f, ScaleHi = 0.92f, Density = 0.55f,
 		},
+		Biome.Forest => new Flora
+		{
+			Canopy = new[] { Palette.LEAF_LILAC, Palette.LEAF_MINT, Palette.LEAF_CREAM, Palette.LEAF_LILAC },
+			ScaleLo = 0.48f, ScaleHi = 1.0f, Density = 1.22f,
+		},
+		Biome.Plains => new Flora
+		{
+			Canopy = new[] { Palette.LEAF_CREAM, Palette.LEAF_BLUSH },
+			ScaleLo = 0.18f, ScaleHi = 0.68f, Density = 0.20f,
+		},
 		Biome.Wetland => new Flora
 		{
 			Canopy = new[] { Palette.LEAF_MINT, Palette.LEAF_CREAM, Palette.LEAF_MINT },
@@ -45,6 +55,11 @@ public static class Vegetation
 		{
 			Canopy = new[] { Palette.LEAF_LILAC, Palette.LEAF_MINT },
 			ScaleLo = 0.14f, ScaleHi = 0.46f, Density = 0.28f,
+		},
+		Biome.SnowyHills => new Flora
+		{
+			Canopy = new[] { Palette.LEAF_MINT, Palette.LEAF_LILAC },
+			ScaleLo = 0.16f, ScaleHi = 0.44f, Density = 0.10f,
 		},
 		_ => new Flora
 		{
@@ -77,6 +92,7 @@ public static class Vegetation
 
 			int i = z * S + x;
 			if (terrain.Land[i] == 0) continue;
+			if (terrain.Plan.Definition.ReservesNaturalDetail(x / (float)S, z / (float)S, 5f / S)) continue;
 			int h = terrain.Level[i];
 			if (h <= Terrain.Sea + 1) continue;
 			if (terrain.StairMask[i] == 1) continue;
@@ -99,9 +115,7 @@ public static class Vegetation
 			if (reserved) continue;
 
 			byte surface = grid.At(x, h - 1, z);
-			bool plantable = surface == Palette.GRASS || surface == Palette.GRASS_LIGHT ||
-				surface == Palette.GRASS_DEEP || surface == Palette.GRASS_STONE ||
-				surface == Palette.GRASS_LIGHT_STONE || surface == Palette.GRASS_DEEP_STONE ||
+			bool plantable = Palette.IsGrassSurface(surface) || surface == Palette.MOSS ||
 				surface == Palette.BLOSSOM_DRIFT;
 			if (!plantable) continue;
 			// Never on a lip: a tree hanging over a cliff edge reads as an

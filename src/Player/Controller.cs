@@ -30,7 +30,8 @@ public partial class Controller : CharacterBody3D
 	public const float JumpVel = 20.5f;
 	public const float Coyote = 0.12f;
 	public const float Buffer = 0.14f;
-	public const float StepHeight = 3.30f;
+	// Keep the traversal probe coupled to the world's canonical terrace height.
+	public const float StepHeight = Terrain.Step + 0.30f;
 	public const float StepSmall = 1.25f;
 	public const float Terminal = -70f;
 
@@ -241,7 +242,9 @@ public partial class Controller : CharacterBody3D
 		var motion = wish * MaxSpeed * dt * 1.6f;
 		motion.Y = 0f;
 
-		for (float lift = 0.6f; lift <= StepHeight + 0.01f; lift += 0.6f)
+		// Half-block probes land exactly on both the one-block detail standard
+		// and the two-block terrace standard; the old 0.6 increment skipped 2.0.
+		for (float lift = 0.5f; lift <= StepHeight + 0.01f; lift += 0.5f)
 		{
 			var probe = GlobalTransform;
 			probe.Origin += new Vector3(0, lift, 0);

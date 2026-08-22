@@ -37,12 +37,13 @@ public sealed class Terrain
 	public const int Height = 76;
 	public const int Sea = 24;              // floor(Palette.WaterLevel)
 	/// <summary>
-	/// Terrace height — one contour disc. Three blocks preserve the reference's
-	/// green cap, warm substrate and cool stone strata on an exposed shelf.
+	/// Standard terrace height. A normal exposed shelf is exactly two blocks:
+	/// one grass cap over either dirt or stone. One-block changes are reserved
+	/// for stairs, small rocks and other deliberately authored details.
 	/// </summary>
-	public const int Step = 3;
+	public const int Step = 2;
 	public const int EdgeGrid = 6;          // lattice terrace edges snap to
-	public const int Base = Sea + 3;        // the valley floor
+	public const int Base = Sea + Step;     // the first dry valley terrace
 	/// <summary>
 	/// Terrace steps between the lowest and highest planned region.
 	///
@@ -241,7 +242,8 @@ public sealed class Terrain
 	{
 		int cw = Size / EdgeGrid + 1;
 		var cellLevel = new short[cw * cw];
-		float half = Size * 0.5f;
+		float centreX = Plan.Definition.Boundary.Centre.X * Size;
+		float centreZ = Plan.Definition.Boundary.Centre.Z * Size;
 
 		for (int cz = 0; cz < cw; cz++)
 		for (int cx = 0; cx < cw; cx++)
@@ -266,7 +268,7 @@ public sealed class Terrain
 			int h = Base + Step * (int)MathF.Floor(sum + 0.5f);
 
 			// The island terminates in a plinth that vanishes into the haze.
-			float rx = wx - half, rz = wz - half;
+			float rx = wx - centreX, rz = wz - centreZ;
 			float r = MathF.Sqrt(rx * rx + rz * rz);
 			float R = Plan.RimRadius(wx, wz);
 			const float K = 256f / 192f;
@@ -569,13 +571,14 @@ public sealed class Terrain
 	/// <summary>Carve only selected stretches of the outer rim into beaches.</summary>
 	private void Beaches()
 	{
-		float half = Size * 0.5f;
+		float centreX = Plan.Definition.Boundary.Centre.X * Size;
+		float centreZ = Plan.Definition.Boundary.Centre.Z * Size;
 		for (int z = 0; z < Size; z++)
 		for (int x = 0; x < Size; x++)
 		{
 			int i = z * Size + x;
 			if (Land[i] == 0) continue;
-			float dx = x - half, dz = z - half;
+			float dx = x - centreX, dz = z - centreZ;
 			float r = MathF.Sqrt(dx * dx + dz * dz);
 			float rim = Plan.RimRadius(x, z);
 			float gap = rim - r;
@@ -584,7 +587,7 @@ public sealed class Terrain
 
 			float qx = MathF.Floor(x / (float)EdgeGrid) * EdgeGrid + EdgeGrid * 0.5f;
 			float qz = MathF.Floor(z / (float)EdgeGrid) * EdgeGrid + EdgeGrid * 0.5f;
-			float qdx = qx - half, qdz = qz - half;
+			float qdx = qx - centreX, qdz = qz - centreZ;
 			float gapQ = MathF.Max(Plan.RimRadius(qx, qz) - MathF.Sqrt(qdx * qdx + qdz * qdz), 0f);
 			Level[i] = (short)Math.Min(Level[i], Sea + (int)MathF.Floor(gapQ / 6f) * Step);
 			if (1f - Rng.Smoothstep(0f, 9f, gap) > 0.30f) Wet[i] = 1;
@@ -593,9 +596,8 @@ public sealed class Terrain
 	}
 
 	/// <summary>
-	/// Put block-sized punctuation into shallow water and restore the isolated
-	/// valley butte from the source composition. The butte is reserved from the
-	/// connectivity pass so stairs can never turn it into an accidental ramp.
+	/// Put block-sized punctuation into shallow water and return the reservation
+	/// mask used by authored terrain stamps before connectivity stairs are cut.
 	/// </summary>
 	private byte[] AddWaterFeatures()
 	{
@@ -610,22 +612,10 @@ public sealed class Terrain
 			if (Level[i] > Sea) Land[i] = 1;
 		}
 
-		var noStair = new byte[Size * Size];
-		int butteX = (int)MathF.Floor(0.585f * Size + 0.5f);
-		int butteZ = (int)MathF.Floor(0.845f * Size + 0.5f);
-		for (int z = butteZ - 8; z <= butteZ + 8; z++)
-		for (int x = butteX - 8; x <= butteX + 8; x++)
-		{
-			if (x < 1 || z < 1 || x >= Size - 1 || z >= Size - 1) continue;
-			int i = z * Size + x;
-			float dx = x - butteX, dz = z - butteZ;
-			float d = MathF.Sqrt(dx * dx + dz * dz) + _nWarp.Fbm(x * 0.09f, z * 0.09f, 2) * 2f;
-			if (d > 6.2f) continue;
-			if (Land[i] == 0 && Level[i] < Sea - 2) Land[i] = 1;
-			Level[i] = (short)(Base + Step * (d > 3.6f ? 5 : 6));
-			noStair[i] = 1;
-		}
-		return noStair;
+		// Authored cliffs and formations now come from the map package. Keeping
+		// this mask in the pipeline lets those stamps reserve themselves from the
+		// automatic stair pass when their geometry is implemented.
+		return new byte[Size * Size];
 	}
 
 	private bool IsFordGround(int i) =>
@@ -655,6 +645,7 @@ public sealed class Terrain
 			if (_rng.Chance(0.30f)) continue;
 			int cx = gx + _rng.RangeInt(-5, 5);
 			int cz = gz + _rng.RangeInt(-5, 5);
+			if (Plan.Definition.ReservesNaturalDetail(cx / (float)Size, cz / (float)Size, 5f / Size)) continue;
 			if (!FlatAround(cx, cz, 4)) continue;
 			float kind = _rng.Next();
 			if (kind < 0.34f)
@@ -724,18 +715,26 @@ public sealed class Terrain
 			float jitter = _nFine.Fbm(x * 0.13f, z * 0.13f, 2) * 0.055f;
 			float rockField = _nRock.Fbm(x * 0.0082f, z * 0.0082f, 3) + jitter
 			                + Rng.Smoothstep(Base + Step * 4, Base + Step * 7, h) * 0.34f
-			                + Rng.Smoothstep(3f, 9f, drop) * 0.10f;
+			                + Rng.Smoothstep(Step, Step * 3f, drop) * 0.10f;
 			float sandField = 1f - Rng.Smoothstep(0f, 6f, RiverDist[i] - RiverHalf[i]);
+			var biome = Plan.RegionAt(x, z).Biome;
+			float tone = _nTone.Fbm(x * 0.0115f + 90f, z * 0.0115f + 12f, 2) + jitter;
 
 			byte cap;
 			if (Land[i] == 0) cap = Palette.SAND;
 			else if (h <= Sea + 2 && (sandField > 0.15f || Wet[i] == 1)) cap = Palette.SAND;
+			else if (biome == Biome.SnowyHills)
+				cap = rockField > 0.43f || tone < -0.24f ? Palette.SCREE : Palette.SNOW;
+			else if (biome == Biome.Wetland)
+				cap = Wet[i] == 1 || tone < -0.08f ? Palette.MUD : Palette.MOSS;
+			else if (biome == Biome.Highland && rockField > 0.16f)
+				cap = tone > 0.08f ? Palette.STONE_PALE : Palette.SCREE;
 			else if (rockField > 0.42f)
 				cap = _nRock.Fbm(x * 0.03f + 9f, z * 0.03f, 2) > 0f
 					? Palette.STONE : Palette.STONE_PALE;
 			else
 			{
-				float g = _nTone.Fbm(x * 0.0115f + 90f, z * 0.0115f + 12f, 2) + jitter;
+				float g = tone + (biome == Biome.Plains ? 0.045f : 0f);
 				cap = g > 0.13f ? Palette.GRASS_LIGHT
 				    : g < -0.14f ? Palette.GRASS_DEEP : Palette.GRASS;
 				if (rockField > 0.28f)
@@ -746,16 +745,16 @@ public sealed class Terrain
 			if (StairMask[i] == 1 && cap != Palette.SAND) cap = Palette.STONE_PALE;
 			if (RockMask[i] != 0) cap = RockMask[i] == 2 ? Palette.STONE_PALE : Palette.STONE;
 
-			bool grassCap = cap == Palette.GRASS || cap == Palette.GRASS_LIGHT || cap == Palette.GRASS_DEEP ||
-			                cap == Palette.GRASS_STONE || cap == Palette.GRASS_LIGHT_STONE || cap == Palette.GRASS_DEEP_STONE;
-			bool stoneSubstrate = cap == Palette.GRASS_STONE || cap == Palette.GRASS_LIGHT_STONE ||
-			                      cap == Palette.GRASS_DEEP_STONE;
+			bool grassCap = Palette.IsGrassSurface(cap);
+			bool stoneSubstrate = Palette.HasStoneSubstrate(cap);
 			byte substrate = grassCap
 				? (stoneSubstrate ? Palette.STONE : Palette.SOIL)
 				: cap;
 
-			// The strata that make a riser read, top down: one cap block, one
-			// substrate block, then softly varied stone all the way down.
+			// A standard Step-high riser exposes exactly two stripes: the grass
+			// cap and its geological substrate (soil or stone). Deeper stone still
+			// exists for intentionally tall cliffs, river cuts and the world rim,
+			// but never appears as a third stripe on an ordinary terrace.
 			int soilTop = h - 1;
 			int soilBottom = Math.Max(1, h - 2);
 			for (int y = 0; y < soilBottom; y++)
@@ -771,10 +770,13 @@ public sealed class Terrain
 		}
 	}
 
-	/// <summary>A reasonable place to put the player down: dry, flat, not a cliff edge.</summary>
-	public (int x, int z) FindSpawn()
+	/// <summary>Nearest dry terrain surface to an authored normalized map point.</summary>
+	public (int x, int z) FindSpawn(MapPoint requested = null)
 	{
-		int cx = Size / 2, cz = Size / 2;
+		int cx = requested == null ? Size / 2
+			: Rng.ClampI((int)MathF.Floor(requested.X * Size + 0.5f), 0, Size - 1);
+		int cz = requested == null ? Size / 2
+			: Rng.ClampI((int)MathF.Floor(requested.Z * Size + 0.5f), 0, Size - 1);
 		for (int r = 0; r < Size / 2; r++)
 		for (int a = 0; a < 24; a++)
 		{
@@ -785,9 +787,13 @@ public sealed class Terrain
 			int i = z * Size + x;
 			int top = Level[i];
 			byte id = Grid.At(x, top - 1, z);
-			bool grass = id == Palette.GRASS || id == Palette.GRASS_LIGHT || id == Palette.GRASS_DEEP ||
-			             id == Palette.GRASS_STONE || id == Palette.GRASS_LIGHT_STONE || id == Palette.GRASS_DEEP_STONE;
-			if (grass || id == Palette.PATH || id == Palette.SAND) return (x, z);
+			bool grass = Palette.IsGrassSurface(id);
+			bool safeSurface = grass || id == Palette.PATH || id == Palette.SAND ||
+				id == Palette.MOSS || id == Palette.SNOW;
+			if (!safeSurface || StairMask[i] != 0) continue;
+			if (TerrainShape.DropBelow(Level, Size, x, z) > 1 ||
+				TerrainShape.RiseAbove(Level, Size, x, z) > 1) continue;
+			return (x, z);
 		}
 		return (cx, cz);
 	}

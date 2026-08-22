@@ -155,7 +155,7 @@ public static class TerrainShape
 	/// <summary>
 	/// Cut walkable stairs into cliffs until the land is one connected region.
 	///
-	/// Terrace steps are three blocks, so every shelf boundary is a wall the
+	/// Standard terrace steps are two blocks, so every shelf boundary is a wall the
 	/// player cannot climb. Rather than softening the cliffs — which is how you
 	/// get mush — leave them sharp and carve a small number of deliberate
 	/// notched staircases, the same move the reference images make.

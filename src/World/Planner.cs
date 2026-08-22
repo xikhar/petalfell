@@ -4,7 +4,7 @@ using Petalfell.Core;
 
 namespace Petalfell.World;
 
-public enum Biome { Meadow, Sakura, Highland, Shore, Wetland }
+public enum Biome { Meadow, Forest, Plains, Sakura, Highland, SnowyHills, Shore, Wetland }
 
 public sealed class Region
 {
@@ -32,13 +32,12 @@ public sealed class LakePlan
 }
 
 /// <summary>
-/// The source world plan, transliterated from planner.js.
+/// Deterministic macro planner for a content-authored map.
 ///
-/// This stage decides places before terrain writes blocks: dart-thrown region
-/// centres, authored macro fields, a warped region map, local elevation, lake
-/// basins and routed channels. Keeping these equations and their RNG order in
-/// sync with the reference matters more than using an engine-native noise or
-/// navigation helper; changing the plan changes the world.
+/// This stage decides places before terrain writes blocks. The map definition
+/// owns fixed geography and biome intent; region sampling and noise provide
+/// stable natural infill between those authored controls. The Three.js planner
+/// remains a visual reference, not a coordinate target.
 /// </summary>
 public sealed class Planner
 {
@@ -52,6 +51,7 @@ public sealed class Planner
 	private const float FeatureMagic = 250f;
 
 	public readonly int Size;
+	public readonly MapDefinition Definition;
 	public readonly int CellW;
 	public readonly List<Region> Regions = new();
 	public readonly int[] CellRegion;
@@ -69,14 +69,15 @@ public sealed class Planner
 	private readonly Noise2D _nWander;
 	private readonly Noise2D _nRim;
 
-	public Planner(int seed, int size)
+	public Planner(int seed, int size, MapDefinition definition)
 	{
 		Size = size;
+		Definition = definition ?? throw new ArgumentNullException(nameof(definition));
 		CellW = (int)MathF.Ceiling(size / (float)Cell);
 		CellRegion = new int[CellW * CellW];
 		CellBiome = new byte[CellW * CellW];
 		CellElevation = new float[CellW * CellW];
-		IslandR = size * IslandFraction;
+		IslandR = size * MathF.Min(Definition.Boundary.RadiusX, Definition.Boundary.RadiusZ);
 
 		var rng = new Rng(unchecked(seed ^ (int)0x9e3779b9u));
 		var nTemp = new Noise2D(seed + 41);
@@ -144,10 +145,10 @@ public sealed class Planner
 
 	private void SampleFields(int seed, Noise2D nTemp, Noise2D nMoist, Noise2D nMagic)
 	{
-		float half = Size * 0.5f;
 		foreach (var r in Regions)
 		{
-			float rim = MathF.Sqrt((r.Cx - half) * (r.Cx - half) + (r.Cz - half) * (r.Cz - half)) / half;
+			float nx = r.Cx / Size, nz = r.Cz / Size;
+			float rim = Definition.BoundaryDistance(nx, nz);
 			r.Elevation = Rng.Clamp(0.94f - rim * 0.70f +
 				_nEdge.Fbm(r.Cx / FeatureElevation, r.Cz / FeatureElevation, 3) * 0.42f, 0f, 1f);
 			r.Temperature = Rng.Clamp(0.5f +
@@ -156,12 +157,39 @@ public sealed class Planner
 				nMoist.Fbm(r.Cx / FeatureMoisture, r.Cz / FeatureMoisture, 3), 0f, 1f);
 			r.Magic = Rng.Clamp(0.5f +
 				nMagic.Fbm(r.Cx / FeatureMagic, r.Cz / FeatureMagic, 2), 0f, 1f);
+			// Elevation zones establish the chapter's plateaus, valleys and
+			// basins. Noise survives inside each zone, but it cannot move a major
+			// destination into a different part of the map.
+			foreach (var zone in Definition.ElevationZones)
+			{
+				float influence = MapDefinition.Influence(zone.Centre, zone.RadiusX,
+					zone.RadiusZ, zone.Inner, nx, nz) * Rng.Clamp(zone.Strength, 0f, 1f);
+				r.Elevation = Rng.Lerp(r.Elevation, Rng.Clamp(zone.Target, 0f, 1f), influence);
+			}
 
 			if (r.Elevation < 0.15f) r.Biome = Biome.Shore;
-			else if (r.Elevation > 0.82f) r.Biome = Biome.Highland;
-			else if (r.Moisture > 0.55f && r.Magic > 0.44f) r.Biome = Biome.Sakura;
-			else if (r.Moisture > 0.62f) r.Biome = Biome.Wetland;
+			else if (r.Elevation > 0.86f && r.Temperature < 0.58f) r.Biome = Biome.SnowyHills;
+			else if (r.Elevation > 0.78f) r.Biome = Biome.Highland;
+			else if (r.Moisture > 0.64f) r.Biome = Biome.Wetland;
+			else if (r.Moisture > 0.54f && r.Magic > 0.44f) r.Biome = Biome.Sakura;
+			else if (r.Moisture > 0.48f) r.Biome = Biome.Forest;
+			else if (r.Moisture < 0.38f) r.Biome = Biome.Plains;
 			else r.Biome = Biome.Meadow;
+
+			// Biome zones are soft ownership fields. Below the threshold the
+			// climate result wins, which creates a real transition rather than a
+			// hard circular paint mask.
+			float strongest = 0f;
+			Biome authored = r.Biome;
+			foreach (var zone in Definition.BiomeZones)
+			{
+				float influence = MapDefinition.Influence(zone.Centre, zone.RadiusX,
+					zone.RadiusZ, zone.Inner, nx, nz) * Rng.Clamp(zone.Strength, 0f, 1f);
+				if (influence <= strongest) continue;
+				strongest = influence;
+				authored = zone.Biome;
+			}
+			if (strongest >= 0.28f) r.Biome = authored;
 
 			r.Seed = unchecked((uint)(seed ^ (r.Id * unchecked((int)0x85ebca6bu))));
 		}
@@ -207,8 +235,8 @@ public sealed class Planner
 			CellBiome[i] = (byte)best.Biome;
 		}
 
-		// Kept byte-for-byte in behaviour with the source: horizontal cell
-		// boundaries are the adjacency skeleton used by the elevation blend.
+			// Region boundaries form the adjacency skeleton used by later roads,
+			// waterways and settlement ownership.
 		for (int cz = 0; cz < CellW; cz++)
 		for (int cx = 0; cx < CellW - 1; cx++)
 		{
@@ -260,10 +288,25 @@ public sealed class Planner
 		return Regions[CellRegion[cz * CellW + cx]];
 	}
 
-	public float RimRadius(float x, float z) => IslandR + _nRim.Fbm(x * 0.011f, z * 0.011f, 3) * 20f;
+	/// <summary>Directional distance from the authored centre to the map boundary.</summary>
+	public float RimRadius(float x, float z)
+	{
+		float cx = Definition.Boundary.Centre.X * Size;
+		float cz = Definition.Boundary.Centre.Z * Size;
+		float dx = x - cx, dz = z - cz;
+		float len = MathF.Sqrt(dx * dx + dz * dz);
+		if (len < 0.0001f) return IslandR;
+		float ux = dx / len, uz = dz / len;
+		float rx = Definition.Boundary.RadiusX * Size;
+		float rz = Definition.Boundary.RadiusZ * Size;
+		float radius = 1f / MathF.Sqrt(ux * ux / (rx * rx) + uz * uz / (rz * rz));
+		return radius + _nRim.Fbm(x * 0.011f, z * 0.011f, 3)
+			* Definition.Boundary.Noise * Size;
+	}
 
 	/* ----------------------------------------------------------------
-	 * Routed water — same ordering and RNG consumption as planner.js.
+	 * Routed water — derived from the reference's flow language, but owned by
+	 * this map plan rather than constrained to its exact coordinates.
 	 * ---------------------------------------------------------------- */
 	private List<(float x, float z)> TraceRiver(float sx, float sz,
 		List<(float x, float z)> join = null, float joinRadius = 7f, bool spring = true)
@@ -272,15 +315,16 @@ public sealed class Planner
 		float joinR2 = joinRadius * joinRadius;
 		var points = new List<(float, float)> { (sx, sz) };
 		float x = sx, z = sz;
-		float half = Size * 0.5f;
-		float hx = x - half, hz = z - half;
+		float centreX = Definition.Boundary.Centre.X * Size;
+		float centreZ = Definition.Boundary.Centre.Z * Size;
+		float hx = x - centreX, hz = z - centreZ;
 		float h0 = MathF.Sqrt(hx * hx + hz * hz);
 		if (h0 == 0f) h0 = 1f;
 		hx /= h0; hz /= h0;
 
 		for (int iteration = 0; iteration < 600; iteration++)
 		{
-			if (MathF.Sqrt((x - half) * (x - half) + (z - half) * (z - half)) > IslandR * 0.99f) break;
+			if (Definition.BoundaryDistance(x / Size, z / Size) > 0.99f) break;
 			if (x < 3f || z < 3f || x > Size - 4f || z > Size - 4f) break;
 
 			if (join != null)
@@ -326,19 +370,47 @@ public sealed class Planner
 
 	private void RouteWater(Rng rng)
 	{
-		float half = Size * 0.5f;
 		var inland = Regions.FindAll(r =>
-		{
-			float dx = r.Cx - half, dz = r.Cz - half;
-			return MathF.Sqrt(dx * dx + dz * dz) < IslandR * 0.74f;
-		});
+			Definition.BoundaryDistance(r.Cx / Size, r.Cz / Size) < 0.74f);
 		var pool = inland.Count > 0 ? inland : Regions;
 		var peaks = new List<Region>(pool);
 		peaks.Sort((a, b) => b.Elevation.CompareTo(a.Elevation));
 
-		float areaScale = (Size / 256f) * (Size / 256f);
-		int trunkCount = Rng.ClampI((int)MathF.Floor(1.5f * MathF.Sqrt(areaScale) + 0.5f), 1, 20);
-		int lakeCount = Rng.ClampI((int)MathF.Floor(areaScale + 0.5f), 1, 48);
+		int lakeCount = Definition.Lakes.Count
+			+ Math.Max(0, Definition.NaturalInfill.AdditionalMajorLakes);
+
+		// Fixed Chapter geography goes in first. Procedural water may enrich it,
+		// but can never replace or relocate it.
+		foreach (var marker in Definition.Lakes)
+		{
+			float x = marker.Centre.X * Size, z = marker.Centre.Z * Size;
+			var region = NearestRegion(x, z);
+			Lakes.Add(new LakePlan
+			{
+				Region = region.Id,
+				Cx = x,
+				Cz = z,
+				Radius = marker.Radius * Size,
+			});
+		}
+
+		foreach (var marker in Definition.Waterways)
+		{
+			var points = new List<(float x, float z)>(marker.Points.Count);
+			foreach (var point in marker.Points) points.Add((point.X * Size, point.Z * Size));
+			var source = NearestRegion(points[0].x, points[0].z);
+			Rivers.Add(new Channel
+			{
+				Order = marker.Order,
+				Source = source.Id,
+				Outflow = marker.Outflow,
+				Tributary = marker.Tributary,
+				Points = points,
+			});
+		}
+		int authoredTrunks = Rivers.FindAll(r => r.Order == 0).Count;
+		int trunkCount = authoredTrunks
+			+ Math.Max(0, Definition.NaturalInfill.AdditionalRiverTrunks);
 
 		var basins = new List<Region>(pool);
 		basins.Sort((a, b) => a.Elevation.CompareTo(b.Elevation));
@@ -356,14 +428,23 @@ public sealed class Planner
 			Lakes.Add(new LakePlan { Region = basin.Id, Cx = basin.Cx, Cz = basin.Cz, Radius = radius });
 		}
 
-		LakePlan largest = Lakes[0];
-		foreach (var lake in Lakes) if (lake.Radius > largest.Radius) largest = lake;
-		LakeRegion = Regions[largest.Region];
-		LakeRadius = largest.Radius;
+		if (Lakes.Count > 0)
+		{
+			LakePlan largest = Lakes[0];
+			foreach (var lake in Lakes) if (lake.Radius > largest.Radius) largest = lake;
+			LakeRegion = Regions[largest.Region];
+			LakeRadius = largest.Radius;
+		}
+		else
+		{
+			LakeRegion = Regions[0];
+			LakeRadius = 0f;
+		}
 
+		int currentTrunks = authoredTrunks;
 		foreach (var peak in peaks)
 		{
-			if (Rivers.Count >= trunkCount) break;
+			if (currentTrunks >= trunkCount) break;
 			bool close = false;
 			foreach (var river in Rivers)
 			{
@@ -377,6 +458,7 @@ public sealed class Planner
 				Order = 0, Source = peak.Id,
 				Points = TraceRiver(peak.Cx, peak.Cz),
 			});
+			currentTrunks++;
 		}
 
 		foreach (var lake in Lakes)
@@ -400,9 +482,11 @@ public sealed class Planner
 		}
 
 		var trunks = Rivers.FindAll(r => r.Order == 0);
+		int tributaryTarget = Rivers.Count
+			+ Math.Max(0, Definition.NaturalInfill.AdditionalTributaries);
 		foreach (var peak in peaks)
 		{
-			if (Rivers.Count >= trunkCount * 3) break;
+			if (Rivers.Count >= tributaryTarget) break;
 			if (Rivers.Exists(r => r.Source == peak.Id)) continue;
 			if (trunks.Count == 0) break;
 			var host = trunks[Rivers.Count % trunks.Count];
@@ -413,5 +497,20 @@ public sealed class Planner
 				Order = 1, Source = peak.Id, Tributary = true, Points = points,
 			});
 		}
+	}
+
+	private Region NearestRegion(float x, float z)
+	{
+		Region nearest = Regions[0];
+		float best = float.MaxValue;
+		foreach (var region in Regions)
+		{
+			float dx = region.Cx - x, dz = region.Cz - z;
+			float d = dx * dx + dz * dz;
+			if (d >= best) continue;
+			best = d;
+			nearest = region;
+		}
+		return nearest;
 	}
 }

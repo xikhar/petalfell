@@ -1,6 +1,6 @@
 # Petalfell — Godot Engineering Architecture
 
-Companion to `plan.md` (in the Three.js reference project). **`plan.md` is the product
+Companion to `plan.md` (from the Three.js reference project). **`plan.md` is the product
 and creative plan and stays complete — nothing is removed from it.** This document is
 the engineering counterpart: it resolves the technical decisions `plan.md` deliberately
 leaves open, and it is the file to argue with when an implementation choice is in
@@ -8,6 +8,11 @@ question.
 
 Reference project: `~/Projects/pastel-game` (Three.js). Treat it as **frozen reference
 material** — read it, port from it, do not develop it further.
+
+The reference defines Petalfell's visual grammar, scale and traversal feel; it is not a
+coordinate contract. Godot maps may—and Chapter 1 will—have new terrain, biome and
+landmark layouts. Determinism means a Godot map remains stable for its own seed and map
+plan, not that its blocks must coincide with the Three.js demo.
 
 Its two supporting documents are required reading and their conclusions carry over
 unchanged:
@@ -185,7 +190,7 @@ kept, fine internal edges dropped) as a flag on the exporter.
 
 ---
 
-## 3. World representation — same model as the Three.js version
+## 3. World representation — voxel storage, authored geography
 
 **Decision: as requested, keep the reference model. A single dense voxel grid for the
 whole map (one byte per block) plus per-chunk meshing, streaming, and unloading around
@@ -196,9 +201,16 @@ the player.**
   `plan.md` §25.
 - Meshing on `WorkerThreadPool` tasks with a per-frame budget for uploads, mirroring the
   reference's `voxel-worker.js` + incremental `pump(deadline)`.
-- Determinism: `rng.gd` is a direct port of `core/rng.js`. **Do not substitute
-  `FastNoiseLite`** — different noise means a different world, and `plan.md` §7.4 makes
-  world stability a requirement.
+- Determinism: the in-tree `Rng` and value-noise implementation is the stable randomness
+  boundary. Do not silently substitute an engine noise source: Chapter maps must remain
+  stable for their own seed even though they do not match the browser demo's coordinates.
+
+The voxel store is runtime representation, not map authorship. Each map is a content
+package under `content/` whose normalized definition owns its boundary, macro elevation
+zones, biome zones, major lakes and waterways, plus settlement, road and landmark anchors.
+The planner consumes that fixed intent and supplies deterministic natural infill. Major
+features are never inferred from map area unless that map explicitly requests additional
+procedural counts.
 
 Cost of this choice, stated plainly so it is not a surprise later: the dense grid is a
 global allocation and it is what caps world size. At `WORLD.height = 76` that is ~45 MB
@@ -225,8 +237,9 @@ that now; we are keeping the mesher's inputs narrow enough that it stays possibl
 - **Not** one `BoxShape3D` per voxel. That is hundreds of thousands of bodies and it is
   the standard way to make a voxel game unshippable.
 - **Player** is a `CharacterBody3D` with a capsule, `move_and_slide`, plus explicit
-  step-up: the reference's `STEP_HEIGHT = 3.30` / `STEP_SMALL = 1.25` split (a kerb is
-  placed, a terrace is jumped) is game-feel-critical and is reimplemented rather than
+  step-up: `STEP_HEIGHT` follows the canonical two-block terrain terrace while
+  `STEP_SMALL = 1.25` distinguishes a kerb from a full shelf. The split is
+  game-feel-critical and is reimplemented rather than
   left to `floor_snap_length`. Acceleration, friction, coyote time, jump buffering,
   variable jump height and the buoyancy/swim model port from
   `pastel-game/src/player/controller.js` with their tuned constants intact.
@@ -249,7 +262,7 @@ that now; we are keeping the mesher's inputs narrow enough that it stays possibl
 M0 and most of M1 are in. What exists and runs:
 
 - Deterministic `Rng` + value noise, palette and block registry, dense
-  `VoxelGrid` (512², height 76).
+  `VoxelGrid` (768² by default, height 76).
 - Chunk mesher with baked per-vertex AO **and the explicit ink edge graph** —
   convex/concave classification, pale/dark per edge, run merging, joint cap
   ownership, midpoint chunk ownership.
@@ -259,11 +272,13 @@ M0 and most of M1 are in. What exists and runs:
 - `InkBuilder` for non-voxel meshes, so the traveller and dog are inked by the
   same rules and the same material as the terrain, with the §15.3 character
   exception applied.
-- Planner: Poisson-disc regions, macro fields, five biomes, warped Voronoi cell
-  map, channel tracing by steepest descent with inertia, lake siting.
+- Reusable JSON map-package loader with validation and a Chapter 1 package containing
+  fixed boundary, elevation, biome, lake, waterway, settlement, road and landmark intent.
+- Planner: Poisson-disc natural regions inside that authored plan, eight biome types,
+  warped region cells, optional generated macro water and deterministic local fields.
 - Terrain: contour discs on the edge-grid lattice, rim and plinth, channel and
-  valley carve, lake basin, beaches, mode filter, despeckle, carved stairs, the
-  grass/soil/stone strata.
+  valley carve, lake basin, beaches, mode filter, despeckle, carved stairs, and
+  canonical two-block grass-over-soil or grass-over-stone terraces.
 - Vegetation: biome-driven species, density and crown form.
 - Chunk streaming with per-frame budget, per-chunk trimesh collision.
 - Camera rig, sky/fog/glow/SSAO, water, canvas grade, petals.
@@ -271,11 +286,10 @@ M0 and most of M1 are in. What exists and runs:
   procedural traveller, dog companion, A* click-to-move with the white pulse.
 - Capture rig with a top-down heightfield map.
 
-Not built: authored stamps and landmarks, props and bridges, settlements, NPCs,
-interaction, inventory, save/persistence, ground detail (tufts and flowers),
-audio, menus and the developer view. Rivers trace and carve but most of their
-course still sits above the water plane, so the map reads as an island with a
-lake rather than an island with a river network.
+Not built: terrain stamps that realize landmark markers, settlements, the authored road
+network, NPCs, interaction, inventory, save/persistence, audio, menus and the developer
+view. Macro markers now exist in the Chapter 1 package; their later visual/gameplay
+stages must consume those markers rather than introduce private coordinates.
 
 ---
 
@@ -289,7 +303,7 @@ palette + block registry as Godot `Resource`s ported from `core/palette.js` (sin
 source of truth, same rule: no colour hardcoded anywhere else), and the capture harness
 (§6). Small and fast.
 
-**M1 — The reference scene** (`plan.md` §29). Grass/dirt/stone terraces, a cliff, stairs,
+**M1 — The reference scene** (`plan.md` §29). Grass-over-dirt/stone terraces, a cliff, stairs,
 concave edges, a tree, a wooden and a stone structure, road, shoreline, shallow and deep
 water, player and dog at gameplay distance, lighting/shadow/fog/grade — and the ink,
 scaffold first then the compositor pass. This is the visual acceptance gate; nothing else
@@ -395,7 +409,7 @@ res://
   tests/        test_*.gd integration suites (MCP-visible)
 petalfell.csproj
 NuGet.config    generated by tools/setup-nuget.sh — see §6.1, the path is nix-store-bound
-docs/           this file's descendants; plan.md stays with the reference project
+plan.md         product and creative plan
 ```
 
 ---

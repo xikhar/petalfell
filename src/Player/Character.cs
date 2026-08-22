@@ -23,7 +23,7 @@ namespace Petalfell.Player;
 /// Dimensions are the reference project's, voxel for voxel. The drawn figure is
 /// about 3.65 units — roughly twice the height of the 1.75-unit collision
 /// capsule it rides on. That mismatch is deliberate and load-bearing: scaled to
-/// its own capsule the traveller is a speck against three-block terraces, and
+/// its own capsule the traveller is a speck against the broad terrain shelves, and
 /// the whole sense of scale collapses.
 /// </summary>
 public partial class Character : Node3D

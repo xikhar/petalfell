@@ -148,6 +148,10 @@ public static class Palette
 
 	public static BlockDef Get(byte id) => Table[id];
 	public static bool IsSolid(byte id) => Table[id].Solid;
+	public static bool IsGrassSurface(byte id) => id is GRASS or GRASS_LIGHT or GRASS_DEEP
+		or GRASS_STONE or GRASS_LIGHT_STONE or GRASS_DEEP_STONE;
+	public static bool HasStoneSubstrate(byte id) => id is GRASS_STONE
+		or GRASS_LIGHT_STONE or GRASS_DEEP_STONE;
 
 	private static void Def(byte id, uint top, uint side, uint bottom,
 		bool lightEdge = false, float emissive = 0f)
