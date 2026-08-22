@@ -27,6 +27,13 @@ public partial class AmbientDrift : Node3D
 		public Vector3 Direction, Gravity;
 		public float Spread;
 		public Color[] Colors;
+		/// <summary>
+		/// Motes rather than flecks: a square drawn additively and above the
+		/// glow threshold, so the environment's bloom picks it up as a soft
+		/// point of light. The reference frames are dusted with these and they
+		/// are most of what makes the air feel lit rather than empty.
+		/// </summary>
+		public bool Glow;
 	}
 
 	private sealed class Profile
@@ -44,6 +51,18 @@ public partial class AmbientDrift : Node3D
 		Direction = direction, Gravity = gravity, Spread = spread, Colors = colors,
 	};
 
+	/// <summary>
+	/// The drifting motes, shared by every province. Slow, near-weightless and
+	/// sparse: a dozen or so in frame, never a snowfall.
+	/// </summary>
+	private static LayerSpec Motes() => new()
+	{
+		Name = "Motes", Amount = 30, Lifetime = 11f,
+		Width = 0.085f, Length = 0.085f, SpeedMin = 0.05f, SpeedMax = 0.20f,
+		Direction = new Vector3(0.2f, -1f, 0.1f), Gravity = new Vector3(0, -0.035f, 0),
+		Spread = 40f, Colors = Palette.MoteColors, Glow = true,
+	};
+
 	private static readonly Dictionary<Biome, Profile> Profiles = new()
 	{
 		[Biome.Meadow] = new Profile
@@ -53,7 +72,7 @@ public partial class AmbientDrift : Node3D
 			{
 				Layer("Leaves", 42, 8.0f, 0.090f, 0.19f, 0.48f, 0.82f,
 					new Vector3(0.36f, -1f, 0.16f), new Vector3(0, -0.34f, 0), 22f, Palette.AirLeafColors),
-				Layer("FlowerPetals", 16, 7.5f, 0.075f, 0.14f, 0.42f, 0.72f,
+				Layer("FlowerPetals", 20, 7.5f, 0.130f, 0.185f, 0.42f, 0.72f,
 					new Vector3(0.32f, -1f, 0.13f), new Vector3(0, -0.30f, 0), 25f, Palette.AirPetalColors),
 			},
 		},
@@ -82,7 +101,7 @@ public partial class AmbientDrift : Node3D
 			{
 				Layer("Leaves", 24, 8.0f, 0.080f, 0.17f, 0.44f, 0.76f,
 					new Vector3(0.32f, -1f, 0.15f), new Vector3(0, -0.30f, 0), 24f, Palette.AirLeafColors),
-				Layer("BlossomPetals", 34, 8.5f, 0.078f, 0.14f, 0.38f, 0.70f,
+				Layer("BlossomPetals", 40, 8.5f, 0.170f, 0.235f, 0.38f, 0.70f,
 					new Vector3(0.30f, -1f, 0.12f), new Vector3(0, -0.27f, 0), 28f, Palette.AirPetalColors),
 			},
 		},
@@ -130,7 +149,17 @@ public partial class AmbientDrift : Node3D
 	private Biome? _biome;
 	private float _probeClock;
 	private bool _surfaceAllowed;
-	private const float HeightAbovePlayer = 18.0f;
+	/// <summary>
+	/// Centre of the drifting column, above the player.
+	///
+	/// Not a ceiling. Spawning a thin band eighteen units up and letting it fall
+	/// puts every particle out of frame for its whole life: at these speeds a
+	/// petal descends about five units in eight seconds, so it lives between
+	/// twelve and eighteen units overhead and the play camera never sees it. The
+	/// emission box below is tall enough to fill the visible column instead, so
+	/// petals drift past the traveller rather than only over them.
+	/// </summary>
+	private const float HeightAbovePlayer = 9.0f;
 	private const int SurfaceProbeRadius = 26;
 
 	public void Setup(Terrain terrain, Vector3 at)
@@ -158,10 +187,12 @@ public partial class AmbientDrift : Node3D
 	private void Probe(Vector3 position, bool force)
 	{
 		var biome = _terrain.Plan.RegionAt(position.X, position.Z).Biome;
+		bool rebuilt = false;
 		if (force || _biome != biome)
 		{
 			_biome = biome;
 			Rebuild(Profiles.GetValueOrDefault(biome));
+			rebuilt = true;
 		}
 
 		bool wasAllowed = _surfaceAllowed;
@@ -170,7 +201,12 @@ public partial class AmbientDrift : Node3D
 		{
 			SetActive(false);
 		}
-		else if (!wasAllowed)
+		// A rebuild has to wake its own emitters. They are constructed switched
+		// off, so activating only on a disallowed-to-allowed transition leaves
+		// them dark for good whenever the province changes while the ground was
+		// already suitable — which is every ordinary walk across a biome
+		// boundary, and the air simply stops for the rest of the session.
+		else if (!wasAllowed || rebuilt)
 		{
 			// Re-entering suitable ground explicitly wakes and pre-fills the steady
 			// overhead stream. There is no burst phase and no empty calm phase.
@@ -223,6 +259,11 @@ public partial class AmbientDrift : Node3D
 			AddChild(emitter);
 			_emitters.Add(emitter);
 		}
+		// Motes belong to the air, not to any one province, so they are appended
+		// here rather than repeated in every profile table.
+		var motes = BuildEmitter(Motes());
+		AddChild(motes);
+		_emitters.Add(motes);
 		// Probe activates the rebuilt emitters once it has confirmed that their
 		// surface family is present around the player.
 	}
@@ -235,7 +276,7 @@ public partial class AmbientDrift : Node3D
 			// Spawn from a thin band above the view. Global-space particles then fall
 			// through it while the band follows the player, matching the old readable
 			// motion without returning to large rectangular confetti.
-			EmissionBoxExtents = new Vector3(26f, 1.4f, 26f),
+			EmissionBoxExtents = new Vector3(26f, 9.5f, 26f),
 			Direction = spec.Direction.Normalized(),
 			Spread = spec.Spread,
 			Gravity = spec.Gravity,
@@ -267,10 +308,48 @@ public partial class AmbientDrift : Node3D
 			Emitting = false,
 			AmountRatio = 1f,
 			ProcessMaterial = process,
-			DrawPass1 = FleckMesh(spec.Width, spec.Length),
+				DrawPass1 = spec.Glow ? MoteMesh(spec.Width) : FleckMesh(spec.Width, spec.Length),
 			VisibilityAabb = new Aabb(new Vector3(-34f, -28f, -34f), new Vector3(68f, 36f, 68f)),
 			CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
 		};
+	}
+
+	/// <summary>
+	/// A mote: a small square drawn additively with its colour pushed above 1.0
+	/// so the environment's glow threshold catches it. Kept square and tiny —
+	/// at any real size an additive quad stops reading as a point of light and
+	/// starts reading as a smear.
+	/// </summary>
+	private static ArrayMesh MoteMesh(float size)
+	{
+		var material = new StandardMaterial3D
+		{
+			ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+			AlbedoColor = Colors.White,
+			BillboardMode = BaseMaterial3D.BillboardModeEnum.Particles,
+			VertexColorUseAsAlbedo = true,
+			Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+			BlendMode = BaseMaterial3D.BlendModeEnum.Add,
+			CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+			DisableReceiveShadows = true,
+		};
+
+		float h = size * 0.5f;
+		var vertices = new[]
+		{
+			new Vector3(-h, -h, 0f), new Vector3(h, -h, 0f),
+			new Vector3(h, h, 0f), new Vector3(-h, h, 0f),
+		};
+		var arrays = new Godot.Collections.Array();
+		arrays.Resize((int)Mesh.ArrayType.Max);
+		arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+		arrays[(int)Mesh.ArrayType.Normal] = new[] { Vector3.Back, Vector3.Back, Vector3.Back, Vector3.Back };
+		arrays[(int)Mesh.ArrayType.Index] = new[] { 0, 1, 2, 0, 2, 3 };
+
+		var mesh = new ArrayMesh();
+		mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+		mesh.SurfaceSetMaterial(0, material);
+		return mesh;
 	}
 
 	private static ArrayMesh FleckMesh(float width, float length)

@@ -167,7 +167,13 @@ public sealed class Planner
 				r.Elevation = Rng.Lerp(r.Elevation, Rng.Clamp(zone.Target, 0f, 1f), influence);
 			}
 
-			if (r.Elevation < 0.15f) r.Biome = Biome.Shore;
+			// Shore is a biome about standing at the water's edge, not merely
+			// about being low. Claiming everything under 0.15 gave it 28% of the
+			// map, which put pale sand where the chapter wants lush terraces —
+			// and the band between here and the old threshold has somewhere far
+			// better to go, since the moisture rules below produce wetland,
+			// meadow or plains from exactly that ground.
+			if (r.Elevation < 0.09f) r.Biome = Biome.Shore;
 			else if (r.Elevation > 0.86f && r.Temperature < 0.58f) r.Biome = Biome.SnowyHills;
 			else if (r.Elevation > 0.78f) r.Biome = Biome.Highland;
 			else if (r.Moisture > 0.64f) r.Biome = Biome.Wetland;

@@ -34,6 +34,7 @@ public partial class ChunkStreamer : Node3D
 	private ShaderMaterial _inkLight;
 	private ShaderMaterial _inkDark;
 	private ShaderMaterial _detailMat;
+	private ShaderMaterial _waterDetailMat;
 
 	public int LoadRadius = 8;
 	public int UnloadPadding = 3;
@@ -44,7 +45,7 @@ public partial class ChunkStreamer : Node3D
 	public int PendingCount => _pending.Count;
 
 	public void Setup(Terrain terrain, ShaderMaterial voxel, ShaderMaterial inkLight,
-		ShaderMaterial inkDark, ShaderMaterial detail)
+		ShaderMaterial inkDark, ShaderMaterial detail, ShaderMaterial waterDetail)
 	{
 		_terrain = terrain;
 		_grid = terrain.Grid;
@@ -52,6 +53,7 @@ public partial class ChunkStreamer : Node3D
 		_inkLight = inkLight;
 		_inkDark = inkDark;
 		_detailMat = detail;
+		_waterDetailMat = waterDetail;
 	}
 
 	private static long Key(int ci, int ck) => ((long)(ci + 4096) << 20) | (uint)(ck + 4096);
@@ -176,6 +178,17 @@ public partial class ChunkStreamer : Node3D
 			{
 				Mesh = detail,
 				MaterialOverride = _detailMat,
+				CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+			});
+		}
+
+		var floating = GroundDetail.BuildWater(_terrain, ci, ck);
+		if (floating != null)
+		{
+			root.AddChild(new MeshInstance3D
+			{
+				Mesh = floating,
+				MaterialOverride = _waterDetailMat,
 				CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
 			});
 		}

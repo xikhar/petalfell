@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Petalfell.Core;
 
 namespace Petalfell.World;
@@ -158,33 +159,40 @@ public static class Vegetation
 	};
 
 	/// <summary>
-	/// Current reference canopy grammar: a compact assembly of authored cuboids,
-	/// not a clipped volume. Large trees have a broad heart, four uneven
-	/// shoulders, a raised mass, side sprays and an offset crown. Smaller trees
-	/// use the same hierarchy at two successively coarser scales.
+	/// The canopy grammar: a compact assembly of cuboids, grown rather than
+	/// stamped.
+	///
+	/// Two rules govern it.
+	///
+	/// **Every lobe is placed against the mass that already exists.** The offset
+	/// range is derived from the anchor's extent so the two boxes are guaranteed
+	/// to share at least one block on all three axes. The previous grammar was a
+	/// fixed list of literal offsets, and its topmost lobe sat a whole level
+	/// above anything else in the tree — so every large canopy carried one cube
+	/// hanging unsupported in the air.
+	///
+	/// **Nothing about the arrangement is fixed.** The old grammar had exactly
+	/// three shapes, mirrored four ways, which is why a grove read as the same
+	/// tree stamped over and over. Core size, lobe count, lobe sizes, offsets
+	/// and which lobes take the paler leaf are all drawn per tree.
 	/// </summary>
 	private static void Tree(VoxelGrid grid, Rng rng, int x, int y, int z,
 		float scale, byte leaf)
 	{
-		int unit = scale >= 0.42f ? 2 : 1;
-		bool large = scale >= 0.72f;
-		int tw = scale >= 0.82f ? 2 : 1;
-		int bare = Math.Max(2, (int)MathF.Floor(2.5f + scale * 3.5f + 0.5f));
+		int tw = scale >= 0.84f ? 2 : 1;
+		int bare = Math.Max(2, (int)MathF.Round(2.2f + scale * 4.4f + rng.Bell() * 0.9f));
 		int canopyY = y + bare;
-		if (canopyY + 7 >= grid.Height) return;
+		if (canopyY + 8 >= grid.Height) return;
 
 		byte trunk = rng.Chance(0.55f) ? Palette.TRUNK
 			: rng.Chance(0.5f) ? Palette.TRUNK_PALE : Palette.TRUNK_ROSE;
-		byte light = rng.Chance(0.62f) ? PaleLeaf(leaf) : leaf;
+		byte light = PaleLeaf(leaf);
 
 		int trunkOffset = -(tw - 1) / 2;
 		for (int dz = 0; dz < tw; dz++)
 		for (int dx = 0; dx < tw; dx++)
-			grid.Column(x + trunkOffset + dx, z + trunkOffset + dz,
-				y, y + bare + unit, trunk);
+			grid.Column(x + trunkOffset + dx, z + trunkOffset + dz, y, canopyY + 1, trunk);
 
-		int dirX = rng.Chance(0.5f) ? -1 : 1;
-		int dirZ = rng.Chance(0.5f) ? -1 : 1;
 		void Fill(int ox, int oy, int oz, int sx, int sy, int sz, byte id)
 		{
 			int px = x + ox - sx / 2;
@@ -202,34 +210,48 @@ public static class Vegetation
 			}
 		}
 
-		if (large)
+		// A box occupies [o - s/2, o - s/2 + s - 1] on each axis. Overlapping the
+		// anchor on an axis means picking the new centre inside this window; the
+		// arithmetic is the containment test rearranged for the unknown.
+		(int lo, int hi) Window(int anchorOffset, int anchorSize, int size) => (
+			anchorOffset - anchorSize / 2 + size / 2 - size + 1,
+			anchorOffset + anchorSize - 1 - anchorSize / 2 + size / 2);
+
+		var boxes = new List<(int ox, int oy, int oz, int sx, int sy, int sz)>(8);
+
+		// A modest heart with many small lobes around it, not one broad slab with
+		// a couple of bumps. The reference crowns are a dozen visible cuboids
+		// with notches bitten between them; a large core swallows the lobes and
+		// the tree reads as a lollipop.
+		int coreW = Math.Max(2, (int)MathF.Round(2.2f + scale * 2.2f));
+		int coreD = Math.Max(2, coreW - rng.RangeInt(0, 1));
+		int coreH = scale >= 0.5f ? 2 : 1;
+		boxes.Add((0, 0, 0, coreW, coreH, coreD));
+		Fill(0, 0, 0, coreW, coreH, coreD, leaf);
+
+		int lobes = (scale >= 0.6f ? 5 : 3) + rng.RangeInt(0, 3);
+		for (int k = 0; k < lobes; k++)
 		{
-			Fill(0, 0, 0, 6, 2, 4, leaf);
-			Fill(-4 * dirX, 0, 0, 2, 2, 2, leaf);
-			Fill(4 * dirX, 1, dirZ, 2, 2, 2, light);
-			Fill(-dirX, 0, -3 * dirZ, 2, 2, 2, leaf);
-			Fill(dirX, 1, 3 * dirZ, 2, 2, 2, light);
-			Fill(dirX, 2, -dirZ, 4, 2, 4, light);
-			Fill(-3 * dirX, 2, dirZ, 2, 2, 2, leaf);
-			Fill(3 * dirX, 3, -dirZ, 2, 2, 2, light);
-			Fill(-dirX, 4, dirZ, 2, 2, 2, light);
-		}
-		else if (unit == 2)
-		{
-			Fill(0, 0, 0, 4, 2, 4, leaf);
-			Fill(-3 * dirX, 0, 0, 2, 2, 2, leaf);
-			Fill(3 * dirX, 1, dirZ, 2, 2, 2, light);
-			Fill(0, 0, -3 * dirZ, 2, 2, 2, leaf);
-			Fill(dirX, 2, 0, 4, 2, 2, light);
-			Fill(-dirX, 4, dirZ, 2, 2, 2, light);
-		}
-		else
-		{
-			Fill(0, 0, 0, 3, 1, 3, leaf);
-			Fill(-2 * dirX, 0, 0, 1, 1, 2, leaf);
-			Fill(2 * dirX, 1, dirZ, 1, 1, 1, light);
-			Fill(dirX, 1, 0, 2, 1, 2, light);
-			Fill(-dirX, 2, dirZ, 1, 1, 1, light);
+			// Anchoring on the most recent boxes as often as the core is what
+			// makes a crown sprawl and bud rather than radiate from one centre.
+			var anchor = boxes[rng.Chance(0.45f) ? 0 : rng.RangeInt(0, boxes.Count - 1)];
+			int sx = 2 + rng.RangeInt(0, 1);
+			int sz = 2 + rng.RangeInt(0, 1);
+			int sy = rng.Chance(0.42f) ? 2 : 1;
+
+			var wx = Window(anchor.ox, anchor.sx, sx);
+			var wy = Window(anchor.oy, anchor.sy, sy);
+			var wz = Window(anchor.oz, anchor.sz, sz);
+			int ox = rng.RangeInt(wx.lo, wx.hi);
+			int oz = rng.RangeInt(wz.lo, wz.hi);
+			// Bias upward: a crown grows over its own shoulders, and lobes that
+			// hang below the core read as a bush swallowing the trunk.
+			int oy = rng.Chance(0.78f) ? Math.Max(wy.lo, Math.Min(wy.hi, anchor.oy + 1))
+			                           : rng.RangeInt(wy.lo, wy.hi);
+			if (oy < 0) oy = 0;
+
+			boxes.Add((ox, oy, oz, sx, sy, sz));
+			Fill(ox, oy, oz, sx, sy, sz, rng.Chance(0.45f) ? light : leaf);
 		}
 	}
 }

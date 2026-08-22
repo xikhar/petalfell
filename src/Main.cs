@@ -67,7 +67,8 @@ public partial class Main : Node3D
 
 		_streamer = new ChunkStreamer { Name = "Chunks", LoadRadius = StreamRadius };
 		AddChild(_streamer);
-		_streamer.Setup(Terrain, MakeVoxelMaterial(), _inkLight, _inkDark, MakeDetailMaterial());
+		_streamer.Setup(Terrain, MakeVoxelMaterial(), _inkLight, _inkDark,
+			MakeDetailMaterial(), MakeWaterDetailMaterial());
 
 		AddChild(BuildWater());
 
@@ -258,9 +259,20 @@ public partial class Main : Node3D
 					? new Vector3(Props.Bridges[0].X + 0.5f, Props.Bridges[0].DeckY + 1f, Props.Bridges[0].Z + 0.5f)
 					: spawn,
 				4 => FindTreeFeature(spawn),
+				5 => FindBiomeFeature(World.Biome.Sakura),
+				6 => Plan.Lakes.Count > 0
+					? new Vector3(Plan.Lakes[0].Cx, Terrain.Sea, Plan.Lakes[0].Cz)
+					: FindRiverFeature(),
 				_ => spawn,
 			};
 			focus += new Vector3(0, 1.6f, 0);
+
+			// The drift follows the player, and the player is not where a review
+			// shot is framed. Without re-seating it, every captured frame is
+			// judged with no petals, motes or leaves in the air at all — the
+			// exact things being tuned.
+			_ambientDrift.Setup(Terrain, focus);
+			_movementPuffs?.SetProcess(false);
 
 			_streamer.UpdateAround(focus, prime: true);
 			for (int i = 0; i < 6; i++)
@@ -269,8 +281,16 @@ public partial class Main : Node3D
 				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 			}
 			Tools.Capture.Place(Rig, shot, focus);
-			for (int i = 0; i < 8; i++)
+			// Airborne drift does NOT appear in captures. GPU particles are
+			// simulated by a compute pass that the offscreen capture path never
+			// runs, so a review screenshot always shows still air no matter how
+			// long it settles — verified against the live game, where the motes
+			// and petals are present. Judge the drift by playing, not by these.
+			for (int i = 0; i < 24; i++)
+			{
+				Tools.Capture.Place(Rig, shot, focus);
 				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			}
 
 			await RenderingServer.Singleton.ToSignal(
 				RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
@@ -314,6 +334,34 @@ public partial class Main : Node3D
 		DirAccess.MakeDirRecursiveAbsolute(dir);
 		img.SavePng($"{dir}/map.png");
 		GD.Print($"[capture] {dir}/map.png");
+	}
+
+	/// <summary>
+	/// The centre of the largest stand of a given province, for review shots
+	/// that have to be judged somewhere representative rather than wherever the
+	/// chapter happened to put the spawn.
+	/// </summary>
+	private Vector3 FindBiomeFeature(World.Biome want)
+	{
+		var best = default(Vector3);
+		float bestScore = -1f;
+		foreach (var region in Plan.Regions)
+		{
+			if (region.Biome != want) continue;
+			int x = Mathf.Clamp((int)region.Cx, 8, WorldSize - 9);
+			int z = Mathf.Clamp((int)region.Cz, 8, WorldSize - 9);
+			int h = Terrain.Level[z * WorldSize + x];
+			if (h <= Terrain.Sea + 1) continue;
+			// Prefer a stand with neighbours of its own kind: one isolated region
+			// is a patch, several together is a province you can photograph.
+			float score = 0f;
+			foreach (int n in region.Neighbours)
+				if (Plan.Regions[n].Biome == want) score += 1f;
+			if (score <= bestScore) continue;
+			bestScore = score;
+			best = new Vector3(x + 0.5f, h, z + 0.5f);
+		}
+		return bestScore < 0f ? new Vector3(WorldSize * 0.5f, Terrain.Sea + 6, WorldSize * 0.5f) : best;
 	}
 
 	/// <summary>Nearest tall cliff, or nearest shoreline, for the fixed review shots.</summary>
@@ -495,10 +543,14 @@ public partial class Main : Node3D
 	private ShaderMaterial MakeDetailMaterial() =>
 		new() { Shader = GD.Load<Shader>("res://shaders/detail.gdshader") };
 
+	private ShaderMaterial MakeWaterDetailMaterial() =>
+		new() { Shader = GD.Load<Shader>("res://shaders/waterdetail.gdshader") };
+
 	private ShaderMaterial MakeVoxelMaterial()
 	{
 		var mat = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/voxel.gdshader") };
 		mat.SetShaderParameter("sun_dir", Palette.SunDir);
+		mat.SetShaderParameter("plane_y", Palette.WaterLevel);
 		return mat;
 	}
 
@@ -510,11 +562,29 @@ public partial class Main : Node3D
 		mat.SetShaderParameter("deep", Palette.WaterDeep);
 		mat.SetShaderParameter("warm", Palette.WaterWarm);
 		mat.SetShaderParameter("sheen", Palette.WaterSheen);
+		// The reflection falls back to the sky when the screen-space march finds
+		// nothing, so it has to be the same sky the player is standing under.
+		mat.SetShaderParameter("sky_low", Palette.SkyHorizon);
+		mat.SetShaderParameter("sky_high", Palette.SkyZenith);
+		mat.SetShaderParameter("sun_colour", Palette.SunColor);
+		mat.SetShaderParameter("sun_dir", Palette.SunDir);
+		mat.SetShaderParameter("plane_y", Palette.WaterLevel);
 
 		return new MeshInstance3D
 		{
 			Name = "Water",
-			Mesh = new PlaneMesh { Size = new Vector2(WorldSize * 1.4f, WorldSize * 1.4f) },
+			// Subdivided, despite being flat. The shader reconstructs its own
+			// surface position analytically, but the ENGINE still interpolates
+			// VERTEX across the mesh for fog, and across a thousand-unit plane
+			// drawn as two triangles that interpolation carries enough error to
+			// paint broad triangular washes of haze over the whole lake. Roughly
+			// eight-unit quads cost nothing and remove it.
+			Mesh = new PlaneMesh
+			{
+				Size = new Vector2(WorldSize * 1.4f, WorldSize * 1.4f),
+				SubdivideWidth = 128,
+				SubdivideDepth = 128,
+			},
 			MaterialOverride = mat,
 			Position = new Vector3(WorldSize * 0.5f, Palette.WaterLevel, WorldSize * 0.5f),
 			CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,

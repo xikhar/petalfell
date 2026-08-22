@@ -43,6 +43,15 @@ public static class Capture
 		new("canopy", 26f, 200f, 20f, 4),
 		new("cliffs", 42f, 300f, 28f, 1),
 		new("lowsun", 54f, 145f, 14f),
+		// A blossom province at play distance. Every other shot frames the
+		// spawn, and the spawn is wherever the chapter put it — which may be
+		// open sand. The art target lives in the groves, so the review loop
+		// needs a viewpoint that is guaranteed to be standing in one.
+		new("grove", 62f, 45f, 34f, 5),
+		// Open water. The river subject frames a channel, which is often a
+		// narrow cut with the banks filling the frame; the lake is the one
+		// body guaranteed to give a broad surface to judge.
+		new("lake", 58f, 45f, 30f, 6),
 	};
 
 	public static (string dir, HashSet<string> only) ParseArgs()

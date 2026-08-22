@@ -191,10 +191,83 @@ public static class GroundDetail
 	{
 		Srgb(0xd6d0e2), Srgb(0xcfc7db), Srgb(0xded7e6),
 	};
+	private static readonly Color[] PadColors =
+	{
+		Srgb(0x93ad72), Srgb(0xa3b97f), Srgb(0x87a267),
+	};
 	private static readonly Color TuftBase = Srgb(0x8f9e66);
 	private static readonly Color ReedBase = Srgb(0x9aa877);
 	private static readonly Color ReedTip = Srgb(0xc3cf9c);
 	private static readonly Color Lichen = Srgb(0xa8b782);
+
+	/// <summary>
+	/// What floats on the water: fallen blossom and the occasional lily pad.
+	///
+	/// Built as its own mesh because it needs a material that writes depth — see
+	/// waterdetail.gdshader for why — and because it is scattered over water
+	/// columns, which the ground pass skips outright.
+	/// </summary>
+	public static ArrayMesh BuildWater(Terrain terrain, int ci, int ck)
+	{
+		int cs = ChunkMesher.ChunkSize;
+		int S = terrain.Size;
+		int x0 = ci * cs, z0 = ck * cs;
+		int x1 = Math.Min(S, x0 + cs), z1 = Math.Min(S, z0 + cs);
+		float surface = Palette.WaterLevel;
+
+		var f = new Field();
+
+		for (int z = z0; z < z1; z++)
+		for (int x = x0; x < x1; x++)
+		{
+			int i = z * S + x;
+			int bed = terrain.Level[i];
+			if (bed > Terrain.Sea) continue;                  // dry land
+			// Nothing floats where the water is a film over the bed; that band
+			// belongs to the shoreline and reads as debris stranded on mud.
+			if (surface - bed < 0.8f) continue;
+
+			var rng = new Draw(x, z, 0x0FA7);
+			float fx = x + 0.5f, fz = z + 0.5f;
+
+			// Pads gather; single petals drift. A pad carries a flower often
+			// enough to be a surprise and rarely enough to stay one.
+			if (rng.Chance(0.005f))
+			{
+				var pad = rng.Pick(PadColors);
+				int n = rng.Int(1, 3);
+				for (int k = 0; k < n; k++)
+				{
+					float ox = rng.Range(-0.34f, 0.34f), oz = rng.Range(-0.34f, 0.34f);
+					f.Fleck(fx + ox, surface + 0.03f, fz + oz,
+						rng.Range(0.46f, 0.72f), rng.Range(0.42f, 0.66f), rng.Next() * 1.57f, pad);
+					if (k == 0 && rng.Chance(0.30f))
+					{
+						f.Box(fx + ox, surface + 0.05f, fz + oz, 0.20f, 0.14f, 0.20f,
+							rng.Pick(FlowerTops));
+					}
+				}
+				continue;
+			}
+
+			// Punctuation, not a carpet. A percent or so of columns puts a couple
+			// of dozen petals across a whole lake, which is what the reference
+			// actually holds; anything denser reads as debris.
+			if (rng.Chance(0.011f))
+			{
+				int n = rng.Int(1, 2);
+				for (int k = 0; k < n; k++)
+				{
+					f.Fleck(fx + rng.Range(-0.38f, 0.38f), surface + 0.02f,
+						fz + rng.Range(-0.38f, 0.38f),
+						rng.Range(0.26f, 0.42f), rng.Range(0.22f, 0.36f),
+						rng.Next() * 1.57f, rng.Pick(Palette.PetalColors));
+				}
+			}
+		}
+
+		return f.Empty ? null : f.Build();
+	}
 
 	public static ArrayMesh Build(Terrain terrain, int ci, int ck)
 	{

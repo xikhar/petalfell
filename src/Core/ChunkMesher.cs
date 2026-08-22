@@ -79,6 +79,8 @@ public static class ChunkMesher
 	private static readonly List<Vector3> _verts = new(8192);
 	private static readonly List<Vector3> _norms = new(8192);
 	private static readonly List<Color> _cols = new(8192);
+	/// <summary>Per vertex: (pattern + drip depth, drip colour rgb).</summary>
+	private static readonly List<float> _surf = new(16384);
 	private static readonly List<int> _idx = new(12288);
 	private static readonly List<Run> _runs = new(4096);
 
@@ -92,7 +94,7 @@ public static class ChunkMesher
 		int x0 = ci * ChunkSize, z0 = ck * ChunkSize;
 		int x1 = Math.Min(grid.Size, x0 + ChunkSize), z1 = Math.Min(grid.Size, z0 + ChunkSize);
 
-		_verts.Clear(); _norms.Clear(); _cols.Clear(); _idx.Clear();
+		_verts.Clear(); _norms.Clear(); _cols.Clear(); _idx.Clear(); _surf.Clear();
 		foreach (int t in _touched) _edges[t] = default;
 		_touched.Clear();
 
@@ -128,7 +130,7 @@ public static class ChunkMesher
 				// Emissive rides in the vertex alpha rather than in a separate
 				// unlit group; one surface keeps collision and the ink graph
 				// reading from the same triangles.
-				if (inside) EmitFace(grid, x, y, z, f, face, def.Emissive);
+				if (inside) EmitFace(grid, x, y, z, f, face, def.Emissive, def.Pattern);
 
 				// The grass cap promotes its own convex perimeter to the pale
 				// ink even where the substrate below it is not pale enough to
@@ -146,9 +148,11 @@ public static class ChunkMesher
 		arrays[(int)Mesh.ArrayType.Vertex] = _verts.ToArray();
 		arrays[(int)Mesh.ArrayType.Normal] = _norms.ToArray();
 		arrays[(int)Mesh.ArrayType.Color] = _cols.ToArray();
+		arrays[(int)Mesh.ArrayType.Custom0] = _surf.ToArray();
 		var indices = _idx.ToArray();
 		arrays[(int)Mesh.ArrayType.Index] = indices;
-		mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+		mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays, null, null,
+			(Mesh.ArrayFormat)((ulong)Mesh.ArrayCustomFormat.RgbaFloat << 13));
 		data.Surface = mesh;
 
 		// Collision reuses the triangles we already computed. A second
@@ -167,11 +171,32 @@ public static class ChunkMesher
 	 * surface
 	 * ================================================================ */
 
-	private static void EmitFace(VoxelGrid grid, int x, int y, int z, int f, Color color, float emissive)
+	private static void EmitFace(VoxelGrid grid, int x, int y, int z, int f,
+		Color color, float emissive, float pattern)
 	{
 		int na = NAxis[f], ua = UAxis[f], va = VAxis[f];
 		int sign = Normals[f, na];
 		var n = new Vector3(Normals[f, 0], Normals[f, 1], Normals[f, 2]);
+
+		// The grass drip.
+		//
+		// A shelf in the reference is not a green band butted flat against a
+		// terracotta one: turf spills raggedly over the lip and hangs a little
+		// way down the face below it. That ragged boundary is the single most
+		// recognisable thing about the terraces, and it lives on the block
+		// UNDER the grass rather than on the grass itself — a grass block's own
+		// side is already green, so spilling over its own face does nothing.
+		float fringe = 0f;
+		var fringeColor = default(Color);
+		if (na != 1)   // side faces only; a top or bottom face has no lip
+		{
+			byte above = grid.At(x, y + 1, z);
+			if (Palette.IsGrassSurface(above) || above == Palette.MOSS)
+			{
+				fringe = 1f;
+				fringeColor = Palette.Get(above).Fringe;
+			}
+		}
 
 		int baseIdx = _verts.Count;
 		Span<float> ao = stackalloc float[4];
@@ -196,6 +221,15 @@ public static class ChunkMesher
 			// rather than approximated in the shader.
 			float a = ao[corner];
 			_cols.Add(new Color(color.R * a, color.G * a, color.B * a, emissive));
+
+			// One custom channel carries everything the surface shader needs:
+			// the pattern id and the drip depth packed into a single float, then
+			// the drip colour. Occlusion is folded into the drip colour here so
+			// the shader never has to reconstruct it.
+			_surf.Add(pattern + fringe * 0.9f);
+			_surf.Add(fringeColor.R * a);
+			_surf.Add(fringeColor.G * a);
+			_surf.Add(fringeColor.B * a);
 		}
 
 		if (sign > 0)
