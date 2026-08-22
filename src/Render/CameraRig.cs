@@ -23,8 +23,8 @@ public partial class CameraRig : Camera3D
 	public float Yaw = Mathf.Pi * 0.25f;
 	public float TargetYaw = Mathf.Pi * 0.25f;
 	public float Pitch = Mathf.DegToRad(33.5f);
-	public float Distance = 50f;
-	public float TargetDistance = 50f;
+	public float Distance = 75f;
+	public float TargetDistance = 75f;
 	public float MinDistance = 50f;
 	public float MaxDistance = 120f;
 
@@ -34,6 +34,10 @@ public partial class CameraRig : Camera3D
 
 	public override void _Ready()
 	{
+		// Main feeds this camera the player's already-interpolated render transform
+		// every frame. Automatic interpolation here would interpolate that result a
+		// second time, leaving the camera one transform behind the character.
+		PhysicsInterpolationMode = PhysicsInterpolationModeEnum.Off;
 		Projection = ProjectionType.Perspective;
 		Fov = 21f;
 		Near = 1f;

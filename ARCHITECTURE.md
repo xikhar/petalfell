@@ -257,39 +257,11 @@ that now; we are keeping the mesher's inputs narrow enough that it stays possibl
 
 ---
 
-## 4b. Build status
+## 4b. Implementation status
 
-M0 and most of M1 are in. What exists and runs:
-
-- Deterministic `Rng` + value noise, palette and block registry, dense
-  `VoxelGrid` (768² by default, height 76).
-- Chunk mesher with baked per-vertex AO **and the explicit ink edge graph** —
-  convex/concave classification, pale/dark per edge, run merging, joint cap
-  ownership, midpoint chunk ownership.
-- Ink rendered via the §2.3 **scaffold** path (transparent pass, manual depth
-  test against `hint_depth_texture`, pale runs before dark by
-  `render_priority`). The compositor/`BLEND_OP_MAX` path is not built yet.
-- `InkBuilder` for non-voxel meshes, so the traveller and dog are inked by the
-  same rules and the same material as the terrain, with the §15.3 character
-  exception applied.
-- Reusable JSON map-package loader with validation and a Chapter 1 package containing
-  fixed boundary, elevation, biome, lake, waterway, settlement, road and landmark intent.
-- Planner: Poisson-disc natural regions inside that authored plan, eight biome types,
-  warped region cells, optional generated macro water and deterministic local fields.
-- Terrain: contour discs on the edge-grid lattice, rim and plinth, channel and
-  valley carve, lake basin, beaches, mode filter, despeckle, carved stairs, and
-  canonical two-block grass-over-soil or grass-over-stone terraces.
-- Vegetation: biome-driven species, density and crown form.
-- Chunk streaming with per-frame budget, per-chunk trimesh collision.
-- Camera rig, sky/fog/glow/SSAO, water, canvas grade, petals.
-- Controller (accel, friction, coyote, buffer, variable jump, step-up, swim),
-  procedural traveller, dog companion, A* click-to-move with the white pulse.
-- Capture rig with a top-down heightfield map.
-
-Not built: terrain stamps that realize landmark markers, settlements, the authored road
-network, NPCs, interaction, inventory, save/persistence, audio, menus and the developer
-view. Macro markers now exist in the Chapter 1 package; their later visual/gameplay
-stages must consume those markers rather than introduce private coordinates.
+The mutable build inventory is kept in [`CURRENT_STATE.md`](CURRENT_STATE.md). It is
+separate so that this document remains a record of engineering decisions rather than
+becoming a mixture of architecture, progress notes, and stale milestone claims.
 
 ---
 

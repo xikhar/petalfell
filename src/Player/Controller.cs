@@ -13,11 +13,9 @@ namespace Petalfell.Player;
 /// time, jump buffering, variable jump height, and step-up so terrace lips
 /// never interrupt a run.
 ///
-/// The step split matters more than it looks. A kerb is not a jump: launching a
-/// ballistic arc over every one-block lip makes ordinary walking bouncy and
-/// turns a gentle beach into a staircase of hops. Below StepSmall the body is
-/// simply placed and the drawn position eases up to meet it, which is what
-/// taking a small step actually looks like.
+/// Traversable ledges are detected before launching a short automatic jump.
+/// The controller follows a real collision-tested arc instead of being placed
+/// on top of the ledge and asking the visual model to hide the teleport.
 /// </summary>
 public partial class Controller : CharacterBody3D
 {
@@ -32,7 +30,6 @@ public partial class Controller : CharacterBody3D
 	public const float Buffer = 0.14f;
 	// Keep the traversal probe coupled to the world's canonical terrace height.
 	public const float StepHeight = Terrain.Step + 0.30f;
-	public const float StepSmall = 1.25f;
 	public const float Terminal = -70f;
 
 	/// <summary>How deep the water must be before you swim rather than wade.</summary>
@@ -42,12 +39,12 @@ public partial class Controller : CharacterBody3D
 	public const float WaterDrag = 4.2f;
 
 	public bool Swimming { get; private set; }
-	/// <summary>How far the body was placed upward this frame by a step, for the drawn figure to ease out.</summary>
-	public float StepLift { get; private set; }
 	public Vector3 Facing = Vector3.Forward;
 
 	private float _coyote;
 	private float _buffer;
+	private bool _autoJumping;
+	private Vector3 _autoJumpFlat;
 	private Terrain _terrain;
 
 	/// <summary>World-space destination from click-to-move, or null.</summary>
@@ -76,7 +73,6 @@ public partial class Controller : CharacterBody3D
 	public override void _PhysicsProcess(double delta)
 	{
 		float dt = (float)delta;
-		StepLift = 0f;
 
 		Vector3 wish = ReadInput();
 		UpdateSwimming();
@@ -87,13 +83,19 @@ public partial class Controller : CharacterBody3D
 		else GroundStep(ref vel, wish, dt);
 
 		Velocity = vel;
-		var before = GlobalPosition;
 		MoveAndSlide();
 
-		if (!Swimming) TryStepUp(before, wish, dt);
+		if (!Swimming) TryAutoJump(wish, dt);
 
-		var flat = new Vector3(Velocity.X, 0, Velocity.Z);
-		if (flat.LengthSquared() > 0.35f) Facing = flat.Normalized();
+		// Collision response may remove the component pointing into a wall and
+		// leave a one-frame sideways slide. That is correct for the physics body,
+		// but it must not turn the visible traveller toward the ledge immediately
+		// before an auto jump. Facing follows intent (or the locked jump heading),
+		// falling back to resolved velocity only while coasting without input.
+		Vector3 look = _autoJumping ? _autoJumpFlat : wish;
+		if (look.LengthSquared() < 0.0001f)
+			look = new Vector3(Velocity.X, 0, Velocity.Z);
+		if (look.LengthSquared() > 0.0001f) Facing = look.Normalized();
 	}
 
 	private Vector3 ReadInput()
@@ -168,13 +170,25 @@ public partial class Controller : CharacterBody3D
 	private void GroundStep(ref Vector3 vel, Vector3 wish, float dt)
 	{
 		bool grounded = IsOnFloor();
+		if (grounded && vel.Y <= 0.1f)
+		{
+			_autoJumping = false;
+			_autoJumpFlat = Vector3.Zero;
+		}
 		_coyote = grounded ? Coyote : Mathf.Max(0f, _coyote - dt);
 		_buffer = Mathf.Max(0f, _buffer - dt);
 
 		float accel = grounded ? Accel : AirAccel;
 		var flat = new Vector3(vel.X, 0, vel.Z);
 
-		if (wish.LengthSquared() > 0.0001f)
+		if (_autoJumping)
+		{
+			// Preserve one crossing vector for the entire automatic arc. Input and
+			// path-following may change their desired direction near a waypoint, but
+			// steering halfway through a ledge jump produces a visibly curved hop.
+			flat = _autoJumpFlat;
+		}
+		else if (wish.LengthSquared() > 0.0001f)
 		{
 			flat += wish * accel * dt;
 			if (flat.Length() > MaxSpeed) flat = flat.Normalized() * MaxSpeed;
@@ -193,13 +207,16 @@ public partial class Controller : CharacterBody3D
 		if (_buffer > 0f && _coyote > 0f)
 		{
 			vel.Y = JumpVel;
+			_autoJumping = false;
+			_autoJumpFlat = Vector3.Zero;
 			_buffer = 0f;
 			_coyote = 0f;
 		}
 		else if (!grounded)
 		{
 			// Variable jump height: releasing early cuts the arc short.
-			if (vel.Y > 0f && !Input.IsActionPressed("jump")) vel.Y -= Gravity * 1.7f * dt;
+			if (vel.Y > 0f && !_autoJumping && !Input.IsActionPressed("jump"))
+				vel.Y -= Gravity * 1.7f * dt;
 			vel.Y = Mathf.Max(Terminal, vel.Y - Gravity * dt);
 		}
 		else if (vel.Y < 0f) vel.Y = -2f;
@@ -207,6 +224,8 @@ public partial class Controller : CharacterBody3D
 
 	private void SwimStep(ref Vector3 vel, Vector3 wish, float dt)
 	{
+		_autoJumping = false;
+		_autoJumpFlat = Vector3.Zero;
 		// The traveller floats rather than sinks: water deeper than a stride is
 		// common, and the surface is where the scene is.
 		float target = Palette.WaterLevel - 0.85f;
@@ -230,20 +249,37 @@ public partial class Controller : CharacterBody3D
 	}
 
 	/// <summary>
-	/// A terrace lip should never stop a run. If the body is against a wall and
-	/// there is clear space one step up, place it there rather than letting the
-	/// slide solver grind along the face.
+	/// A terrace lip should never stop a run. Probe for both clearance and a real
+	/// landing surface, then launch a short physical arc high enough to clear it.
+	/// Nothing changes position here: MoveAndSlide owns the entire traversal.
 	/// </summary>
-	private void TryStepUp(Vector3 before, Vector3 wish, float dt)
+	private void TryAutoJump(Vector3 wish, float dt)
 	{
 		if (!IsOnWall() || wish.LengthSquared() < 0.0001f) return;
-		if (!IsOnFloor() && Velocity.Y > 0.1f) return;
+		if (!IsOnFloor() || _autoJumping) return;
 
-		var motion = wish * MaxSpeed * dt * 1.6f;
+		// Preserve the exact incoming heading. The wall normal is used only to
+		// measure whether that straight line can cross the ledge and how much speed
+		// it needs; it must never rotate the jump toward the platform.
+		var wallNormal = GetWallNormal();
+		var inward = new Vector3(-wallNormal.X, 0f, -wallNormal.Z).Normalized();
+		var approach = wish.Normalized();
+		if (inward.LengthSquared() < 0.5f) inward = approach;
+		float crossingDot = approach.Dot(inward);
+		// Grazing along a wall is not an attempt to climb it.
+		if (crossingDot < 0.18f) return;
+
+		float currentSpeed = new Vector2(Velocity.X, Velocity.Z).Length();
+		float crossingSpeed = Mathf.Max(currentSpeed, MaxSpeed * 0.72f);
+		crossingSpeed = Mathf.Max(crossingSpeed, MaxSpeed * 0.50f / crossingDot);
+		crossingSpeed = Mathf.Min(crossingSpeed, MaxSpeed * 1.20f);
+		var crossingVelocity = approach * crossingSpeed;
+
+		var motion = crossingVelocity.Normalized() * MaxSpeed * dt * 1.6f;
 		motion.Y = 0f;
 
-		// Half-block probes land exactly on both the one-block detail standard
-		// and the two-block terrace standard; the old 0.6 increment skipped 2.0.
+		// Half-block probes find both one-block details and the canonical two-block
+		// terrace without guessing the obstacle height from a wall normal.
 		for (float lift = 0.5f; lift <= StepHeight + 0.01f; lift += 0.5f)
 		{
 			var probe = GlobalTransform;
@@ -258,12 +294,18 @@ public partial class Controller : CharacterBody3D
 				probe.Origin += drop * result.GetTravel().Length() / Mathf.Max(drop.Length(), 0.001f);
 
 			float rise = probe.Origin.Y - GlobalPosition.Y;
-			if (rise > StepHeight + 0.05f) return;
+			if (rise <= 0.05f || rise > StepHeight + 0.05f) continue;
 
-			GlobalPosition = probe.Origin;
-			// Small rises are placed, not jumped, and the drawn figure eases up
-			// to meet the body over the next few frames.
-			if (rise > 0.05f) StepLift = rise;
+			// Solve v² = 2gh for an apex slightly above the landing. Auto jumps
+			// ignore manual short-hop input while rising, otherwise the absence of a
+			// held jump key would cut the arc before it cleared the ledge.
+			float apex = rise + 0.38f;
+			float launchY = MathF.Sqrt(2f * Gravity * apex);
+			_autoJumpFlat = crossingVelocity;
+			Velocity = new Vector3(_autoJumpFlat.X, launchY, _autoJumpFlat.Z);
+			_autoJumping = true;
+			_coyote = 0f;
+			_buffer = 0f;
 			return;
 		}
 	}

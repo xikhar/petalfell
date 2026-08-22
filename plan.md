@@ -18,6 +18,9 @@ The Godot version should not be a direct line-by-line port. It should preserve t
 
 This is a product and design plan. It intentionally describes what the game and its supporting systems should accomplish without prescribing technical implementation details.
 
+The current implementation is tracked separately in [`CURRENT_STATE.md`](CURRENT_STATE.md).
+That document records what exists now; it does not narrow or replace the goals here.
+
 ---
 
 ## 2. High-Level Vision

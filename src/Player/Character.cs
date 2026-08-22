@@ -68,12 +68,15 @@ public partial class Character : Node3D
 
 	private float _phase;
 	private float _bob;
-	private float _stepEase;
 
 	private ShaderMaterial _inkLight, _inkDark;
 
 	public void Setup(ShaderMaterial inkLight, ShaderMaterial inkDark)
 	{
+		// Translation still inherits the interpolated Player transform. Local body,
+		// limb and outline animation is authored every render frame, so interpolating
+		// it again retains a second nearby pose on fast motion.
+		PhysicsInterpolationMode = PhysicsInterpolationModeEnum.Off;
 		_inkLight = inkLight;
 		_inkDark = inkDark;
 
@@ -212,15 +215,17 @@ public partial class Character : Node3D
 	/// walk and a run are the same curve at different rates rather than two clips
 	/// that have to be blended.
 	/// </summary>
-	public void Animate(Vector3 velocity, bool grounded, bool swimming, float stepLift, double delta)
+	public void Animate(Vector3 velocity, Vector3 facing,
+		bool grounded, bool swimming, double delta)
 	{
 		float dt = (float)delta;
 		var flat = new Vector3(velocity.X, 0, velocity.Z);
 		float speed = flat.Length();
 
-		if (flat.LengthSquared() > 0.4f)
+		var look = new Vector3(facing.X, 0, facing.Z);
+		if (look.LengthSquared() > 0.0001f)
 		{
-			float yaw = Mathf.Atan2(flat.X, flat.Z);
+			float yaw = Mathf.Atan2(look.X, look.Z);
 			Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, yaw, 1f - Mathf.Exp(-14f * dt)), 0);
 		}
 
@@ -261,16 +266,11 @@ public partial class Character : Node3D
 		_bob = Mathf.Lerp(_bob, Mathf.Abs(Mathf.Sin(_phase)) * cadence * 0.10f + idle,
 			1f - Mathf.Exp(-18f * dt));
 
-		// A small rise is placed instantly on the body; the drawn figure eases up
-		// to meet it, which is what taking a step actually looks like.
-		if (stepLift > 0.01f) _stepEase = Mathf.Min(_stepEase + stepLift, 1.6f);
-		_stepEase = Mathf.Lerp(_stepEase, 0f, 1f - Mathf.Exp(-16f * dt));
+		_body.Position = new Vector3(0, _bob, 0);
 
-		_body.Position = new Vector3(0, _bob - _stepEase, 0);
-
-		// Squash and stretch, kept small: it should read as weight, not rubber.
-		float stretch = Mathf.Clamp(velocity.Y / 40f, -0.18f, 0.22f);
-		_body.Scale = new Vector3(1f - stretch * 0.5f, 1f + stretch, 1f - stretch * 0.5f);
+		// Keep the voxel proportions rigid in the air. Jump height and limb posing
+		// provide the motion; scaling the whole body made the player visibly stretch.
+		_body.Scale = Vector3.One;
 
 		_head.Rotation = new Vector3(Mathf.Sin(_phase * 0.5f) * 0.04f,
 			Mathf.Sin(_phase * 0.31f) * 0.09f, 0);

@@ -260,17 +260,24 @@ public static class ChunkMesher
 		int na = NAxis[f], ua = UAxis[f], va = VAxis[f];
 		int sign = Normals[f, na];
 
+		// Allocated once for the whole call, not once per border. A stackalloc
+		// inside a loop is not released until the method returns, so the frame
+		// grows with the iteration count — harmless at four fixed iterations,
+		// but this is the hottest function in the mesher and the pattern is only
+		// ever one careless edit away from being unbounded.
+		Span<int> a = stackalloc int[3];
+		Span<int> b = stackalloc int[3];
+		Span<int> p = stackalloc int[3];
+
 		for (int bi = 0; bi < 4; bi++)
 		{
 			int axis = (bi < 2) ? ua : va;
 			int dir = (bi % 2 == 0) ? 1 : -1;
 
-			Span<int> a = stackalloc int[3];
 			a[0] = x; a[1] = y; a[2] = z;
 			a[axis] += dir;
 			bool aSolid = grid.SolidAt(a[0], a[1], a[2]);
 
-			Span<int> b = stackalloc int[3];
 			b[0] = a[0]; b[1] = a[1]; b[2] = a[2];
 			b[na] += sign;
 			bool bSolid = grid.SolidAt(b[0], b[1], b[2]);
@@ -282,7 +289,6 @@ public static class ChunkMesher
 			// `axis`. It runs along whichever in-plane axis is not `axis`.
 			int along = (axis == ua) ? va : ua;
 
-			Span<int> p = stackalloc int[3];
 			p[0] = x; p[1] = y; p[2] = z;
 			p[na] += sign > 0 ? 1 : 0;
 			if (dir > 0) p[axis] += 1;
@@ -330,6 +336,11 @@ public static class ChunkMesher
 		_runs.Clear();
 		int yMax = Math.Min(grid.Height, yTop + 1);
 
+		// Hoisted above the axis loop for the same reason as in CollectEdges: a
+		// stackalloc lives until the method returns, so one inside a loop grows
+		// the frame every iteration.
+		Span<int> local = stackalloc int[3];
+
 		for (int axis = 0; axis < 3; axis++)
 		{
 			int spanAlong = axis == 1 ? yMax : Span;
@@ -338,7 +349,6 @@ public static class ChunkMesher
 			int spanA = oa == 1 ? yMax : Span;
 			int spanB = ob == 1 ? yMax : Span;
 
-			Span<int> local = stackalloc int[3];
 			for (int fa = 0; fa < spanA; fa++)
 			for (int fb = 0; fb < spanB; fb++)
 			{

@@ -3,12 +3,14 @@
 A calm, atmospheric exploration adventure in a soft pastel block world. This is
 the Godot rebuild of the Three.js prototype in `~/Projects/pastel-game`.
 
-Three documents govern this project:
+Project documentation is deliberately split between goals, engineering decisions,
+and the live implementation state:
 
 | | |
 |---|---|
-| `~/Projects/pastel-game/plan.md` | The product and creative plan. Complete; nothing is removed from it. |
-| `ARCHITECTURE.md` | Engineering decisions — camera, ink, world model, collision, language. |
+| [`plan.md`](plan.md) | Product and creative plan. It describes the game Petalfell is intended to become. |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Engineering decisions — camera, ink, world model, collision, language. |
+| [`CURRENT_STATE.md`](CURRENT_STATE.md) | Factual snapshot of what is implemented, partial, and absent today. |
 | `~/Projects/pastel-game/WORLDGEN.md` | The generator's design and its documented failure modes. Required reading before touching `src/World`. |
 
 ## Running
@@ -18,7 +20,8 @@ godot-mono --path .
 ```
 
 Controls: **WASD** move (camera-relative), **Space** jump / swim up,
-**left click** travel to a point, **Q/E** orbit in 45° steps, **wheel** zoom.
+**left click** travel to a point, **Q/E** orbit in 45° steps, **wheel** zoom,
+**tilde/backtick** developer settings.
 
 ## The capture rig
 

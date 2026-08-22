@@ -9,7 +9,9 @@ shader_type canvas_item;
 // can turn it back into an emitter.
 render_mode unshaded;
 
-uniform sampler2D screen_tex : hint_screen_texture, filter_linear;
+// This pass is a colour grade, not a resampler. Nearest sampling preserves the
+// already-antialiased 3D frame instead of softening small moving silhouettes.
+uniform sampler2D screen_tex : hint_screen_texture, filter_nearest;
 
 uniform vec3 lift = vec3(0.006, 0.004, 0.014);
 uniform vec3 gamma_ = vec3(1.00, 1.005, 0.99);
@@ -18,7 +20,9 @@ uniform float saturation = 1.19;
 uniform float contrast = 1.10;
 uniform float vignette = 0.06;
 uniform float grain = 0.006;
-uniform float aberration = 0.0008;
+// Chromatic separation is especially visible on the player when camera lead
+// moves them away from screen centre, where it reads as motion blur.
+uniform float aberration = 0.0;
 // A flat mix toward a bright lilac, weighted toward the dark end so the
 // deepest values lift the most and nothing in frame approaches black.
 uniform float milk = 0.010;

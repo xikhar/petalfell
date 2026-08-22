@@ -71,10 +71,17 @@ public partial class Dog : Node3D
 	private float _think;
 	private float _sit;
 	private bool _sitting;
+	private bool _jumping;
+	private Vector3 _jumpStart, _jumpEnd;
+	private float _jumpClock, _jumpDuration, _jumpArc;
+	private List<Vector3> _route;
+	private int _routeIndex;
 	private ShaderMaterial _inkLight, _inkDark;
 
 	public void Setup(Navigation nav, Node3D player, ShaderMaterial inkLight, ShaderMaterial inkDark, int seed)
 	{
+		// The dog owns render-frame movement and its own jump interpolation.
+		PhysicsInterpolationMode = PhysicsInterpolationModeEnum.Off;
 		_nav = nav;
 		_player = player;
 		_inkLight = inkLight;
@@ -84,15 +91,19 @@ public partial class Dog : Node3D
 		_body = new Node3D();
 		AddChild(_body);
 
-		Box(_body, 4.2f, 2.3f, 2.2f, Coat, new Vector3(0, S * 2.6f, 0));
-		Box(_body, 1.6f, 0.5f, 2.4f, Collar, new Vector3(0, S * 2.7f, S * 1.5f), outlined: false);
+		// Forward is +Z for the dog. The old dimensions put the long side across
+		// X, making the torso look rotated ninety degrees relative to its head,
+		// legs and movement direction.
+		Box(_body, 2.2f, 2.3f, 4.2f, Coat, new Vector3(0, S * 2.6f, 0));
+		Box(_body, 2.4f, 0.5f, 1.6f, Collar, new Vector3(0, S * 2.7f, S * 1.5f), outlined: false);
 
 		_head = Pivot(_body, new Vector3(0, S * 3.4f, S * 2.0f));
 		Box(_head, 2.0f, 1.9f, 1.9f, Coat, new Vector3(0, S * 0.5f, S * 0.3f));
 		Box(_head, 1.1f, 0.9f, 1.0f, Muzzle, new Vector3(0, S * 0.15f, S * 1.4f), outlined: false);
 		Box(_head, 0.4f, 0.35f, 0.3f, Nose, new Vector3(0, S * 0.3f, S * 1.95f), outlined: false);
-		Box(_head, 0.5f, 1.0f, 0.6f, CoatDeep, new Vector3(-S * 0.75f, S * 1.5f, -S * 0.1f), outlined: false);
-		Box(_head, 0.5f, 1.0f, 0.6f, CoatDeep, new Vector3(S * 0.75f, S * 1.5f, -S * 0.1f), outlined: false);
+		// Sit the ears on the head instead of embedding their lower halves in it.
+		Box(_head, 0.5f, 0.7f, 0.6f, CoatDeep, new Vector3(-S * 0.75f, S * 1.8f, -S * 0.1f), outlined: false);
+		Box(_head, 0.5f, 0.7f, 0.6f, CoatDeep, new Vector3(S * 0.75f, S * 1.8f, -S * 0.1f), outlined: false);
 
 		_legFL = Pivot(_body, new Vector3(-S * 0.9f, S * 1.7f, S * 1.3f));
 		Box(_legFL, 0.7f, 1.8f, 0.7f, CoatDeep, new Vector3(0, -S * 0.9f, 0));
@@ -156,13 +167,28 @@ public partial class Dog : Node3D
 		// than trail forlornly across the map.
 		if (away > Warp)
 		{
-			GlobalPosition = you + new Vector3(_rng.Bell() * 2f, 0, _rng.Bell() * 2f);
+			var warp = you + new Vector3(_rng.Bell() * 2f, 0, _rng.Bell() * 2f);
+			warp.Y = GroundAt(warp.X, warp.Z);
+			GlobalPosition = warp;
 			_vel = Vector3.Zero;
+			_jumping = false;
+			_route = null;
 			return;
 		}
 
-		_think -= dt;
-		if (_think <= 0f) Decide(you, away);
+		if (_jumping)
+		{
+			AdvanceJump(dt);
+			Animate(dt);
+			return;
+		}
+
+		if (_route != null) AdvanceRouteTarget(me);
+		else
+		{
+			_think -= dt;
+			if (_think <= 0f) Decide(you, away);
+		}
 
 		Vector3 wish = Vector3.Zero;
 		if (!_sitting)
@@ -183,7 +209,32 @@ public partial class Dog : Node3D
 		if (gap.Length() < Personal && gap.LengthSquared() > 0.0001f)
 			next = you + gap.Normalized() * Personal;
 
-		next.Y = Mathf.Lerp(me.Y, GroundAt(next.X, next.Z), 1f - Mathf.Exp(-16f * dt));
+		float hereGround = GroundAt(me.X, me.Z);
+		float nextGround = GroundAt(next.X, next.Z);
+		if (FindBoundaryAhead(me, _vel, hereGround,
+			out float boundaryGround, out float boundaryDistance))
+		{
+			float boundaryRise = boundaryGround - hereGround;
+			if (Mathf.Abs(boundaryRise) <= Controller.StepHeight + 0.10f &&
+				TryStartJump(me, _vel, hereGround, boundaryGround, boundaryDistance))
+			{
+				AdvanceJump(dt);
+				Animate(dt);
+				return;
+			}
+
+			// A rejected jump is an impassable boundary, not permission for the
+			// ordinary height lerp to pull the dog through it. Stop on this side and
+			// ask the shared navigation graph for a legal route around.
+			_vel = Vector3.Zero;
+			Vector3 routeTarget = away > Leash ? you : _goal;
+			PlanRoute(me, routeTarget);
+			GlobalPosition = new Vector3(me.X, hereGround, me.Z);
+			Animate(dt);
+			return;
+		}
+
+		next.Y = Mathf.Lerp(me.Y, nextGround, 1f - Mathf.Exp(-16f * dt));
 		GlobalPosition = next;
 
 		Animate(dt);
@@ -224,11 +275,127 @@ public partial class Dog : Node3D
 		_goal = you + new Vector3(Mathf.Cos(a) * rad, 0, Mathf.Sin(a) * rad);
 	}
 
+	private void PlanRoute(Vector3 from, Vector3 destination)
+	{
+		_route = _nav.FindPath(from, destination);
+		_routeIndex = 0;
+		if (_route == null || _route.Count == 0)
+		{
+			_route = null;
+			_goal = from;
+			_think = 0.35f;
+			return;
+		}
+		AdvanceRouteTarget(from);
+	}
+
+	private void AdvanceRouteTarget(Vector3 from)
+	{
+		while (_route != null && _routeIndex < _route.Count)
+		{
+			var point = _route[_routeIndex];
+			var delta = new Vector2(point.X - from.X, point.Z - from.Z);
+			if (delta.LengthSquared() >= 0.72f) break;
+			_routeIndex++;
+		}
+
+		if (_route == null || _routeIndex >= _route.Count)
+		{
+			_route = null;
+			_think = 0f;
+			return;
+		}
+		_goal = _route[_routeIndex];
+	}
+
 	private float GroundAt(float x, float z)
 	{
 		float g = _nav.GroundY(Mathf.FloorToInt(x), Mathf.FloorToInt(z));
 		// Paddling rather than walking the bed: the surface is where the scene is.
 		return Mathf.Max(g, Palette.WaterLevel - 0.55f) == g ? g : Palette.WaterLevel - 0.35f;
+	}
+
+	private bool FindBoundaryAhead(Vector3 from, Vector3 velocity, float hereGround,
+		out float boundaryGround, out float boundaryDistance)
+	{
+		boundaryGround = hereGround;
+		boundaryDistance = 0f;
+		var direction = new Vector3(velocity.X, 0f, velocity.Z).Normalized();
+		if (direction.LengthSquared() < 0.5f) return false;
+
+		// Begin looking beyond the next movement step. At the dog's running speed,
+		// a one-frame test discovers the shelf only after its nose is already in it.
+		for (float distance = 0.22f; distance <= 0.95f; distance += 0.09f)
+		{
+			var sample = from + direction * distance;
+			float ground = GroundAt(sample.X, sample.Z);
+			if (Mathf.Abs(ground - hereGround) < 0.20f) continue;
+			boundaryGround = ground;
+			boundaryDistance = distance;
+			return true;
+		}
+		return false;
+	}
+
+	/// <summary>
+	/// Detect a one- or two-block boundary and choose a landing point beyond its
+	/// face. The regular ground lerp is never allowed to absorb this height
+	/// change: once accepted, the whole crossing belongs to the jump arc.
+	/// </summary>
+	private bool TryStartJump(Vector3 from, Vector3 velocity,
+		float hereGround, float nextGround, float boundaryDistance)
+	{
+		float initialRise = nextGround - hereGround;
+		if (Mathf.Abs(initialRise) < 0.20f ||
+			Mathf.Abs(initialRise) > Controller.StepHeight + 0.10f)
+			return false;
+
+		var direction = new Vector3(velocity.X, 0f, velocity.Z).Normalized();
+		if (direction.LengthSquared() < 0.5f) return false;
+
+		// Move far enough beyond the cell boundary that the dog's torso lands on
+		// the new shelf rather than balancing on its front edge.
+		Vector3 landing = from;
+		float targetGround = nextGround;
+		bool found = false;
+		float landingStart = boundaryDistance + 0.68f;
+		for (float distance = landingStart; distance <= landingStart + 1.35f; distance += 0.15f)
+		{
+			var candidate = from + direction * distance;
+			float ground = GroundAt(candidate.X, candidate.Z);
+			if (Mathf.Abs(ground - nextGround) > 0.15f) continue;
+			landing = candidate;
+			targetGround = ground;
+			found = true;
+			break;
+		}
+		if (!found) return false;
+
+		_jumpStart = from;
+		_jumpStart.Y = hereGround;
+		_jumpEnd = new Vector3(landing.X, targetGround, landing.Z);
+		float distanceFlat = new Vector2(_jumpEnd.X - _jumpStart.X,
+			_jumpEnd.Z - _jumpStart.Z).Length();
+		_jumpDuration = Mathf.Clamp(distanceFlat / (Speed * 0.46f), 0.36f, 0.54f);
+		_jumpArc = 0.62f + Mathf.Abs(targetGround - hereGround) * 0.62f;
+		_jumpClock = 0f;
+		_jumping = true;
+		_sitting = false;
+		_vel = (_jumpEnd - _jumpStart) / _jumpDuration;
+		return true;
+	}
+
+	private void AdvanceJump(float dt)
+	{
+		_jumpClock = Mathf.Min(_jumpClock + dt, _jumpDuration);
+		float t = _jumpClock / Mathf.Max(_jumpDuration, 0.001f);
+		var position = _jumpStart.Lerp(_jumpEnd, t);
+		position.Y += Mathf.Sin(t * Mathf.Pi) * _jumpArc;
+		GlobalPosition = position;
+
+		if (t < 1f) return;
+		GlobalPosition = _jumpEnd;
+		_jumping = false;
 	}
 
 	private void Animate(float dt)
@@ -246,7 +413,17 @@ public partial class Dog : Node3D
 		float swing = Mathf.Sin(_phase) * cadence * 0.95f;
 		float counter = Mathf.Sin(_phase + Mathf.Pi) * cadence * 0.95f;
 
-		if (_sitting)
+		if (_jumping)
+		{
+			// Compact readable tuck, held for the arc rather than blended through a
+			// walking cycle while the dog is airborne.
+			_body.Rotation = new Vector3(-0.08f, 0, 0);
+			_legFL.Rotation = new Vector3(-0.72f, 0, 0);
+			_legFR.Rotation = new Vector3(-0.72f, 0, 0);
+			_legBL.Rotation = new Vector3(0.78f, 0, 0);
+			_legBR.Rotation = new Vector3(0.78f, 0, 0);
+		}
+		else if (_sitting)
 		{
 			_body.Rotation = new Vector3(Mathf.Lerp(_body.Rotation.X, -0.42f, 1f - Mathf.Exp(-8f * dt)), 0, 0);
 			_legBL.Rotation = new Vector3(1.15f, 0, 0);
@@ -268,6 +445,8 @@ public partial class Dog : Node3D
 		float wag = Mathf.Sin(_phase * (2.2f + cadence * 2.5f)) * (0.35f + cadence * 0.55f);
 		_tail.Rotation = new Vector3(-0.5f - cadence * 0.35f, wag, 0);
 		_head.Rotation = new Vector3(Mathf.Sin(_phase * 0.4f) * 0.08f, Mathf.Sin(_phase * 0.27f) * 0.22f, 0);
-		_body.Position = new Vector3(0, Mathf.Abs(Mathf.Sin(_phase)) * cadence * 0.045f, 0);
+		_body.Position = _jumping
+			? new Vector3(0, 0.035f, 0)
+			: new Vector3(0, Mathf.Abs(Mathf.Sin(_phase)) * cadence * 0.045f, 0);
 	}
 }

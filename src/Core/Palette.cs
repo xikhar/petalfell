@@ -81,7 +81,7 @@ public static class Palette
 	/// Stroke width in framebuffer pixels. Kept here so the renderer and the
 	/// developer control always start from the same authored value.
 	/// </summary>
-	public const float InkWidth = 1.55f;
+	public const float InkWidth = 1.30f;
 
 	/* ---------------- grade ---------------- */
 	public const float GradeExposure = 1.12f;
@@ -119,6 +119,10 @@ public static class Palette
 	public static readonly Color[] AirReedColors =
 	{
 		Srgb(0xc3bd92), Srgb(0xaeb287), Srgb(0xd1c7a5),
+	};
+	public static readonly Color[] FootPuffColors =
+	{
+		Srgb(0xd8d0c9), Srgb(0xc9c0ca), Srgb(0xb8b8ae), Srgb(0xd7c9cf),
 	};
 
 	/* ================= block library ================= */

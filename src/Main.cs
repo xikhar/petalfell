@@ -32,6 +32,7 @@ public partial class Main : Node3D
 	private Dog _dog;
 	private Navigation _nav;
 	private ClickPulse _pulse;
+	private MovementPuffs _movementPuffs;
 	private AmbientDrift _ambientDrift;
 	private ShaderMaterial _inkLight, _inkDark;
 	private Tools.DeveloperMenu _developerMenu;
@@ -83,6 +84,7 @@ public partial class Main : Node3D
 		Player = new Controller { Name = "Player", Position = spawn };
 		AddChild(Player);
 		Player.Setup(Terrain);
+		Player.ResetPhysicsInterpolation();
 
 		_character = new Character { Name = "Traveller" };
 		Player.AddChild(_character);
@@ -96,6 +98,9 @@ public partial class Main : Node3D
 
 		_pulse = new ClickPulse { Name = "ClickPulse" };
 		AddChild(_pulse);
+
+		_movementPuffs = new MovementPuffs { Name = "MovementPuffs" };
+		AddChild(_movementPuffs);
 
 		Rig = new CameraRig { Name = "Camera", Current = true };
 		AddChild(Rig);
@@ -394,13 +399,19 @@ public partial class Main : Node3D
 	public override void _Process(double delta)
 	{
 		if (Player == null) return;
-		var p = Player.GlobalPosition;
+		// Physics moves the controller at a fixed cadence while rendering may run
+		// much faster. Follow the same interpolated transform Godot presents for
+		// the character; otherwise the small model jumps several screen pixels per
+		// physics tick and persistence makes adjacent positions look like a ghost.
+		var p = Player.GetGlobalTransformInterpolated().Origin;
+		_movementPuffs?.Advance(p, Player.Velocity, Player.IsOnFloor(), Player.Swimming);
 		_ambientDrift?.Advance(p, delta);
 		if (_capturing) return;
 
 		_streamer.UpdateAround(p);
 		Rig.Follow(p, Player.Velocity, delta);
-		_character.Animate(Player.Velocity, Player.IsOnFloor(), Player.Swimming, Player.StepLift, delta);
+		_character.Animate(Player.Velocity, Player.Facing,
+			Player.IsOnFloor(), Player.Swimming, delta);
 	}
 
 	public override void _UnhandledInput(InputEvent e)
