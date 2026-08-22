@@ -58,8 +58,6 @@ void vertex() {
 	v_normal_a = normalize(mat3(MODEL_MATRIX) * CUSTOM2.xyz);
 	v_normal_b = normalize(mat3(MODEL_MATRIX) * CUSTOM3.xyz);
 	v_caps = vec2(CUSTOM0.w, CUSTOM1.w);
-	v_ws_start = ws_start;
-	v_ws_end = ws_end;
 	// Baked half of the rule: both owning faces pale, manifold, not a concave
 	// fold. The camera half is decided in the fragment stage.
 	v_pale_eligible = CUSTOM2.w;
@@ -79,13 +77,17 @@ void vertex() {
 		v_screen_end = vec2(0.0);
 		v_depth_start = 1.0;
 		v_depth_end = 1.0;
+		v_ws_start = ws_start;
+		v_ws_end = ws_end;
 	} else {
 		if (s_behind) {
 			float t = (near_z - ve.z) / (vs.z - ve.z);
 			vs = mix(ve, vs, t);
+			ws_start = mix(ws_end, ws_start, t);
 		} else if (e_behind) {
 			float t = (near_z - vs.z) / (ve.z - vs.z);
 			ve = mix(vs, ve, t);
+			ws_end = mix(ws_start, ws_end, t);
 		}
 
 		vec4 cs = PROJECTION_MATRIX * vs;
@@ -101,6 +103,8 @@ void vertex() {
 		v_screen_end = se;
 		v_depth_start = -vs.z;
 		v_depth_end = -ve.z;
+		v_ws_start = ws_start;
+		v_ws_end = ws_end;
 
 		vec2 dir = se - ss;
 		float len = length(dir);
@@ -123,6 +127,14 @@ void vertex() {
 	}
 }
 
+float scene_depth_at(vec2 uv, mat4 inverse_projection) {
+	uv = clamp(uv, vec2(0.0), vec2(1.0));
+	float raw = texture(depth_tex, uv).r;
+	vec3 ndc = vec3(uv * 2.0 - 1.0, raw);
+	vec4 view = inverse_projection * vec4(ndc, 1.0);
+	return -(view.z / view.w);
+}
+
 void fragment() {
 	vec2 pa = FRAGCOORD.xy - v_screen_start;
 	vec2 ba = v_screen_end - v_screen_start;
@@ -139,8 +151,16 @@ void fragment() {
 	float coverage = 1.0 - smoothstep(core_width * 0.5 - 0.5, core_width * 0.5 + 0.5, dist);
 	if (coverage <= 0.001) discard;
 
-	float edge_depth = mix(v_depth_start, v_depth_end, tc);
-	vec3 point = mix(v_ws_start, v_ws_end, tc);
+	// `tc` is a screen-space parameter. View depth and world position are not
+	// linear in it under perspective, so ordinary mix() bends the inferred edge
+	// behind its owning face on long receding runs. Interpolate them with 1/w,
+	// as the rasteriser does for regular vertex attributes.
+	float inv_start_depth = 1.0 / max(v_depth_start, 0.0001);
+	float inv_end_depth = 1.0 / max(v_depth_end, 0.0001);
+	float inv_depth = mix(inv_start_depth, inv_end_depth, tc);
+	float edge_depth = 1.0 / inv_depth;
+	vec3 point = mix(v_ws_start * inv_start_depth,
+	                 v_ws_end * inv_end_depth, tc) / inv_depth;
 
 	// The camera half of the light/dark rule, evaluated at this point along the
 	// run rather than at its midpoint, so a long stroke can change class as it
@@ -170,15 +190,25 @@ void fragment() {
 	// contrast anyway.
 	float fade = 1.0 - smoothstep(fade_start, fade_end, edge_depth);
 
-	// Tolerance only has to cover depth-buffer precision: a stroke sits exactly
-	// on the surface it outlines. Anything looser and edges hidden a block or
-	// two behind — a trunk inside its own canopy, the far side of a cube — punch
-	// straight through the thing in front of them.
-	float raw = texture(depth_tex, SCREEN_UV).r;
-	vec3 ndc = vec3(SCREEN_UV * 2.0 - 1.0, raw);
-	vec4 view = INV_PROJECTION_MATRIX * vec4(ndc, 1.0);
-	float scene_depth = -(view.z / view.w);
-	float tol = max(0.05, edge_depth * 0.004);
+	// Test visibility at the mathematical centreline, not at each pixel of the
+	// expanded strip. Sampling a sloping owner face at the strip's outside edge
+	// clips half the stroke at normal viewing angles. The two small side samples
+	// let either owning face preserve the line, while a genuinely nearer solid
+	// still wins across the full stroke.
+	float segment_length = sqrt(max(bb, 0.0001));
+	vec2 line_direction = ba / segment_length;
+	vec2 line_normal = vec2(-line_direction.y, line_direction.x);
+	vec2 nearest = v_screen_start + ba * tc;
+	float scene_depth = scene_depth_at(nearest / VIEWPORT_SIZE, INV_PROJECTION_MATRIX);
+	scene_depth = max(scene_depth, scene_depth_at(
+		(nearest + line_normal * 0.75) / VIEWPORT_SIZE, INV_PROJECTION_MATRIX));
+	scene_depth = max(scene_depth, scene_depth_at(
+		(nearest - line_normal * 0.75) / VIEWPORT_SIZE, INV_PROJECTION_MATRIX));
+
+	// This covers reconstruction precision only. A distance-scaled world-space
+	// bias eventually approaches a whole voxel and exposes perpendicular edges
+	// that are actually behind the visible face.
+	float tol = 0.04;
 	if (scene_depth > 0.0 && edge_depth > scene_depth + tol) discard;
 
 	ALBEDO = col;

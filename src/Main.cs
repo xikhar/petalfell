@@ -33,6 +33,7 @@ public partial class Main : Node3D
 	private Navigation _nav;
 	private ClickPulse _pulse;
 	private ShaderMaterial _inkLight, _inkDark;
+	private Tools.DeveloperMenu _developerMenu;
 
 	public override void _Ready()
 	{
@@ -98,6 +99,12 @@ public partial class Main : Node3D
 		Rig = new CameraRig { Name = "Camera", Current = true };
 		AddChild(Rig);
 		Rig.Follow(spawn, Vector3.Zero, 1.0);
+
+		// Kept separate from game-facing UI. This is a disposable live-tuning
+		// surface, toggled with tilde, and owns no gameplay or menu state.
+		_developerMenu = new Tools.DeveloperMenu { Name = "DeveloperSettings" };
+		_developerMenu.Setup(_inkLight, _inkDark, Rig);
+		AddChild(_developerMenu);
 
 		AddChild(BuildPetals(spawn));
 		AddChild(BuildGrade());

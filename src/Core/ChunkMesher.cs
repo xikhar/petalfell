@@ -297,7 +297,22 @@ public static class ChunkMesher
 			sbyte fs = (sbyte)(f + 1);
 			if (rec.Dir0 == 0) { rec.Dir0 = fs; rec.Light0 = light; rec.Count = 1; }
 			else if (rec.Dir0 == fs) rec.Light0 = rec.Light0 && light;
-			else if (rec.Dir1 == 0) { rec.Dir1 = fs; rec.Light1 = light; rec.Count = 2; }
+			else if (rec.Dir1 == 0)
+			{
+				// Face traversal order changes across a chunk halo. Keep the two
+				// owners canonical so the same physical edge always has the same
+				// merge style in both chunks.
+				if (fs < rec.Dir0)
+				{
+					rec.Dir1 = rec.Dir0; rec.Light1 = rec.Light0;
+					rec.Dir0 = fs; rec.Light0 = light;
+				}
+				else
+				{
+					rec.Dir1 = fs; rec.Light1 = light;
+				}
+				rec.Count = 2;
+			}
 			else if (rec.Dir1 == fs) rec.Light1 = rec.Light1 && light;
 			else rec.Count = 3;   // non-manifold: three or more faces meet. Always dark.
 		}
@@ -337,11 +352,18 @@ public static class ChunkMesher
 						local[axis] = a; local[oa] = fa; local[ob] = fb;
 						int ei = EdgeIndex(local[0], local[1], local[2], axis);
 						rec = _edges[ei];
-						has = rec.Dir0 != 0;
+						// Ownership belongs to each unit edge, before merging. Filtering a
+						// completed halo run by its midpoint makes adjacent chunks both emit
+						// several of the same units (or neither emit them), which is the
+						// source of locally doubled and abruptly cut strokes.
+						has = rec.Dir0 != 0 && UnitBelongsToChunk(
+							grid, local[0], local[2], axis,
+							x0, z0, x1, z1);
 					}
 
 					bool same = has && runStart >= 0 &&
 					            rec.Dir0 == style.Dir0 && rec.Dir1 == style.Dir1 &&
+					            rec.Count == style.Count && rec.Concave == style.Concave &&
 					            IsLight(rec) == IsLight(style);
 
 					if (same) continue;
@@ -352,7 +374,7 @@ public static class ChunkMesher
 						var start = new Vector3(local[0] + x0 - 1, local[1], local[2] + z0 - 1);
 						var end = start;
 						end[axis] = start[axis] + (a - runStart);
-						AddRun(start, end, style, axis, x0, z0, x1, z1);
+						AddRun(start, end, style);
 					}
 
 					runStart = has ? a : -1;
@@ -367,14 +389,23 @@ public static class ChunkMesher
 	private static bool IsLight(in EdgeRec r) =>
 		r.Count == 2 && !r.Concave && ((r.Light0 && r.Light1) || r.Force);
 
-	private static void AddRun(Vector3 start, Vector3 end, in EdgeRec rec, int axis,
-		int x0, int z0, int x1, int z1)
+	/// <summary>
+	/// Stable ownership for one lattice edge. Edges on a chunk plane belong to
+	/// the cell on its positive side (clamped at the world rim), exactly once.
+	/// The one-cell halo still supplies both owning faces to that chunk.
+	/// </summary>
+	private static bool UnitBelongsToChunk(VoxelGrid grid,
+		int lx, int lz, int axis, int x0, int z0, int x1, int z1)
 	{
-		// Exactly one chunk owns each edge: the one containing its midpoint.
-		float mx = (start.X + end.X) * 0.5f;
-		float mz = (start.Z + end.Z) * 0.5f;
-		if (mx < x0 || mx >= x1 || mz < z0 || mz >= z1) return;
+		float mx = lx + x0 - 1 + (axis == 0 ? 0.5f : 0f);
+		float mz = lz + z0 - 1 + (axis == 2 ? 0.5f : 0f);
+		int cellX = Math.Clamp((int)MathF.Floor(mx), 0, grid.Size - 1);
+		int cellZ = Math.Clamp((int)MathF.Floor(mz), 0, grid.Size - 1);
+		return cellX >= x0 && cellX < x1 && cellZ >= z0 && cellZ < z1;
+	}
 
+	private static void AddRun(Vector3 start, Vector3 end, in EdgeRec rec)
+	{
 		int d0 = rec.Dir0 - 1;
 		int d1 = rec.Dir1 > 0 ? rec.Dir1 - 1 : d0;
 

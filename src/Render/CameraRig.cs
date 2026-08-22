@@ -47,6 +47,14 @@ public partial class CameraRig : Camera3D
 		TargetDistance = Mathf.Clamp(TargetDistance + delta, MinDistance, MaxDistance);
 	}
 
+	public void SetZoomLimits(float minimum, float maximum)
+	{
+		MinDistance = Mathf.Max(1f, minimum);
+		MaxDistance = Mathf.Max(MinDistance, maximum);
+		TargetDistance = Mathf.Clamp(TargetDistance, MinDistance, MaxDistance);
+		Distance = Mathf.Clamp(Distance, MinDistance, MaxDistance);
+	}
+
 	/// <summary>Critically damped approach — no overshoot, no lag spike on a hard turn.</summary>
 	private static float Damp(float current, float target, float lambda, float dt) =>
 		Mathf.Lerp(current, target, 1f - Mathf.Exp(-lambda * dt));

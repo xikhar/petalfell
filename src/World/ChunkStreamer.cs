@@ -156,9 +156,12 @@ public partial class ChunkStreamer : Node3D
 			// The ink mesh's vertices carry quad corners, not positions, so the
 			// engine cannot derive a bounding box from them.
 			int cs = ChunkMesher.ChunkSize;
+			// Include the screen-space skirt and edges owned on the positive
+			// chunk plane. An exact surface AABB can cull a complete ink object
+			// while its widened stroke is still inside the frame.
 			ink.CustomAabb = new Aabb(
-				new Vector3(ci * cs, 0, ck * cs),
-				new Vector3(cs, _grid.Height, cs));
+				new Vector3(ci * cs - 1, -1, ck * cs - 1),
+				new Vector3(cs + 2, _grid.Height + 2, cs + 2));
 			root.AddChild(ink);
 			chunk.Ink = ink;
 		}
