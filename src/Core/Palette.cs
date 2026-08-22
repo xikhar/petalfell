@@ -46,9 +46,9 @@ public static class Palette
 	public static readonly Color FillColor = C(0xd8cdf2);
 
 	/* ---------------- water ---------------- */
-	public static readonly Color WaterShoal = C(0xc3c2ec);
-	public static readonly Color WaterShallow = C(0x8f92dc);
-	public static readonly Color WaterDeep = C(0x5a63c8);
+	public static readonly Color WaterShoal = C(0xb9bcf2);
+	public static readonly Color WaterShallow = C(0x7076e2);
+	public static readonly Color WaterDeep = C(0x3a3ea6);
 	public static readonly Color WaterWarm = C(0xe3c4c9);
 	public static readonly Color WaterSheen = C(0xe8e2f5);
 	public static readonly Color WaterEdge = C(0x5c5378);
@@ -76,7 +76,7 @@ public static class Palette
 	// Supplying an already-linear value here would convert it twice and make this
 	// intended mid-grey ink render almost black.
 	public static readonly Color InkDark = new Color(0.30f, 0.28f, 0.33f);
-	public static readonly Color InkLight = new Color(0.84f, 0.83f, 0.85f);
+	public static readonly Color InkLight = new Color(0.81f, 0.80f, 0.82f);
 	/// <summary>
 	/// Stroke width in framebuffer pixels. Kept here so the renderer and the
 	/// developer control always start from the same authored value.
@@ -229,7 +229,7 @@ public static class Palette
 
 	private static void Def(byte id, uint top, uint side, uint bottom,
 		bool lightEdge = false, float emissive = 0f, float pattern = PatternNone,
-		uint fringe = 0u)
+		uint fringe = 0u, bool forceLightFaces = false)
 	{
 		var d = new BlockDef
 		{
@@ -240,9 +240,9 @@ public static class Palette
 		// The pale/dark split is judged on the authored sRGB value, not on the
 		// linear one. Luminance in linear space is a different number entirely,
 		// and the 0.61 threshold was tuned against the hex.
-		d.TopLight = Luma(Srgb(top)) >= LightFaceLuma;
-		d.SideLight = Luma(Srgb(side)) >= LightFaceLuma;
-		d.BottomLight = Luma(Srgb(bottom)) >= LightFaceLuma;
+		d.TopLight = forceLightFaces || Luma(Srgb(top)) >= LightFaceLuma;
+		d.SideLight = forceLightFaces || Luma(Srgb(side)) >= LightFaceLuma;
+		d.BottomLight = forceLightFaces || Luma(Srgb(bottom)) >= LightFaceLuma;
 		Table[id] = d;
 	}
 
@@ -263,7 +263,8 @@ public static class Palette
 		Def(GRASS_LIGHT_STONE, 0xd2d79a, 0xc9d49f, 0xb5c18e, lightEdge: true, pattern: PatternGrass, fringe: 0xb0c76c);
 		Def(GRASS_DEEP_STONE, 0xb2bd78, 0xaaba7e, 0x97a86f, lightEdge: true, pattern: PatternGrass, fringe: 0x8fac52);
 
-		Def(SOIL, 0xc2836f, 0xc4826d, 0xa96d5c, pattern: PatternEarth);
+		Def(SOIL, 0xc2836f, 0xc4826d, 0xa96d5c, pattern: PatternEarth,
+			forceLightFaces: true);
 		Def(SAND, 0xefe3cb, 0xe5d6bc, 0xd2c1a6, pattern: PatternGrass);
 
 		// Biome surfaces. Each province has to be recognisable from its ground

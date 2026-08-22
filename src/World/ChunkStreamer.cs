@@ -190,6 +190,10 @@ public partial class ChunkStreamer : Node3D
 				Mesh = floating,
 				MaterialOverride = _waterDetailMat,
 				CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+				// Same layer as the water: these lie ON the surface, so the
+				// reflection pass has nothing to gain from them and would only
+				// reflect a petal onto itself.
+				Layers = Render.PlanarReflection.WaterLayer,
 			});
 		}
 

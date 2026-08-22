@@ -177,6 +177,8 @@ public sealed class Navigation
 public partial class ClickPulse : Node3D
 {
 	private const float Duration = 0.52f;
+	private const float StartRadius = 0.34f;
+	private const float ExpansionRadius = 1.42f;
 	private float _t = Duration;
 	private MeshInstance3D _mesh;
 	private ShaderMaterial _mat;
@@ -211,7 +213,7 @@ public partial class ClickPulse : Node3D
 		if (_t >= Duration) return;
 		_t += (float)delta;
 		float k = Mathf.Clamp(_t / Duration, 0f, 1f);
-		float r = 0.5f + k * 2.6f;
+		float r = StartRadius + k * ExpansionRadius;
 		_mesh.Scale = new Vector3(r, r * 0.55f, r);
 		_mat.SetShaderParameter("fade", 1f - k);
 		if (_t >= Duration) _mesh.Visible = false;

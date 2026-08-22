@@ -34,7 +34,7 @@ public partial class Main : Node3D
 	private ClickPulse _pulse;
 	private MovementPuffs _movementPuffs;
 	private AmbientDrift _ambientDrift;
-	private ShaderMaterial _inkLight, _inkDark;
+	private ShaderMaterial _inkLight, _inkDark, _waterMat;
 	private Tools.DeveloperMenu _developerMenu;
 
 	public override void _Ready()
@@ -106,6 +106,11 @@ public partial class Main : Node3D
 		Rig = new CameraRig { Name = "Camera", Current = true };
 		AddChild(Rig);
 		Rig.Follow(spawn, Vector3.Zero, 1.0);
+
+		// After the rig: it mirrors that camera, so it needs the real one.
+		var reflection = new PlanarReflection { Name = "LakeReflection" };
+		reflection.Setup(Rig, _waterMat, Palette.WaterLevel);
+		AddChild(reflection);
 
 		// Kept separate from game-facing UI. This is a disposable live-tuning
 		// surface, toggled with tilde, and owns no gameplay or menu state.
@@ -557,13 +562,15 @@ public partial class Main : Node3D
 	private MeshInstance3D BuildWater()
 	{
 		var mat = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/water.gdshader") };
+		_waterMat = mat;
 		mat.SetShaderParameter("shoal", Palette.WaterShoal);
 		mat.SetShaderParameter("shallow", Palette.WaterShallow);
 		mat.SetShaderParameter("deep", Palette.WaterDeep);
 		mat.SetShaderParameter("warm", Palette.WaterWarm);
 		mat.SetShaderParameter("sheen", Palette.WaterSheen);
-		// The reflection falls back to the sky when the screen-space march finds
-		// nothing, so it has to be the same sky the player is standing under.
+		// The mirrored pass is held partway toward this gradient where it sees
+		// through the world's shell, so it has to be the same sky the player is
+		// standing under.
 		mat.SetShaderParameter("sky_low", Palette.SkyHorizon);
 		mat.SetShaderParameter("sky_high", Palette.SkyZenith);
 		mat.SetShaderParameter("sun_colour", Palette.SunColor);
@@ -588,6 +595,9 @@ public partial class Main : Node3D
 			MaterialOverride = mat,
 			Position = new Vector3(WorldSize * 0.5f, Palette.WaterLevel, WorldSize * 0.5f),
 			CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+			// Kept off the layer the reflection pass draws, or the lake would be
+			// rendered into the texture the lake reads from.
+			Layers = PlanarReflection.WaterLayer,
 		};
 	}
 

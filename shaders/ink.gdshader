@@ -26,7 +26,7 @@ render_mode unshaded, blend_mix, depth_draw_never, depth_test_disabled,
 // world are tree trunks, and ink that goes to black reads as a cartoon stroke
 // laid over a pastel painting.
 uniform vec3 ink_dark : source_color = vec3(0.47, 0.42, 0.52);
-uniform vec3 ink_light : source_color = vec3(0.97, 0.95, 0.97);
+uniform vec3 ink_light : source_color = vec3(0.81, 0.80, 0.82);
 uniform float core_width = 3.2;
 // Pass 0 draws only pale fragments, pass 1 only the dark silhouette fragments
 // of that same eligible geometry, and pass 2 draws permanently-dark runs.
