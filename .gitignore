@@ -1,0 +1,30 @@
+# Godot-generated caches and imports
+/.godot/
+/.mono/
+*.import
+
+# C# / .NET build products
+/.vs/
+/.idea/
+**/[Bb]in/
+**/[Oo]bj/
+/packages/
+
+# Platform builds and exports
+/android/
+/build/
+/builds/
+/export/
+/exports/
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Temporary files, logs, and runtime crashes
+*.tmp
+*.log
+mono_crash.*.json

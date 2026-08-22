@@ -1,0 +1,221 @@
+using System;
+using Petalfell.Core;
+
+namespace Petalfell.World;
+
+/// <summary>
+/// Trees and undergrowth.
+///
+/// Biome drives *species*, not just density. It used to drive density alone, so
+/// a sakura province was a meadow with more trees in it and you could not tell
+/// one from the other by looking — which defeats the point of having provinces.
+///
+/// Crowns are compact asymmetric stacks of solid cuboids. Never rings, donuts,
+/// noisy voxel clouds, or repeated grid-like layouts: the silhouette has to
+/// look sculpted, and it is the only thing describing the form once the faces
+/// are flat colour.
+/// </summary>
+public static class Vegetation
+{
+	private struct Flora
+	{
+		public byte[] Canopy;
+		public float ScaleLo, ScaleHi;
+		public float Density;
+	}
+
+	private static Flora For(Biome b) => b switch
+	{
+		Biome.Sakura => new Flora
+		{
+			Canopy = new[] { Palette.LEAF_PINK, Palette.LEAF_BLUSH, Palette.LEAF_ROSE, Palette.LEAF_PINK },
+			ScaleLo = 0.42f, ScaleHi = 1.0f, Density = 1.65f,
+		},
+		Biome.Meadow => new Flora
+		{
+			Canopy = new[] { Palette.LEAF_CREAM, Palette.LEAF_BLUSH, Palette.LEAF_LILAC },
+			ScaleLo = 0.20f, ScaleHi = 0.92f, Density = 0.55f,
+		},
+		Biome.Wetland => new Flora
+		{
+			Canopy = new[] { Palette.LEAF_MINT, Palette.LEAF_CREAM, Palette.LEAF_MINT },
+			ScaleLo = 0.26f, ScaleHi = 0.78f, Density = 0.75f,
+		},
+		Biome.Highland => new Flora
+		{
+			Canopy = new[] { Palette.LEAF_LILAC, Palette.LEAF_MINT },
+			ScaleLo = 0.14f, ScaleHi = 0.46f, Density = 0.28f,
+		},
+		_ => new Flora
+		{
+			Canopy = new[] { Palette.LEAF_CREAM, Palette.LEAF_BLUSH },
+			ScaleLo = 0.16f, ScaleHi = 0.60f, Density = 0.22f,
+		},
+	};
+
+	/// <summary>Tree count from the last run, for the boot diagnostics.</summary>
+	public static int LastTreeCount;
+
+	public static void Populate(Terrain terrain, int seed)
+	{
+		LastTreeCount = 0;
+		var grid = terrain.Grid;
+		int S = terrain.Size;
+		var rng = new Rng(seed ^ 0x7EE5);
+		var nGrove = new Noise2D(seed + 21);
+		var nHue = new Noise2D(seed + 22);
+
+		// Scatter on a jittered lattice rather than by rejection sampling: it
+		// costs one pass and cannot clump.
+		const int Cell = 4;
+		for (int cz = 0; cz < S / Cell; cz++)
+		for (int cx = 0; cx < S / Cell; cx++)
+		{
+			int x = cx * Cell + (int)(rng.Next() * Cell);
+			int z = cz * Cell + (int)(rng.Next() * Cell);
+			if (x < 4 || z < 4 || x >= S - 4 || z >= S - 4) continue;
+
+			int i = z * S + x;
+			if (terrain.Land[i] == 0) continue;
+			int h = terrain.Level[i];
+			if (h <= Terrain.Sea + 1) continue;
+			if (terrain.StairMask[i] == 1) continue;
+
+			// Structures and paths own their composition before scatter does. A
+			// raised column marks bridge decks, rails, lanterns and later authored
+			// props; reserve a small apron around all of them so a tree never grows
+			// through a crossing or turns its approach into a tunnel.
+			bool reserved = false;
+			// Six blocks also accounts for the footprint of a large canopy whose
+			// trunk stands outside the immediate prop buffer.
+			for (int rz = -6; rz <= 6 && !reserved; rz++)
+			for (int rx = -6; rx <= 6; rx++)
+			{
+				int xx = x + rx, zz = z + rz;
+				if (xx < 0 || zz < 0 || xx >= S || zz >= S) { reserved = true; break; }
+				int ri = zz * S + xx;
+				if (grid.Heights[ri] > terrain.Level[ri]) { reserved = true; break; }
+			}
+			if (reserved) continue;
+
+			byte surface = grid.At(x, h - 1, z);
+			bool plantable = surface == Palette.GRASS || surface == Palette.GRASS_LIGHT ||
+				surface == Palette.GRASS_DEEP || surface == Palette.GRASS_STONE ||
+				surface == Palette.GRASS_LIGHT_STONE || surface == Palette.GRASS_DEEP_STONE ||
+				surface == Palette.BLOSSOM_DRIFT;
+			if (!plantable) continue;
+			// Never on a lip: a tree hanging over a cliff edge reads as an
+			// accident, and it breaks the clean terrace silhouette.
+			if (TerrainShape.DropBelow(terrain.Level, S, x, z) > 1) continue;
+			if (TerrainShape.RiseAbove(terrain.Level, S, x, z) > 1) continue;
+
+			var region = terrain.Plan.RegionAt(x, z);
+			var flora = For(region.Biome);
+
+			// The grove field already exceeds 1 in its cores, where the chance
+			// test saturates — so a 1.65x multiplier added no trees at all and
+			// the biomes arrived with a 1.3x spread instead of the 3x they
+			// specify. Clamping first is what makes the plan visible on the
+			// ground.
+			float dens = nGrove.Fbm01(x * 0.035f, z * 0.035f, 3);
+			dens = MathF.Min(dens, 0.55f) * flora.Density;
+			if (!rng.Chance(dens * 0.36f)) continue;
+
+			float scale = rng.Range(flora.ScaleLo, flora.ScaleHi);
+			// Hue varies only *within* the biome's palette, so neighbouring
+			// stands differ without ever crossing into another province.
+			float hue = nHue.Fbm01(x * 0.09f, z * 0.09f, 2);
+			byte leaf = flora.Canopy[Math.Min(flora.Canopy.Length - 1,
+				(int)(hue * flora.Canopy.Length))];
+
+			Tree(grid, rng, x, h, z, scale, leaf);
+			LastTreeCount++;
+		}
+	}
+
+	private static byte PaleLeaf(byte leaf) => leaf switch
+	{
+		Palette.LEAF_PINK => Palette.LEAF_BLUSH,
+		Palette.LEAF_ROSE => Palette.LEAF_PINK,
+		Palette.LEAF_LILAC => Palette.LEAF_BLUSH,
+		Palette.LEAF_CREAM => Palette.LEAF_BLUSH,
+		Palette.LEAF_BLUSH => Palette.LEAF_CREAM,
+		_ => leaf,
+	};
+
+	/// <summary>
+	/// Current reference canopy grammar: a compact assembly of authored cuboids,
+	/// not a clipped volume. Large trees have a broad heart, four uneven
+	/// shoulders, a raised mass, side sprays and an offset crown. Smaller trees
+	/// use the same hierarchy at two successively coarser scales.
+	/// </summary>
+	private static void Tree(VoxelGrid grid, Rng rng, int x, int y, int z,
+		float scale, byte leaf)
+	{
+		int unit = scale >= 0.42f ? 2 : 1;
+		bool large = scale >= 0.72f;
+		int tw = scale >= 0.82f ? 2 : 1;
+		int bare = Math.Max(2, (int)MathF.Floor(2.5f + scale * 3.5f + 0.5f));
+		int canopyY = y + bare;
+		if (canopyY + 7 >= grid.Height) return;
+
+		byte trunk = rng.Chance(0.55f) ? Palette.TRUNK
+			: rng.Chance(0.5f) ? Palette.TRUNK_PALE : Palette.TRUNK_ROSE;
+		byte light = rng.Chance(0.62f) ? PaleLeaf(leaf) : leaf;
+
+		int trunkOffset = -(tw - 1) / 2;
+		for (int dz = 0; dz < tw; dz++)
+		for (int dx = 0; dx < tw; dx++)
+			grid.Column(x + trunkOffset + dx, z + trunkOffset + dz,
+				y, y + bare + unit, trunk);
+
+		int dirX = rng.Chance(0.5f) ? -1 : 1;
+		int dirZ = rng.Chance(0.5f) ? -1 : 1;
+		void Fill(int ox, int oy, int oz, int sx, int sy, int sz, byte id)
+		{
+			int px = x + ox - sx / 2;
+			int py = canopyY + oy;
+			int pz = z + oz - sz / 2;
+			for (int by = 0; by < sy; by++)
+			for (int bz = 0; bz < sz; bz++)
+			for (int bx = 0; bx < sx; bx++)
+			{
+				int xx = px + bx, yy = py + by, zz = pz + bz;
+				if (!grid.InBounds(xx, yy, zz)) continue;
+				grid.Set(xx, yy, zz, id);
+				int col = zz * grid.Size + xx;
+				if (yy + 1 > grid.Heights[col]) grid.Heights[col] = (short)(yy + 1);
+			}
+		}
+
+		if (large)
+		{
+			Fill(0, 0, 0, 6, 2, 4, leaf);
+			Fill(-4 * dirX, 0, 0, 2, 2, 2, leaf);
+			Fill(4 * dirX, 1, dirZ, 2, 2, 2, light);
+			Fill(-dirX, 0, -3 * dirZ, 2, 2, 2, leaf);
+			Fill(dirX, 1, 3 * dirZ, 2, 2, 2, light);
+			Fill(dirX, 2, -dirZ, 4, 2, 4, light);
+			Fill(-3 * dirX, 2, dirZ, 2, 2, 2, leaf);
+			Fill(3 * dirX, 3, -dirZ, 2, 2, 2, light);
+			Fill(-dirX, 4, dirZ, 2, 2, 2, light);
+		}
+		else if (unit == 2)
+		{
+			Fill(0, 0, 0, 4, 2, 4, leaf);
+			Fill(-3 * dirX, 0, 0, 2, 2, 2, leaf);
+			Fill(3 * dirX, 1, dirZ, 2, 2, 2, light);
+			Fill(0, 0, -3 * dirZ, 2, 2, 2, leaf);
+			Fill(dirX, 2, 0, 4, 2, 2, light);
+			Fill(-dirX, 4, dirZ, 2, 2, 2, light);
+		}
+		else
+		{
+			Fill(0, 0, 0, 3, 1, 3, leaf);
+			Fill(-2 * dirX, 0, 0, 1, 1, 2, leaf);
+			Fill(2 * dirX, 1, dirZ, 1, 1, 1, light);
+			Fill(dirX, 1, 0, 2, 1, 2, light);
+			Fill(-dirX, 2, dirZ, 1, 1, 1, light);
+		}
+	}
+}

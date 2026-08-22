@@ -1,0 +1,417 @@
+# Petalfell — Godot Engineering Architecture
+
+Companion to `plan.md` (in the Three.js reference project). **`plan.md` is the product
+and creative plan and stays complete — nothing is removed from it.** This document is
+the engineering counterpart: it resolves the technical decisions `plan.md` deliberately
+leaves open, and it is the file to argue with when an implementation choice is in
+question.
+
+Reference project: `~/Projects/pastel-game` (Three.js). Treat it as **frozen reference
+material** — read it, port from it, do not develop it further.
+
+Its two supporting documents are required reading and their conclusions carry over
+unchanged:
+
+- `pastel-game/WORLDGEN.md` — the generator's design and its ~15 documented failure
+  modes. The most valuable file in either project.
+- `pastel-game/ART_DIRECTION.md` — palette discipline, the reference images, and the
+  "why" behind the look.
+
+---
+
+## 0. Verified environment
+
+Everything below was checked against this machine, not assumed.
+
+| | |
+|---|---|
+| Godot | 4.7.1.stable, **Mono build** (`godot-mono`, `godot4-mono`, `godot4.7-mono`) |
+| Renderer | Forward+ (`rendering_method=forward_plus`), Jolt physics already selected |
+| Blender | 5.2.0 LTS, at `/etc/profiles/per-user/shikhar/bin/blender` |
+| godot-ai MCP | live — session `petalfell@bd1e`, plugin/server 3.1.5 |
+| .NET SDK | 8.0.423, runtime 8.0.29 — **C# verified working end to end** (see §6) |
+
+Engine capabilities confirmed present via `ClassDB` (these are what the ink system
+depends on, so they were checked rather than trusted):
+
+- `CompositorEffect` + `RenderSceneBuffersRD` + `RenderSceneDataRD`.
+- The **full raster path is exposed to GDScript**: `render_pipeline_create`,
+  `vertex_buffer_create`, `vertex_format_create`, `framebuffer_create`,
+  `draw_list_begin/bind_render_pipeline/bind_vertex_array/draw/end`,
+  `draw_list_set_push_constant`, `uniform_set_create`, and
+  `shader_compile_spirv_from_source` (so the ink GLSL can live in-tree as source and be
+  compiled at load).
+- `RenderingDevice.BLEND_OP_MAX = 5` — union coverage blending is available.
+- `Mesh.ARRAY_CUSTOM0..3`, each up to `ARRAY_CUSTOM_RGBA_FLOAT` → **16 spare floats per
+  vertex**.
+- `WorkerThreadPool.add_task` / `add_group_task`, `ConcavePolygonShape3D`,
+  `HeightMapShape3D`, `NavigationRegion3D`, `MultiMeshInstance3D`, `GPUParticles3D`.
+- `BaseMaterial3D` has stencil support (4.5+): `stencil_mode`, `stencil_compare`,
+  `stencil_reference`, `stencil_outline_thickness`. **We do not use the built-in stencil
+  outline** — it is an inverted-hull silhouette and cannot express our per-edge
+  light/dark rules. Stencil stays available for masking if a later effect needs it.
+
+`CompositorEffect` callback stages are `PRE_OPAQUE`, `POST_OPAQUE`, `POST_SKY`,
+`PRE_TRANSPARENT`, `POST_TRANSPARENT` — **all of them run before Godot's built-in
+post-processing** (tonemap, glow, adjustments). That single fact shapes §2.
+
+---
+
+## 1. Camera — long-lens perspective, not orthographic
+
+**Decision: keep the reference rig. Perspective, ~21° FOV, pitch ~33.5°, yaw snapped to
+45°, dolly zoom over a 50–120 unit range, critically-damped follow springs with lead.**
+
+Reasoning:
+
+- The entire art direction was tuned against this rig. `ART_DIRECTION.md`'s "roughly 25
+  blocks across the frame" is a *distance* statement under a 21° lens. Switching to
+  orthographic invalidates every existing screenshot as a target.
+- A long lens far back already gives the flattened model-railway parallax that reads as
+  isometric, while keeping the depth cues that make the diorama feel like a physical
+  object. True orthographic reads flat and, at this palette, reads as a tech demo.
+- The atmosphere pass depends on perspective: ray reconstruction from depth, the
+  analytic height-integrated mist along the view ray, and the AO world-radius →
+  screen-pixels conversion (`focal = P[1][1] * height * 0.5`) all assume a perspective
+  projection. Ortho needs different math for each.
+- Orthographic's real wins — pixel-exact tile alignment, identical silhouettes anywhere
+  on screen — matter for a tactics grid, not for a follow-camera explorer with free yaw.
+- Dolly zoom keeps "outline width fixed in screen space" a well-posed requirement: the
+  stroke is defined in framebuffer pixels and is independent of distance by construction.
+
+Contextual framing (§16 of `plan.md`: conversations, discoveries, interiors) is a
+target/distance/pitch override on the same rig, not a second camera mode.
+
+---
+
+## 2. Ink — the outline system
+
+This is the defining feature and the single largest technical risk in the port. It gets
+built properly.
+
+### 2.1 The part that must be right: the edge graph
+
+The look does **not** come from a post-process edge detector. It comes from *data*: for
+every edge in the world we know its two owning faces, their normals, whether each face
+is above the pale-luminance threshold, and whether the fold is concave. That is what
+lets us honour `plan.md` §15.3 — light edges only between two camera-facing light
+surfaces, concave always dark, dark lines stopping cleanly against light ones.
+
+Port of `pastel-game/src/core/voxel.js:920-1075`, unchanged in spirit:
+
+1. The chunk mesher emits, per face border, an entry keyed on the deduplicated unit
+   edge, recording `{normal, isLightFace(color), concave, forceLight}`.
+2. Edges with identical topology merge into **runs** — long straight strokes, not
+   per-voxel segments.
+3. Runs are classified: `light` iff exactly two owning faces, not concave, and either
+   both faces pale or one explicitly promotes (grass tops).
+4. Joint ownership: at a vertex where a pale run meets dark runs, the pale run keeps its
+   round cap and every incident dark run has its cap suppressed, so a dark cap cannot
+   protrude half a stroke into the pale line.
+
+This runs inside the threaded chunk mesher and is chunk-local, with midpoint ownership
+(`edgeBelongsToChunk`) deciding which chunk emits an edge on a boundary — the reference
+already solved the "runs break at chunk seams" problem this way.
+
+### 2.2 Delivery — GPU representation
+
+One `ArrayMesh` of ink quads per chunk, built in the same worker task as the surface
+mesh. Four vertices per run, expanded to a screen-space-width quad in the vertex shader.
+The 16 spare custom floats hold everything the fragment shader needs:
+
+| channel | contents |
+|---|---|
+| `ARRAY_VERTEX` | corner offset (±1, ±1) — the quad's local corner, not a world position |
+| `CUSTOM0` | `run.start.xyz`, `capStart` |
+| `CUSTOM1` | `run.end.xyz`, `capEnd` |
+| `CUSTOM2` | `normalA.xyz`, `lightEligible` |
+| `CUSTOM3` | `normalB.xyz`, spare (reserved for per-run ink tint / fade) |
+
+Custom AABB is set per chunk since the vertex positions are not real positions.
+
+Screen-space width, backface/normal-facing rejection, the waterline hard stop, and the
+distance/mist fade all port from the reference vertex+fragment shader almost literally.
+
+### 2.3 Delivery — where the ink lands in the frame
+
+Three options were researched. What we build:
+
+**Target architecture (the right way).** The 3D world renders into a `SubViewport`. A
+`CompositorEffect` at `POST_TRANSPARENT` on that viewport:
+
+- creates its own framebuffer over a persistent **RG8 coverage target** (R = union of
+  dark coverage, G = union of pale coverage),
+- builds a render pipeline with `blend_op = BLEND_OP_MAX` on that attachment, which makes
+  overlapping round caps a mathematical **union** — junctions cannot accumulate, glow, or
+  crack open,
+- binds the scene depth texture so the ink can do its own tolerant depth test (the
+  reference's manual test, which is what stops a stroke being eaten by the face it
+  outlines at grazing angles),
+- draws every loaded chunk's ink mesh in one draw list.
+
+A fullscreen `CanvasLayer` shader then composites: SubViewport colour → grade (lift /
+gamma / gain, split tone, milk, highlight knee) → **ink mixed in last**. Because Godot's
+compositor stages all run *before* tonemap and glow, this SubViewport-plus-canvas
+structure is the only way to reproduce the reference's ordering, where ink is applied
+after tone mapping and therefore can never become an emitter or be caught by bloom.
+
+**Scaffold, days 1–3 of the milestone.** The same ink meshes drawn as ordinary
+transparent-pass geometry with a `ShaderMaterial`, doing the manual depth test against
+`hint_depth_texture` (transparent materials can *read* the depth texture; they merely do
+not *write* into it), `blend_mix`, pale runs at a lower `render_priority` than dark runs
+so dark wins at junctions. This is deliberately not throwaway: it shares the edge graph,
+the mesh layout and ~90% of the shader with the target, and it gets pixels on screen —
+and therefore art review — while the compositor pass is written. Two known deviations,
+both retunable: ink is applied pre-tonemap, and overlaps saturate toward the ink colour
+rather than unioning (harmless with `blend_mix`, since mixing twice toward the same
+colour cannot overshoot it — but it does not give the exact joint behaviour).
+
+**Rejected.** Inverted-hull outlines (no fixed screen width, no per-edge classification),
+Sobel/normal-depth post-process outlines (silhouettes only, no light/dark rule, no clean
+joints), and `stencil_outline_thickness` (same limits as inverted hull).
+
+### 2.4 Ink for Blender-authored assets
+
+`plan.md` §14 asks for authored buildings, characters, props and kits. **They do not get
+edges for free** — the edge graph is a by-product of the voxel mesher, and a glTF mesh
+carries none of that data. This is an unlisted dependency of the entire asset plan.
+
+Deliverable, required before the first authored building ships: a Blender-side export
+step (or Godot import post-process) that extracts edges by feature angle and emits the
+same four-channel run format — the two adjacent face normals, the pale/dark class from
+each face's base colour, and a concavity flag from the dihedral sign. Authored assets
+then feed the identical ink pipeline, and characters get the §15.3 exception (silhouette
+kept, fine internal edges dropped) as a flag on the exporter.
+
+---
+
+## 3. World representation — same model as the Three.js version
+
+**Decision: as requested, keep the reference model. A single dense voxel grid for the
+whole map (one byte per block) plus per-chunk meshing, streaming, and unloading around
+the player.**
+
+- Chunk footprint 24×24, full world height, matching `CHUNK = 24`.
+- Stream radius 8 chunks (`DEFAULT_STREAM_RADIUS`), exposed in the developer view per
+  `plan.md` §25.
+- Meshing on `WorkerThreadPool` tasks with a per-frame budget for uploads, mirroring the
+  reference's `voxel-worker.js` + incremental `pump(deadline)`.
+- Determinism: `rng.gd` is a direct port of `core/rng.js`. **Do not substitute
+  `FastNoiseLite`** — different noise means a different world, and `plan.md` §7.4 makes
+  world stability a requirement.
+
+Cost of this choice, stated plainly so it is not a surprise later: the dense grid is a
+global allocation and it is what caps world size. At `WORLD.height = 76` that is ~45 MB
+at 768 blocks square, ~80 MB at 1024, ~320 MB at 2048. **1024 is the practical ceiling**,
+which at this block scale is roughly a square kilometre of playable region — comfortably
+"considerably larger than the current world" per §8. If Chapter 1 ever needs to exceed
+it, the escape hatch is already identified in `WORLDGEN.md`: keep the 2D layers (heights,
+surface, wetness, plan) globally and materialise voxels per tile. We are not building
+that now; we are keeping the mesher's inputs narrow enough that it stays possible.
+
+---
+
+## 4. Collision — real bodies, per-chunk, from the mesh we already have
+
+**Decision: proper physics collision for everything, generated from the mesher output.**
+
+- **Terrain and structures.** Each chunk's opaque surface mesh already exists as vertex
+  data; the same buffer becomes a `ConcavePolygonShape3D` on a `StaticBody3D` parented to
+  the chunk, created in the worker task and attached on the same frame as the visual
+  mesh. Cost is near zero because the triangles are already computed, and it is exact —
+  no second definition of the world to drift out of sync. Jolt handles static trimesh
+  well. Collision chunks stream with visual chunks; a chunk is never visible without its
+  body (`plan.md` §25: "loading never visibly removes ground").
+- **Not** one `BoxShape3D` per voxel. That is hundreds of thousands of bodies and it is
+  the standard way to make a voxel game unshippable.
+- **Player** is a `CharacterBody3D` with a capsule, `move_and_slide`, plus explicit
+  step-up: the reference's `STEP_HEIGHT = 3.30` / `STEP_SMALL = 1.25` split (a kerb is
+  placed, a terrace is jumped) is game-feel-critical and is reimplemented rather than
+  left to `floor_snap_length`. Acceleration, friction, coyote time, jump buffering,
+  variable jump height and the buoyancy/swim model port from
+  `pastel-game/src/player/controller.js` with their tuned constants intact.
+- **Dog, NPCs, animals** keep the reference's approach: they ride the navigation surface
+  and carry an `Area3D` for interaction, with no rigid body. A companion does not need
+  gravity, and a second thing to de-penetrate every frame buys nothing.
+- **Props, items, throwables** get real bodies — `RigidBody3D` for thrown/dropped
+  objects, `StaticBody3D` + `Area3D` for interactables.
+- **Navigation** stays the reference's multi-layer voxel-surface A* (terraces, bridge
+  decks, swimmable water, step/drop limits, incremental with a time budget). Godot's
+  navmesh baker is the wrong tool here: it fights blocky terraces, it would need
+  rebaking as chunks stream, and it cannot express "this character may swim but that one
+  may not". `NavigationRegion3D` stays unused for now; per-agent traversal rules
+  (§17.3) come from the surface's own cost function.
+
+---
+
+## 4b. Build status
+
+M0 and most of M1 are in. What exists and runs:
+
+- Deterministic `Rng` + value noise, palette and block registry, dense
+  `VoxelGrid` (512², height 76).
+- Chunk mesher with baked per-vertex AO **and the explicit ink edge graph** —
+  convex/concave classification, pale/dark per edge, run merging, joint cap
+  ownership, midpoint chunk ownership.
+- Ink rendered via the §2.3 **scaffold** path (transparent pass, manual depth
+  test against `hint_depth_texture`, pale runs before dark by
+  `render_priority`). The compositor/`BLEND_OP_MAX` path is not built yet.
+- `InkBuilder` for non-voxel meshes, so the traveller and dog are inked by the
+  same rules and the same material as the terrain, with the §15.3 character
+  exception applied.
+- Planner: Poisson-disc regions, macro fields, five biomes, warped Voronoi cell
+  map, channel tracing by steepest descent with inertia, lake siting.
+- Terrain: contour discs on the edge-grid lattice, rim and plinth, channel and
+  valley carve, lake basin, beaches, mode filter, despeckle, carved stairs, the
+  grass/soil/stone strata.
+- Vegetation: biome-driven species, density and crown form.
+- Chunk streaming with per-frame budget, per-chunk trimesh collision.
+- Camera rig, sky/fog/glow/SSAO, water, canvas grade, petals.
+- Controller (accel, friction, coyote, buffer, variable jump, step-up, swim),
+  procedural traveller, dog companion, A* click-to-move with the white pulse.
+- Capture rig with a top-down heightfield map.
+
+Not built: authored stamps and landmarks, props and bridges, settlements, NPCs,
+interaction, inventory, save/persistence, ground detail (tufts and flowers),
+audio, menus and the developer view. Rivers trace and carve but most of their
+course still sits above the water plane, so the map reads as an island with a
+lake rather than an island with a river network.
+
+---
+
+## 5. Scope — build a slice, keep the plan whole
+
+Nothing leaves `plan.md`. The build order below is what gets *implemented first*; every
+other system in the plan keeps its section and its future slot.
+
+**M0 — Project skeleton.** Folder layout, project settings (shadows, MSAA, colour),
+palette + block registry as Godot `Resource`s ported from `core/palette.js` (single
+source of truth, same rule: no colour hardcoded anywhere else), and the capture harness
+(§6). Small and fast.
+
+**M1 — The reference scene** (`plan.md` §29). Grass/dirt/stone terraces, a cliff, stairs,
+concave edges, a tree, a wooden and a stone structure, road, shoreline, shallow and deep
+water, player and dog at gameplay distance, lighting/shadow/fog/grade — and the ink,
+scaffold first then the compositor pass. This is the visual acceptance gate; nothing else
+starts until a capture of this scene stands next to `shots/` and holds up.
+
+**M2 — World foundation.** Port `rng` → `planner` → `terrain-shape` → `terrain` →
+`props` → `stamps` → `vegetation`, in that order (the order is load-bearing; see
+`WORLDGEN.md` §"Stage ordering"). Streaming, collision, persistence hooks.
+
+**M3 — Traversal.** Controller, swimming, click-to-move with the white hemispherical
+pulse, the dog, camera polish, pause/settings/developer view.
+
+**M4 — First authored content.** The Blender edge-export tool (§2.4), the wooden village
+kit, one village, one road loop. This is where the asset pipeline gets proven on
+something small before kit production scales up.
+
+Interaction, dialogue, inventory, crafting, trading, NPC populations, map, audio and
+Chapter 1 story content stay in `plan.md` and are scheduled after M4.
+
+---
+
+## 6. Tooling and workflow
+
+**godot-ai MCP is the primary interface to the editor** — scene creation and node
+wiring, script/shader attachment, running the project, reading logs and errors,
+performance monitors, editor screenshots, `game_eval` against the running game, and the
+test runner. Bulk authoring of source and `.gdshader` files goes through ordinary file
+writes, because those want to be reviewable diffs rather than tool calls; everything that
+touches *editor state* goes through the MCP. See §6.1 for the two places the MCP does not
+reach under a C# codebase.
+
+**Capture harness — build this in M0, before the second shader is written.** The Godot
+equivalent of `pastel-game/tools/shoot.mjs`: a scene that takes a shot list on the
+command line, places the camera at named fixed viewpoints (`hero, wide, close, bridge,
+river, canopy, cliffs, lowsun`), waits for streaming to settle, and writes PNGs via
+`get_viewport().get_texture().get_image().save_png()`. Fixed seed, fixed time of day,
+fixed camera values. The reference project's look got where it did *because* this loop
+existed; losing it is the most likely way to lose the art direction.
+
+### 6.1 Language policy — C# primary
+
+**Decision: C# is the primary language. GDScript is retained only for `@tool` editor
+helpers, the MCP-visible `res://tests/test_*.gd` integration suites, and small
+developer-view glue. GDExtension is no longer needed.**
+
+This was measured on this machine, not assumed. The same two loops, run in Godot 4.7.1
+headless, one in GDScript and one in C#:
+
+| workload | GDScript | C# | ratio |
+|---|---|---|---|
+| 5.2 M byte writes + reads | 188.6 ms | 9 ms | **21×** |
+| Mesher-shaped face scan, 1.3 M voxels with neighbour lookups and branching | 152.3 ms | 5.7 ms | **27×** |
+
+Verified working end to end: `dotnet build` → `godot-mono --headless` runs a C# `Node`,
+.NET runtime 8.0.29, `RenderingDevice.BlendOperation.Max` and `Mesh.ArrayCustomFormat`
+reachable from C#. (`RenderingServer.GetRenderingDevice()` returns null under
+`--headless` because the dummy driver has no device — expected, not a C# limitation.)
+
+27× removes the entire reason GDExtension was on the table. The mesher, the edge graph,
+the generator and the A* are all comfortably affordable in C#.
+
+**Everything is C#, not just the hot parts.** The boundary between hot and cold moves —
+dog behaviour is cheap until there are forty NPCs — and a split codebase means
+relitigating that boundary constantly while paying variant marshalling at every seam.
+One language, one idiom.
+
+Consequences, all of which are accepted rather than worked around:
+
+- **Restart the editor with `godot-mono`.** The editor the MCP is currently attached to
+  is the old non-Mono build and cannot open a C# project.
+- **NuGet on NixOS needs a `NuGet.config`.** Without it the build fails with
+  `MSB4236: The SDK 'Godot.NET.Sdk/4.7.1' could not be found`. The working configuration
+  clears `packageSources` and adds the engine's package folder as a
+  `fallbackPackageFolders` entry. That path contains a nix store hash and **will change
+  on every nixpkgs update**, so it is generated from `$(dirname $(readlink -f $(command
+  -v godot-mono)))` in a checked-in setup script rather than hardcoded.
+- **The MCP's script surface is GDScript-only.** `script_create` writes `.gd`, and
+  `test_run` discovers `test_*.gd`. C# is authored with ordinary file writes (which is
+  what we wanted anyway — reviewable diffs) and unit-tested with `dotnet test`; the
+  MCP-visible GDScript suites become integration tests that drive C# nodes through the
+  scene tree. Everything else the MCP does — scenes, nodes, running, logs, monitors,
+  screenshots, `game_eval` — is unaffected.
+- **Browser delivery is effectively closed.** Godot 4 cannot export C# to the web; the
+  feature was dropped from the .NET 9 milestone and is not scheduled. Only an unofficial
+  community build offers it. `plan.md` §31 lists browser delivery as an open question —
+  **this decision answers it "no" unless you say otherwise.** Given the reference project
+  *is* a browser game, this is the one consequence worth a deliberate yes.
+
+---
+
+## 7. Repo layout
+
+```
+res://
+  core/         rng, palette + block registry resources, voxel grid, chunk mesher, ink graph
+  render/       camera rig, lighting/environment, sky, water, grade + compositor effects
+  world/        planner, terrain, props, stamps, vegetation, streaming, persistence
+  player/       controller, character, navigation surface, pathfinding, dog
+  ui/           hud, pause, settings, developer view, map
+  content/      chapter/map packages (plan.md §6.2), authored markers, kits
+  assets/       Blender sources and imported glTF, textures
+  tools/        capture harness, debug scenes
+  tests/        test_*.gd integration suites (MCP-visible)
+petalfell.csproj
+NuGet.config    generated by tools/setup-nuget.sh — see §6.1, the path is nix-store-bound
+docs/           this file's descendants; plan.md stays with the reference project
+```
+
+---
+
+## 8. Still open
+
+- **Ink width.** `plan.md` §15.3 calls the ~`3.2` reference the visual starting point,
+  but the shipped default in the reference build is `CORE_WIDTH = 1.85` — `3.2` is the
+  *maximum* of the settings slider (`inkWidth` 0.16 ÷ `INK_BASE` 0.05). One of these is
+  canon and everything downstream gets tuned against it.
+- **Grass fringe.** `plan.md` §10 says there is no separate dark-green fringe at a grass
+  ledge, but the block registry still defines `fringe`/`fringeColor`. Assumed dropped in
+  the port unless corrected.
+- **Block scale in metres**, which fixes character height, walk speed and the units every
+  future asset is authored against.
+- **Interiors** (§31) — seamless, separate scenes, or implied. Affects streaming and the
+  settlement kits, so it is wanted before M4, not before M1.
+- **Browser delivery** (§31) — choosing C# closes it. Confirm that is acceptable; it is
+  the only decision in this document that is expensive to reverse later.

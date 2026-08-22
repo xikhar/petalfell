@@ -1,0 +1,273 @@
+using System;
+using System.Collections.Generic;
+using Godot;
+using Petalfell.Core;
+using Petalfell.World;
+
+namespace Petalfell.Player;
+
+/// <summary>
+/// The dog.
+///
+/// A companion rather than a follower. Left alone it mills about wherever you
+/// happen to be — trotting a few paces, stopping to sniff, sitting down and
+/// watching you — and it only actually *travels* when you get far enough away
+/// that staying put would look like it had forgotten about you.
+///
+/// It has no physics body. It rides the terrain heightfield directly: there is
+/// nothing to fall through and nothing to collide with. A dog does not need
+/// gravity, and giving it a Controller would mean a second body to depenetrate,
+/// tune and debug for an animal whose whole job is to look happy near you.
+/// </summary>
+public partial class Dog : Node3D
+{
+	/// <summary>World units per dog voxel. A dog reads as roughly a third of a person's height.</summary>
+	private const float S = 0.205f;
+
+	// Distances in blocks. Leash is the one that matters: inside it the dog
+	// potters, outside it the dog comes to you.
+	private const float Leash = 9.0f;
+	private const float Heel = 3.0f;
+	private const float WanderR = 6.5f;
+	private const float Warp = 72f;
+	/// <summary>Hard minimum gap, enforced as a positional clamp rather than a steering force.</summary>
+	private const float Personal = 1.15f;
+	private const float Speed = 11.0f;
+
+	/// <summary>
+	/// An authored colour plus its ink class. The linear value is what the
+	/// shader gets; the pale/dark decision is made on the original sRGB, where
+	/// the 0.61 threshold was tuned. Keeping the pair together stops the two
+	/// from being derived in different spaces.
+	/// </summary>
+	private readonly struct Tone
+	{
+		public readonly Color Linear;
+		public readonly bool Pale;
+
+		public Tone(uint hex)
+		{
+			var s = new Color(((hex >> 16) & 255) / 255f, ((hex >> 8) & 255) / 255f, (hex & 255) / 255f);
+			Linear = s.SrgbToLinear();
+			Pale = s.R * 0.2126f + s.G * 0.7152f + s.B * 0.0722f >= Palette.LightFaceLuma;
+		}
+	}
+
+	private static readonly Tone Coat = new(0xe8d9c8);
+	private static readonly Tone CoatDeep = new(0xd6c2ae);
+	private static readonly Tone Muzzle = new(0xf6ecdf);
+	private static readonly Tone Nose = new(0x7a5c60);
+	private static readonly Tone Collar = new(0xefb173);
+
+
+	private Node3D _body, _head, _tail, _legFL, _legFR, _legBL, _legBR;
+	private Navigation _nav;
+	private Node3D _player;
+	private Rng _rng;
+
+	private Vector3 _vel;
+	private Vector3 _goal;
+	private float _phase;
+	private float _think;
+	private float _sit;
+	private bool _sitting;
+	private ShaderMaterial _inkLight, _inkDark;
+
+	public void Setup(Navigation nav, Node3D player, ShaderMaterial inkLight, ShaderMaterial inkDark, int seed)
+	{
+		_nav = nav;
+		_player = player;
+		_inkLight = inkLight;
+		_inkDark = inkDark;
+		_rng = new Rng(seed ^ 0xD06);
+
+		_body = new Node3D();
+		AddChild(_body);
+
+		Box(_body, 4.2f, 2.3f, 2.2f, Coat, new Vector3(0, S * 2.6f, 0));
+		Box(_body, 1.6f, 0.5f, 2.4f, Collar, new Vector3(0, S * 2.7f, S * 1.5f), outlined: false);
+
+		_head = Pivot(_body, new Vector3(0, S * 3.4f, S * 2.0f));
+		Box(_head, 2.0f, 1.9f, 1.9f, Coat, new Vector3(0, S * 0.5f, S * 0.3f));
+		Box(_head, 1.1f, 0.9f, 1.0f, Muzzle, new Vector3(0, S * 0.15f, S * 1.4f), outlined: false);
+		Box(_head, 0.4f, 0.35f, 0.3f, Nose, new Vector3(0, S * 0.3f, S * 1.95f), outlined: false);
+		Box(_head, 0.5f, 1.0f, 0.6f, CoatDeep, new Vector3(-S * 0.75f, S * 1.5f, -S * 0.1f), outlined: false);
+		Box(_head, 0.5f, 1.0f, 0.6f, CoatDeep, new Vector3(S * 0.75f, S * 1.5f, -S * 0.1f), outlined: false);
+
+		_legFL = Pivot(_body, new Vector3(-S * 0.9f, S * 1.7f, S * 1.3f));
+		Box(_legFL, 0.7f, 1.8f, 0.7f, CoatDeep, new Vector3(0, -S * 0.9f, 0));
+		_legFR = Pivot(_body, new Vector3(S * 0.9f, S * 1.7f, S * 1.3f));
+		Box(_legFR, 0.7f, 1.8f, 0.7f, CoatDeep, new Vector3(0, -S * 0.9f, 0));
+		_legBL = Pivot(_body, new Vector3(-S * 0.9f, S * 1.7f, -S * 1.3f));
+		Box(_legBL, 0.7f, 1.8f, 0.7f, CoatDeep, new Vector3(0, -S * 0.9f, 0));
+		_legBR = Pivot(_body, new Vector3(S * 0.9f, S * 1.7f, -S * 1.3f));
+		Box(_legBR, 0.7f, 1.8f, 0.7f, CoatDeep, new Vector3(0, -S * 0.9f, 0));
+
+		_tail = Pivot(_body, new Vector3(0, S * 3.2f, -S * 2.0f));
+		Box(_tail, 0.5f, 1.5f, 0.5f, Coat, new Vector3(0, S * 0.6f, 0));
+	}
+
+	private Node3D Pivot(Node3D parent, Vector3 at)
+	{
+		var n = new Node3D { Position = at };
+		parent.AddChild(n);
+		return n;
+	}
+
+	/// <summary>See Character.Box — the same silhouette-only rule applies.</summary>
+	private void Box(Node3D parent, float w, float h, float d, Tone tone, Vector3 at,
+		bool outlined = true)
+	{
+		float wx = w * S, wy = h * S, wz = d * S;
+		var mesh = new MeshInstance3D
+		{
+			Mesh = new BoxMesh { Size = new Vector3(wx, wy, wz) },
+			Position = at,
+		};
+		var mat = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/character.gdshader") };
+		mat.SetShaderParameter("albedo", tone.Linear);
+		mat.SetShaderParameter("sun_dir", Palette.SunDir);
+		mesh.MaterialOverride = mat;
+		parent.AddChild(mesh);
+
+		if (!outlined) return;
+
+		var inkMesh = InkBuilder.Box(wx, wy, wz, tone.Pale);
+		var ink = new MeshInstance3D
+		{
+			Mesh = inkMesh,
+			CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+			CustomAabb = new Aabb(new Vector3(-wx, -wy, -wz), new Vector3(wx * 2, wy * 2, wz * 2)),
+		};
+		ink.SetSurfaceOverrideMaterial(0, tone.Pale ? _inkLight : _inkDark);
+		mesh.AddChild(ink);
+	}
+
+	public override void _Process(double delta)
+	{
+		if (_player == null) return;
+		float dt = (float)delta;
+
+		var me = GlobalPosition;
+		var you = _player.GlobalPosition;
+		float away = new Vector2(you.X - me.X, you.Z - me.Z).Length();
+
+		// Hopelessly far, or stuck the far side of something: reappear rather
+		// than trail forlornly across the map.
+		if (away > Warp)
+		{
+			GlobalPosition = you + new Vector3(_rng.Bell() * 2f, 0, _rng.Bell() * 2f);
+			_vel = Vector3.Zero;
+			return;
+		}
+
+		_think -= dt;
+		if (_think <= 0f) Decide(you, away);
+
+		Vector3 wish = Vector3.Zero;
+		if (!_sitting)
+		{
+			var d = new Vector3(_goal.X - me.X, 0, _goal.Z - me.Z);
+			if (d.LengthSquared() > 0.6f) wish = d.Normalized();
+		}
+
+		// Outside the leash the dog commits and comes to you; inside, it ambles.
+		float pace = away > Leash ? 1f : 0.42f;
+		_vel = _vel.Lerp(wish * Speed * pace, 1f - Mathf.Exp(-9f * dt));
+
+		var next = me + _vel * dt;
+
+		// A soft push loses to a route that wants to go straight through you,
+		// so the gap is a positional clamp instead.
+		var gap = new Vector3(next.X - you.X, 0, next.Z - you.Z);
+		if (gap.Length() < Personal && gap.LengthSquared() > 0.0001f)
+			next = you + gap.Normalized() * Personal;
+
+		next.Y = Mathf.Lerp(me.Y, GroundAt(next.X, next.Z), 1f - Mathf.Exp(-16f * dt));
+		GlobalPosition = next;
+
+		Animate(dt);
+	}
+
+	private void Decide(Vector3 you, float away)
+	{
+		_think = _rng.Range(0.6f, 2.2f);
+
+		if (away > Leash)
+		{
+			// Choose a natural nearby position rather than the player's exact
+			// spot: a pet standing inside you is not a pet.
+			float ang = _rng.Next() * Mathf.Tau;
+			float r = _rng.Range(Heel * 0.6f, Heel);
+			_goal = you + new Vector3(Mathf.Cos(ang) * r, 0, Mathf.Sin(ang) * r);
+			_sitting = false;
+			_sit = 0f;
+			return;
+		}
+
+		if (_sitting)
+		{
+			_sit -= _think;
+			if (_sit <= 0f) _sitting = false;
+			return;
+		}
+
+		if (_rng.Chance(0.22f))
+		{
+			_sitting = true;
+			_sit = _rng.Range(1.2f, 3.4f);
+			return;
+		}
+
+		float a = _rng.Next() * Mathf.Tau;
+		float rad = _rng.Range(1.5f, WanderR);
+		_goal = you + new Vector3(Mathf.Cos(a) * rad, 0, Mathf.Sin(a) * rad);
+	}
+
+	private float GroundAt(float x, float z)
+	{
+		float g = _nav.GroundY(Mathf.FloorToInt(x), Mathf.FloorToInt(z));
+		// Paddling rather than walking the bed: the surface is where the scene is.
+		return Mathf.Max(g, Palette.WaterLevel - 0.55f) == g ? g : Palette.WaterLevel - 0.35f;
+	}
+
+	private void Animate(float dt)
+	{
+		float speed = new Vector2(_vel.X, _vel.Z).Length();
+		float cadence = Mathf.Clamp(speed / Speed, 0f, 1f);
+		_phase += dt * (6f + cadence * 14f) * (cadence > 0.03f ? 1f : 0.15f);
+
+		if (speed > 0.6f)
+		{
+			float yaw = Mathf.Atan2(_vel.X, _vel.Z);
+			Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, yaw, 1f - Mathf.Exp(-11f * dt)), 0);
+		}
+
+		float swing = Mathf.Sin(_phase) * cadence * 0.95f;
+		float counter = Mathf.Sin(_phase + Mathf.Pi) * cadence * 0.95f;
+
+		if (_sitting)
+		{
+			_body.Rotation = new Vector3(Mathf.Lerp(_body.Rotation.X, -0.42f, 1f - Mathf.Exp(-8f * dt)), 0, 0);
+			_legBL.Rotation = new Vector3(1.15f, 0, 0);
+			_legBR.Rotation = new Vector3(1.15f, 0, 0);
+			_legFL.Rotation = new Vector3(0, 0, 0);
+			_legFR.Rotation = new Vector3(0, 0, 0);
+		}
+		else
+		{
+			_body.Rotation = new Vector3(Mathf.Lerp(_body.Rotation.X, 0f, 1f - Mathf.Exp(-8f * dt)), 0, 0);
+			_legFL.Rotation = new Vector3(swing, 0, 0);
+			_legFR.Rotation = new Vector3(counter, 0, 0);
+			_legBL.Rotation = new Vector3(counter, 0, 0);
+			_legBR.Rotation = new Vector3(swing, 0, 0);
+		}
+
+		// The tail is the whole personality: fast and wide when moving, a slow
+		// idle sweep when parked.
+		float wag = Mathf.Sin(_phase * (2.2f + cadence * 2.5f)) * (0.35f + cadence * 0.55f);
+		_tail.Rotation = new Vector3(-0.5f - cadence * 0.35f, wag, 0);
+		_head.Rotation = new Vector3(Mathf.Sin(_phase * 0.4f) * 0.08f, Mathf.Sin(_phase * 0.27f) * 0.22f, 0);
+		_body.Position = new Vector3(0, Mathf.Abs(Mathf.Sin(_phase)) * cadence * 0.045f, 0);
+	}
+}
