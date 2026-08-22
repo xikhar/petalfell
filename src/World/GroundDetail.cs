@@ -147,15 +147,16 @@ public static class GroundDetail
 			Quad(new(x0, y0, z0), new(x1, y0, z0), new(x1, y1, z0), new(x0, y1, z0), Vector3.Forward, szc, szc, 0f, phase);
 		}
 
-		/// <summary>A petal lying flat on the ground, rotated in plan.</summary>
-		public void Petal(float x, float y, float z, float s, float rot, Color color)
+		/// <summary>A tiny leaf or petal lying flat on the ground, rotated in plan.</summary>
+		public void Fleck(float x, float y, float z, float length, float width, float rot, Color color)
 		{
-			float c = Mathf.Cos(rot) * s * 0.5f, sn = Mathf.Sin(rot) * s * 0.5f;
+			var along = new Vector2(Mathf.Cos(rot), Mathf.Sin(rot)) * (length * 0.5f);
+			var across = new Vector2(-along.Y, along.X).Normalized() * (width * 0.5f);
 			Quad(
-				new(x - c + sn, y, z - sn - c),
-				new(x + c + sn, y, z + sn - c),
-				new(x + c - sn, y, z + sn + c),
-				new(x - c - sn, y, z - sn + c),
+				new(x - along.X, y, z - along.Y),
+				new(x + across.X, y, z + across.Y),
+				new(x + along.X, y, z + along.Y),
+				new(x - across.X, y, z - across.Y),
 				Vector3.Up, color, color, 0f, 0f);
 		}
 
@@ -302,15 +303,38 @@ public static class GroundDetail
 						rng.Pick(PebbleTops));
 				}
 
-				// Fallen petals, drifting under the big canopies.
-				if (rng.Chance(0.012f))
+				// Ground flecks are tiny and scarce. Most are leaves; flower petals are
+				// a rarer biome note rather than a uniform confetti scatter.
+				var biome = terrain.Plan.RegionAt(fx, fz).Biome;
+				float leafChance = biome switch
 				{
-					int n = rng.Int(1, 2);
-					for (int k = 0; k < n; k++)
-					{
-						f.Petal(fx + rng.Range(-0.36f, 0.36f), y + 0.02f, fz + rng.Range(-0.36f, 0.36f),
-							rng.Range(0.24f, 0.40f), rng.Next() * 1.57f, rng.Pick(Palette.PetalColors));
-					}
+					Biome.Forest => 0.008f,
+					Biome.Sakura => 0.007f,
+					Biome.Meadow => 0.005f,
+					Biome.Plains => 0.003f,
+					_ => 0.002f,
+				};
+				if (rng.Chance(leafChance))
+				{
+					f.Fleck(fx + rng.Range(-0.36f, 0.36f), y + 0.02f,
+						fz + rng.Range(-0.36f, 0.36f), rng.Range(0.10f, 0.18f),
+						rng.Range(0.045f, 0.075f), rng.Next() * Mathf.Pi,
+						rng.Pick(Palette.FallenLeafColors));
+				}
+
+				float petalChance = biome switch
+				{
+					Biome.Sakura => 0.006f,
+					Biome.Meadow => 0.0025f,
+					Biome.Forest => 0.0015f,
+					_ => 0f,
+				};
+				if (rng.Chance(petalChance))
+				{
+					f.Fleck(fx + rng.Range(-0.36f, 0.36f), y + 0.022f,
+						fz + rng.Range(-0.36f, 0.36f), rng.Range(0.08f, 0.14f),
+						rng.Range(0.04f, 0.07f), rng.Next() * Mathf.Pi,
+						rng.Pick(Palette.PetalColors));
 				}
 				continue;
 			}

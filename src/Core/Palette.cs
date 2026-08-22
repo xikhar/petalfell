@@ -78,11 +78,10 @@ public static class Palette
 	public static readonly Color InkDark = new Color(0.30f, 0.28f, 0.33f);
 	public static readonly Color InkLight = new Color(0.84f, 0.83f, 0.85f);
 	/// <summary>
-	/// Stroke width in framebuffer pixels. The reference ships 1.85 as its
-	/// authored default; the settings slider reaches 3.2 and that is what the
-	/// plan calls the visual starting point. 1.85 is canon until told otherwise.
+	/// Stroke width in framebuffer pixels. Kept here so the renderer and the
+	/// developer control always start from the same authored value.
 	/// </summary>
-	public const float InkWidth = 1.85f;
+	public const float InkWidth = 1.55f;
 
 	/* ---------------- grade ---------------- */
 	public const float GradeExposure = 1.12f;
@@ -97,6 +96,29 @@ public static class Palette
 	public static readonly Color[] PetalColors =
 	{
 		C(0xf7b9cc), C(0xf3a8c0), C(0xe6c0ef), C(0xd7b3ee), C(0xfbd3dc), C(0xf8e2c8),
+	};
+	public static readonly Color[] FallenLeafColors =
+	{
+		C(0xaab581), C(0x929f70), C(0xc4b989), C(0xb59b82),
+	};
+
+	// Particle material colors stay in authored sRGB: Godot's material and
+	// particle color properties perform their own source-color conversion.
+	public static readonly Color[] AirLeafColors =
+	{
+		Srgb(0xb5bf8d), Srgb(0x99a879), Srgb(0xc9bc91), Srgb(0xb89c87),
+	};
+	public static readonly Color[] AirPetalColors =
+	{
+		Srgb(0xf1b8ca), Srgb(0xe6c2eb), Srgb(0xf5d4dc), Srgb(0xd7b8e7),
+	};
+	public static readonly Color[] AirAlpineColors =
+	{
+		Srgb(0xaeb5c5), Srgb(0xb7b2c6), Srgb(0x9fabb6), Srgb(0xb3a9bb),
+	};
+	public static readonly Color[] AirReedColors =
+	{
+		Srgb(0xc3bd92), Srgb(0xaeb287), Srgb(0xd1c7a5),
 	};
 
 	/* ================= block library ================= */

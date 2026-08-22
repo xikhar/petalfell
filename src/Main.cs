@@ -32,6 +32,7 @@ public partial class Main : Node3D
 	private Dog _dog;
 	private Navigation _nav;
 	private ClickPulse _pulse;
+	private AmbientDrift _ambientDrift;
 	private ShaderMaterial _inkLight, _inkDark;
 	private Tools.DeveloperMenu _developerMenu;
 
@@ -106,7 +107,9 @@ public partial class Main : Node3D
 		_developerMenu.Setup(_inkLight, _inkDark, Rig);
 		AddChild(_developerMenu);
 
-		AddChild(BuildPetals(spawn));
+		_ambientDrift = new AmbientDrift { Name = "AmbientDrift" };
+		_ambientDrift.Setup(Terrain, spawn);
+		AddChild(_ambientDrift);
 		AddChild(BuildGrade());
 
 		GD.Print($"[petalfell] spawn {spawn}  chunks {_streamer.LoadedCount}");
@@ -390,16 +393,14 @@ public partial class Main : Node3D
 
 	public override void _Process(double delta)
 	{
-		if (Player == null || _capturing) return;
+		if (Player == null) return;
 		var p = Player.GlobalPosition;
+		_ambientDrift?.Advance(p, delta);
+		if (_capturing) return;
 
 		_streamer.UpdateAround(p);
 		Rig.Follow(p, Player.Velocity, delta);
 		_character.Animate(Player.Velocity, Player.IsOnFloor(), Player.Swimming, Player.StepLift, delta);
-
-		// Petals follow the camera focus rather than the world, so the effect
-		// is sparse punctuation everywhere instead of a weather system.
-		if (_petals != null) _petals.GlobalPosition = new Vector3(p.X, p.Y + 26f, p.Z);
 	}
 
 	public override void _UnhandledInput(InputEvent e)
@@ -507,55 +508,6 @@ public partial class Main : Node3D
 			Position = new Vector3(WorldSize * 0.5f, Palette.WaterLevel, WorldSize * 0.5f),
 			CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
 		};
-	}
-
-	private GpuParticles3D _petals;
-
-	/// <summary>
-	/// Sparse punctuation: a few large tumbling petals. Not weather, not
-	/// confetti — the reference frames hold maybe a dozen at a time.
-	/// </summary>
-	private GpuParticles3D BuildPetals(Vector3 at)
-	{
-		var mat = new ParticleProcessMaterial
-		{
-			EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Box,
-			EmissionBoxExtents = new Vector3(38f, 2f, 38f),
-			Direction = new Vector3(0.3f, -1f, 0.15f),
-			Spread = 22f,
-			Gravity = new Vector3(0, -0.9f, 0),
-			InitialVelocityMin = 0.6f,
-			InitialVelocityMax = 1.8f,
-			AngularVelocityMin = -160f,
-			AngularVelocityMax = 160f,
-			ScaleMin = 0.7f,
-			ScaleMax = 1.5f,
-			Damping = new Vector2(0.1f, 0.4f),
-		};
-
-		var quad = new QuadMesh { Size = new Vector2(0.34f, 0.22f) };
-		var qmat = new StandardMaterial3D
-		{
-			ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-			AlbedoColor = Palette.PetalColors[0],
-			BillboardMode = BaseMaterial3D.BillboardModeEnum.Particles,
-			VertexColorUseAsAlbedo = true,
-			Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-			CullMode = BaseMaterial3D.CullModeEnum.Disabled,
-		};
-		quad.Material = qmat;
-
-		_petals = new GpuParticles3D
-		{
-			Name = "Petals",
-			Amount = 160,
-			Lifetime = 9.0,
-			ProcessMaterial = mat,
-			DrawPass1 = quad,
-			Position = at + new Vector3(0, 26f, 0),
-			VisibilityAabb = new Aabb(new Vector3(-60, -60, -60), new Vector3(120, 120, 120)),
-		};
-		return _petals;
 	}
 
 	private CanvasLayer BuildGrade()
