@@ -18,6 +18,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
+GlobalInventory="*res://src/Items/GlobalInventory.cs"
 
 [display]
 

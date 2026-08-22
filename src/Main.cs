@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using Petalfell.Core;
+using Petalfell.Items;
 using Petalfell.Player;
 using Petalfell.Render;
+using Petalfell.UI;
 using Petalfell.World;
 
 namespace Petalfell;
@@ -33,6 +35,9 @@ public partial class Main : Node3D
 	private Navigation _nav;
 	private ClickPulse _pulse;
 	private MovementPuffs _movementPuffs;
+	private GlobalInventory _inventory;
+	private WorldItemSystem _worldItems;
+	private ItemGameplay _itemGameplay;
 	private AmbientDrift _ambientDrift;
 	private ShaderMaterial _inkLight, _inkDark, _waterMat;
 	private Tools.DeveloperMenu _developerMenu;
@@ -96,6 +101,19 @@ public partial class Main : Node3D
 		_dog = new Dog { Name = "Dog", Position = spawn + new Vector3(2.2f, 0, 1.4f) };
 		AddChild(_dog);
 		_dog.Setup(_nav, Player, _inkLight, _inkDark, Seed);
+
+		_inventory = GetNode<GlobalInventory>("/root/GlobalInventory");
+		_worldItems = new WorldItemSystem { Name = "WorldItems" };
+		AddChild(_worldItems);
+		_worldItems.Setup(_inkLight, _inkDark, Player);
+
+		_itemGameplay = new ItemGameplay { Name = "ItemGameplay" };
+		AddChild(_itemGameplay);
+		_itemGameplay.Setup(_inventory, _worldItems, Player, _character, _dog);
+
+		var quickLoadout = new QuickLoadoutHud { Name = "QuickLoadout" };
+		quickLoadout.Setup(_inventory);
+		AddChild(quickLoadout);
 
 		_pulse = new ClickPulse { Name = "ClickPulse" };
 		AddChild(_pulse);
@@ -469,6 +487,11 @@ public partial class Main : Node3D
 
 	public override void _UnhandledInput(InputEvent e)
 	{
+		if (_itemGameplay?.HandleInput(e) == true)
+		{
+			GetViewport().SetInputAsHandled();
+			return;
+		}
 		if (e is InputEventMouseButton mb && mb.Pressed)
 		{
 			switch (mb.ButtonIndex)
@@ -640,5 +663,13 @@ public partial class Main : Node3D
 		Bind("move_left", Key.A, Key.Left);
 		Bind("move_right", Key.D, Key.Right);
 		Bind("jump", Key.Space);
+		Bind("loadout_1", Key.Key1);
+		Bind("loadout_2", Key.Key2);
+		Bind("loadout_3", Key.Key3);
+		Bind("loadout_4", Key.Key4);
+		Bind("throw_left", Key.F);
+		Bind("throw_right", Key.G);
+		Bind("interact", Key.R);
+		Bind("dog_fetch", Key.U);
 	}
 }

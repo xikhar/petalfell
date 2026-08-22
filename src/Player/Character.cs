@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using Petalfell.Core;
+using Petalfell.Items;
 
 namespace Petalfell.Player;
 
@@ -64,6 +65,9 @@ public partial class Character : Node3D
 	private Node3D _swimPivot; // pitches the complete figure around its torso
 	private Node3D _body;      // everything that bobs
 	private Node3D _legL, _legR, _armL, _armR, _head;
+	private Node3D _handL, _handR;
+	private Node3D _heldL, _heldR;
+	private string _heldLId, _heldRId;
 	private readonly List<Node3D> _cloak = new();
 	private readonly List<float> _cloakLag = new();
 	private readonly List<Node3D> _scarfTail = new();
@@ -76,6 +80,8 @@ public partial class Character : Node3D
 	private float _airLead = 1f;
 	private bool _wasAirborne;
 	private float _bob;
+	private float _throwChargeL;
+	private float _throwChargeR;
 
 	private ShaderMaterial _inkLight, _inkDark;
 
@@ -173,6 +179,9 @@ public partial class Character : Node3D
 		var pivot = Pivot(_body, new Vector3(side * 2.7f * S, 7.6f * S, 0f));
 		Part(pivot, 1.6f, 3.6f, 1.6f, Hood, 0f, -1.5f, 0f);
 		Part(pivot, 1.5f, 1.3f, 1.5f, Tunic, 0f, -3.9f, 0f, outlined: false);
+		var hand = Pivot(pivot, new Vector3(0f, -4.1f * S, 0.12f * S));
+		if (side < 0) _handL = hand;
+		else _handR = hand;
 		return pivot;
 	}
 
@@ -230,6 +239,38 @@ public partial class Character : Node3D
 		ink.SetSurfaceOverrideMaterial(0, tone.Pale ? _inkLight : _inkDark);
 		mesh.AddChild(ink);
 		return mesh;
+	}
+
+	/// <summary>Refresh one hand from the inventory without rebuilding the character.</summary>
+	public void SetHeldItem(ItemHand hand, ItemDefinition item)
+	{
+		ref Node3D visual = ref (hand == ItemHand.Left ? ref _heldL : ref _heldR);
+		ref string currentId = ref (hand == ItemHand.Left ? ref _heldLId : ref _heldRId);
+		var anchor = hand == ItemHand.Left ? _handL : _handR;
+		if (anchor == null || currentId == item?.Id) return;
+
+		if (visual != null && GodotObject.IsInstanceValid(visual)) visual.QueueFree();
+		visual = null;
+		currentId = item?.Id;
+		if (item == null) return;
+
+		visual = ItemVisuals.Build(item, _inkLight, _inkDark);
+		anchor.AddChild(visual);
+		visual.Position = new Vector3(0f, -0.06f, 0.10f);
+		visual.Rotation = new Vector3(0.08f, 0f,
+			hand == ItemHand.Left ? -0.13f : 0.13f);
+	}
+
+	public Vector3 HandWorldPosition(ItemHand hand)
+	{
+		var anchor = hand == ItemHand.Left ? _handL : _handR;
+		return anchor?.GlobalPosition ?? GlobalPosition + Vector3.Up * 1.5f;
+	}
+
+	public void SetThrowCharge(ItemHand hand, float amount)
+	{
+		if (hand == ItemHand.Left) _throwChargeL = Mathf.Clamp(amount, 0f, 1f);
+		else _throwChargeR = Mathf.Clamp(amount, 0f, 1f);
 	}
 
 	/// <summary>
@@ -347,6 +388,14 @@ public partial class Character : Node3D
 		_armR.Rotation = landArmR.Lerp(swimArmR, swim);
 		_legL.Rotation = landLegL.Lerp(swimLegL, swim);
 		_legR.Rotation = landLegR.Lerp(swimLegR, swim);
+
+		// Pull the selected hand back while charging. This is deliberately layered
+		// after locomotion so the held object remains readable while walking or
+		// swimming instead of fighting the procedural gait for ownership.
+		float chargeL = Ease01(_throwChargeL);
+		float chargeR = Ease01(_throwChargeR);
+		_armL.Rotation = _armL.Rotation.Lerp(new Vector3(0.72f, -0.10f, -0.38f), chargeL);
+		_armR.Rotation = _armR.Rotation.Lerp(new Vector3(0.72f, 0.10f, 0.38f), chargeR);
 
 		// Breathing idle plus a two-per-stride bob.
 		float idle = Mathf.Sin(_phase * 0.35f + 1.3f) * 0.012f;

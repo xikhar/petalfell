@@ -154,7 +154,26 @@ snapshot, not a design target or implementation guide.
 - A far-distance recovery reposition remains for cases where the companion is lost far
   outside its useful following range.
 
-## 6. Tools and interface currently present
+## 6. Inventory and object gameplay
+
+- A global inventory autoload owns 24 storage slots using stable item IDs and stack
+  quantities, ready to be serialized independently of scene nodes.
+- Four quick-loadout slots are separate from storage. Plain `1`–`4` selects a slot
+  for the right hand; `Shift+1`–`Shift+4` selects it for the left hand.
+- The first concrete item is a stackable, one-handed stick. New games currently begin
+  with one stick assigned to quick slot 1.
+- The traveller displays equipped items at articulated hand anchors. `F` charges and
+  throws the left-hand item; `G` does the same for the right hand.
+- Throwing removes the physical copy from inventory and creates a rigid, colliding
+  world item. Throw distance and lift follow the time the button was held.
+- `R` performs the current shared interaction: collecting the nearest world item back
+  into inventory. Its loadout assignment survives while its quantity is zero.
+- `U` commands the dog to retrieve the latest thrown stick. The dog travels to it,
+  carries it visibly in its mouth, returns, and drops it beside the player for pickup.
+- A compact translucent four-slot quickbar shows item quantity and left/right-hand
+  ownership without introducing a full inventory screen.
+
+## 7. Tools and interface currently present
 
 - A standalone developer overlay toggled with the tilde/backtick key.
 - Developer sliders currently control outline width and the minimum and maximum camera
@@ -166,7 +185,7 @@ snapshot, not a design target or implementation guide.
 - There is currently no game-facing HUD, pause menu, settings menu, inventory UI, or
   map UI in the active project.
 
-## 7. Defined but not yet realized as gameplay content
+## 8. Defined but not yet realized as gameplay content
 
 The Chapter 1 map package already reserves and identifies several future features, but
 the markers are not the same as completed locations.
@@ -181,12 +200,12 @@ the markers are not the same as completed locations.
 - Generated river bridges exist, but the broader authored structure and building kits
   do not.
 
-## 8. Major game systems not yet present
+## 9. Major game systems not yet present
 
 - NPC populations, dialogue, schedules, and reputation.
-- General interaction and artifact systems.
-- Inventory, equipment, left/right-hand use, hot loadout, collection, consumables,
-  throwing, weapons, crafting, and trading.
+- General NPC, structure, artifact, and contextual interaction systems beyond world-item pickup.
+- Full inventory management, loadout assignment UI, consumables, tools, weapons,
+  crafting, trading, and two-handed item behavior.
 - Quests, chapter progression, discoveries, and finished Chapter 1 narrative content.
 - Save files and persistent world-state changes.
 - Audio and music systems.
@@ -195,4 +214,3 @@ the markers are not the same as completed locations.
 - Finished villages, towns, city-scale areas, ruins, abandoned buildings, and authored
   road network.
 - The target compositor-based union-coverage outline renderer.
-

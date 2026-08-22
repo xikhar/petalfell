@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using Petalfell.Core;
+using Petalfell.Items;
 using Petalfell.World;
 
 namespace Petalfell.Player;
@@ -60,7 +61,7 @@ public partial class Dog : Node3D
 	private static readonly Tone Collar = new(0xefb173);
 
 
-	private Node3D _body, _head, _tail, _legFL, _legFR, _legBL, _legBR;
+	private Node3D _body, _head, _tail, _legFL, _legFR, _legBL, _legBR, _mouth;
 	private Navigation _nav;
 	private Node3D _player;
 	private Rng _rng;
@@ -77,6 +78,8 @@ public partial class Dog : Node3D
 	private List<Vector3> _route;
 	private int _routeIndex;
 	private ShaderMaterial _inkLight, _inkDark;
+	private WorldItem _fetchTarget;
+	private bool _carryingFetch;
 
 	public void Setup(Navigation nav, Node3D player, ShaderMaterial inkLight, ShaderMaterial inkDark, int seed)
 	{
@@ -101,6 +104,7 @@ public partial class Dog : Node3D
 		Box(_head, 2.0f, 1.9f, 1.9f, Coat, new Vector3(0, S * 0.5f, S * 0.3f));
 		Box(_head, 1.1f, 0.9f, 1.0f, Muzzle, new Vector3(0, S * 0.15f, S * 1.4f), outlined: false);
 		Box(_head, 0.4f, 0.35f, 0.3f, Nose, new Vector3(0, S * 0.3f, S * 1.95f), outlined: false);
+		_mouth = Pivot(_head, new Vector3(0f, S * 0.02f, S * 1.72f));
 		// Sit the ears on the head instead of embedding their lower halves in it.
 		Box(_head, 0.5f, 0.7f, 0.6f, CoatDeep, new Vector3(-S * 0.75f, S * 1.8f, -S * 0.1f), outlined: false);
 		Box(_head, 0.5f, 0.7f, 0.6f, CoatDeep, new Vector3(S * 0.75f, S * 1.8f, -S * 0.1f), outlined: false);
@@ -116,6 +120,21 @@ public partial class Dog : Node3D
 
 		_tail = Pivot(_body, new Vector3(0, S * 3.2f, -S * 2.0f));
 		Box(_tail, 0.5f, 1.5f, 0.5f, Coat, new Vector3(0, S * 0.6f, 0));
+	}
+
+	/// <summary>Command the dog to retrieve one physical stick from the world.</summary>
+	public bool Fetch(WorldItem item)
+	{
+		if (item == null || !GodotObject.IsInstanceValid(item) || !item.CanPickUp ||
+			item.Item != ItemCatalog.Stick)
+			return false;
+		_fetchTarget = item;
+		_carryingFetch = false;
+		_sitting = false;
+		_sit = 0f;
+		_route = null;
+		_think = 0f;
+		return true;
 	}
 
 	private Node3D Pivot(Node3D parent, Vector3 at)
@@ -183,7 +202,13 @@ public partial class Dog : Node3D
 			return;
 		}
 
+		bool fetching = UpdateFetchCommand(me, you, out Vector3 fetchDestination);
 		if (_route != null) AdvanceRouteTarget(me);
+		else if (fetching)
+		{
+			_goal = fetchDestination;
+			_sitting = false;
+		}
 		else
 		{
 			_think -= dt;
@@ -198,7 +223,7 @@ public partial class Dog : Node3D
 		}
 
 		// Outside the leash the dog commits and comes to you; inside, it ambles.
-		float pace = away > Leash ? 1f : 0.42f;
+		float pace = fetching ? 0.88f : (away > Leash ? 1f : 0.42f);
 		_vel = _vel.Lerp(wish * Speed * pace, 1f - Mathf.Exp(-9f * dt));
 
 		var next = me + _vel * dt;
@@ -227,7 +252,7 @@ public partial class Dog : Node3D
 			// ordinary height lerp to pull the dog through it. Stop on this side and
 			// ask the shared navigation graph for a legal route around.
 			_vel = Vector3.Zero;
-			Vector3 routeTarget = away > Leash ? you : _goal;
+			Vector3 routeTarget = fetching ? fetchDestination : (away > Leash ? you : _goal);
 			PlanRoute(me, routeTarget);
 			GlobalPosition = new Vector3(me.X, hereGround, me.Z);
 			Animate(dt);
@@ -238,6 +263,52 @@ public partial class Dog : Node3D
 		GlobalPosition = next;
 
 		Animate(dt);
+	}
+
+	private bool UpdateFetchCommand(Vector3 me, Vector3 you, out Vector3 destination)
+	{
+		destination = me;
+		if (_fetchTarget == null || !GodotObject.IsInstanceValid(_fetchTarget) ||
+			_fetchTarget.IsQueuedForDeletion())
+		{
+			_fetchTarget = null;
+			_carryingFetch = false;
+			return false;
+		}
+
+		if (!_carryingFetch)
+		{
+			destination = _fetchTarget.GlobalPosition;
+			float distance = new Vector2(destination.X - me.X, destination.Z - me.Z).Length();
+			if (distance > 0.92f) return true;
+
+			if (!_fetchTarget.BeginCarry(_mouth))
+			{
+				_fetchTarget = null;
+				return false;
+			}
+			_carryingFetch = true;
+			_route = null;
+			destination = you;
+			return true;
+		}
+
+		destination = you;
+		float homeDistance = new Vector2(you.X - me.X, you.Z - me.Z).Length();
+		if (homeDistance > 1.75f) return true;
+
+		var awayFromDog = new Vector3(you.X - me.X, 0f, you.Z - me.Z);
+		if (awayFromDog.LengthSquared() < 0.01f) awayFromDog = Vector3.Right;
+		var drop = you + awayFromDog.Normalized() * 1.15f;
+		drop.Y = GroundAt(drop.X, drop.Z);
+		_fetchTarget.Drop(drop);
+		_fetchTarget = null;
+		_carryingFetch = false;
+		_route = null;
+		_goal = me;
+		_vel = Vector3.Zero;
+		_think = 0.45f;
+		return false;
 	}
 
 	private void Decide(Vector3 you, float away)
