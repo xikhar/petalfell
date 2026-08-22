@@ -667,6 +667,8 @@ public partial class Main : Node3D
 		Bind("loadout_2", Key.Key2);
 		Bind("loadout_3", Key.Key3);
 		Bind("loadout_4", Key.Key4);
+		Bind("cycle_left_hand", Key.Z);
+		Bind("cycle_right_hand", Key.X);
 		Bind("throw_left", Key.F);
 		Bind("throw_right", Key.G);
 		Bind("interact", Key.R);

@@ -157,6 +157,36 @@ public partial class GlobalInventory : Node
 		return true;
 	}
 
+	/// <summary>
+	/// Advance one hand through populated quick slots, then through an empty-hand
+	/// state. With only one assigned item this naturally acts as equip/unequip.
+	/// </summary>
+	public bool CycleHand(ItemHand hand)
+	{
+		int current = hand == ItemHand.Left ? _leftLoadout : _rightLoadout;
+		int next = -1;
+		for (int offset = 1; offset <= LoadoutCapacity; offset++)
+		{
+			int candidate = (current + offset + LoadoutCapacity) % LoadoutCapacity;
+			var item = LoadoutItem(candidate);
+			if (item == null || !item.Equipable || Count(item.Id) == 0) continue;
+			next = candidate;
+			break;
+		}
+
+		// Once the search wraps back to the current item, insert the empty-hand
+		// state instead of selecting the same object again.
+		if (next == current || next < 0)
+		{
+			if (current < 0) return false;
+			if (hand == ItemHand.Left) _leftLoadout = -1;
+			else _rightLoadout = -1;
+			Changed?.Invoke();
+			return true;
+		}
+		return SelectForHand(next, hand);
+	}
+
 	public ItemDefinition HeldItem(ItemHand hand)
 	{
 		int selected = hand == ItemHand.Left ? _leftLoadout : _rightLoadout;

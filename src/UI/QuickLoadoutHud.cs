@@ -4,14 +4,12 @@ using Petalfell.Items;
 namespace Petalfell.UI;
 
 /// <summary>
-/// The only persistent inventory UI: four quiet quick slots. Full storage can
-/// later live in a separate inventory screen without changing this component.
+/// Four translucent sockets in the lower-left corner. Left and right mirror
+/// the traveller's hands; top and bottom are intentionally reserved for the
+/// future consumable layer rather than pretending to be inventory slots now.
 /// </summary>
 public partial class QuickLoadoutHud : CanvasLayer
 {
-	private readonly PanelContainer[] _panels = new PanelContainer[GlobalInventory.LoadoutCapacity];
-	private readonly Label[] _names = new Label[GlobalInventory.LoadoutCapacity];
-	private readonly Label[] _hands = new Label[GlobalInventory.LoadoutCapacity];
 	private GlobalInventory _inventory;
 
 	public void Setup(GlobalInventory inventory) => _inventory = inventory;
@@ -19,128 +17,96 @@ public partial class QuickLoadoutHud : CanvasLayer
 	public override void _Ready()
 	{
 		Layer = 220;
-		var root = new Control
+		var display = new LoadoutCross
 		{
-			Name = "QuickLoadoutRoot",
+			Name = "HandLoadout",
 			MouseFilter = Control.MouseFilterEnum.Ignore,
-			AnchorLeft = 0.5f,
-			AnchorRight = 0.5f,
+			AnchorLeft = 0f,
+			AnchorRight = 0f,
 			AnchorTop = 1f,
 			AnchorBottom = 1f,
-			OffsetLeft = -212f,
-			OffsetRight = 212f,
-			OffsetTop = -76f,
-			OffsetBottom = -18f,
+			OffsetLeft = 24f,
+			OffsetRight = 188f,
+			OffsetTop = -192f,
+			OffsetBottom = -28f,
 		};
-		AddChild(root);
+		display.Setup(_inventory);
+		AddChild(display);
+	}
 
-		var row = new HBoxContainer
+	private partial class LoadoutCross : Control
+	{
+		private const float Radius = 30f;
+		private const float Offset = 50f;
+		private static readonly Vector2 Centre = new(82f, 82f);
+
+		private GlobalInventory _inventory;
+
+		public void Setup(GlobalInventory inventory) => _inventory = inventory;
+
+		public override void _Ready()
 		{
-			MouseFilter = Control.MouseFilterEnum.Ignore,
-		};
-		row.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-		row.AddThemeConstantOverride("separation", 8);
-		root.AddChild(row);
-
-		for (int i = 0; i < GlobalInventory.LoadoutCapacity; i++)
-		{
-			var panel = new PanelContainer
-			{
-				CustomMinimumSize = new Vector2(100f, 58f),
-				SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-				MouseFilter = Control.MouseFilterEnum.Ignore,
-			};
-			_panels[i] = panel;
-			row.AddChild(panel);
-
-			var margin = new MarginContainer();
-			margin.AddThemeConstantOverride("margin_left", 9);
-			margin.AddThemeConstantOverride("margin_top", 6);
-			margin.AddThemeConstantOverride("margin_right", 9);
-			margin.AddThemeConstantOverride("margin_bottom", 5);
-			panel.AddChild(margin);
-
-			var stack = new VBoxContainer();
-			stack.AddThemeConstantOverride("separation", 0);
-			margin.AddChild(stack);
-
-			var header = new HBoxContainer();
-			stack.AddChild(header);
-			var number = new Label { Text = (i + 1).ToString() };
-			number.AddThemeFontSizeOverride("font_size", 11);
-			number.AddThemeColorOverride("font_color", new Color(0.25f, 0.25f, 0.30f, 0.58f));
-			header.AddChild(number);
-			_hands[i] = new Label
-			{
-				Text = "",
-				HorizontalAlignment = HorizontalAlignment.Right,
-				SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-			};
-			_hands[i].AddThemeFontSizeOverride("font_size", 11);
-			header.AddChild(_hands[i]);
-
-			_names[i] = new Label
-			{
-				Text = "—",
-				HorizontalAlignment = HorizontalAlignment.Center,
-			};
-			_names[i].AddThemeFontSizeOverride("font_size", 14);
-			_names[i].AddThemeColorOverride("font_color", new Color(0.18f, 0.18f, 0.23f, 0.92f));
-			stack.AddChild(_names[i]);
+			if (_inventory != null) _inventory.Changed += QueueRedraw;
+			QueueRedraw();
 		}
 
-		if (_inventory != null) _inventory.Changed += Refresh;
-		Refresh();
-	}
-
-	public override void _ExitTree()
-	{
-		if (_inventory != null) _inventory.Changed -= Refresh;
-	}
-
-	private void Refresh()
-	{
-		if (_inventory == null || _panels[0] == null) return;
-		for (int i = 0; i < GlobalInventory.LoadoutCapacity; i++)
+		public override void _ExitTree()
 		{
-			var item = _inventory.LoadoutItem(i);
-			int quantity = item == null ? 0 : _inventory.Count(item.Id);
-			_names[i].Text = item == null ? "—" : $"{item.Name}  {quantity}";
-
-			bool left = _inventory.LeftLoadout == i;
-			bool right = _inventory.RightLoadout == i;
-			_hands[i].Text = left && right ? "L  R" : left ? "L" : right ? "R" : "";
-			_hands[i].AddThemeColorOverride("font_color",
-				left ? new Color(0.48f, 0.35f, 0.49f, 0.92f)
-				     : new Color(0.27f, 0.42f, 0.48f, 0.92f));
-
-			Color border = left && right
-				? new Color(0.52f, 0.43f, 0.58f, 0.78f)
-				: left
-					? new Color(0.61f, 0.47f, 0.59f, 0.72f)
-					: right
-						? new Color(0.42f, 0.59f, 0.65f, 0.72f)
-						: new Color(1f, 1f, 1f, 0.42f);
-			_panels[i].AddThemeStyleboxOverride("panel", MakePanel(border,
-				item == null || quantity == 0 ? 0.34f : 0.70f));
+			if (_inventory != null) _inventory.Changed -= QueueRedraw;
 		}
-	}
 
-	private static StyleBoxFlat MakePanel(Color border, float opacity)
-	{
-		return new StyleBoxFlat
+		public override void _Draw()
 		{
-			BgColor = new Color(0.98f, 0.98f, 1f, opacity),
-			BorderColor = border,
-			BorderWidthLeft = 1,
-			BorderWidthTop = 1,
-			BorderWidthRight = 1,
-			BorderWidthBottom = 1,
-			CornerRadiusTopLeft = 9,
-			CornerRadiusTopRight = 9,
-			CornerRadiusBottomLeft = 9,
-			CornerRadiusBottomRight = 9,
-		};
+			var left = Centre + Vector2.Left * Offset;
+			var right = Centre + Vector2.Right * Offset;
+			var top = Centre + Vector2.Up * Offset;
+			var bottom = Centre + Vector2.Down * Offset;
+
+			var leftItem = _inventory?.HeldItem(ItemHand.Left);
+			var rightItem = _inventory?.HeldItem(ItemHand.Right);
+			DrawSocket(top, occupied: false);
+			DrawSocket(bottom, occupied: false);
+			DrawSocket(left, leftItem != null);
+			DrawSocket(right, rightItem != null);
+			DrawItem(left, leftItem);
+			DrawItem(right, rightItem);
+		}
+
+		private void DrawSocket(Vector2 centre, bool occupied)
+		{
+			var fill = new Color(0.96f, 0.96f, 1f, occupied ? 0.17f : 0.09f);
+			var edge = new Color(0.98f, 0.98f, 1f, occupied ? 0.72f : 0.48f);
+			DrawCircle(centre, Radius, fill, filled: true, width: -1f, antialiased: true);
+			DrawArc(centre, Radius, 0f, Mathf.Tau, 64, edge, 1.65f, antialiased: true);
+		}
+
+		private void DrawItem(Vector2 centre, ItemDefinition item)
+		{
+			if (item == ItemCatalog.Stick) DrawStick(centre);
+		}
+
+		private void DrawStick(Vector2 centre)
+		{
+			// A tiny vector version of the blocky world stick. Drawing it here keeps
+			// the HUD resolution-independent and avoids a one-item texture atlas.
+			var axis = new Vector2(0.68f, -0.73f);
+			var a = centre - axis * 17f;
+			var b = centre + axis * 17f;
+			var outline = new Color(0.29f, 0.22f, 0.27f, 0.86f);
+			var wood = new Color(0.62f, 0.40f, 0.27f, 0.98f);
+			var highlight = new Color(0.76f, 0.53f, 0.35f, 0.82f);
+
+			DrawLine(a, b, outline, 12f, antialiased: true);
+			DrawLine(a, b, wood, 8f, antialiased: true);
+			DrawLine(a + new Vector2(1f, -1f), b + new Vector2(1f, -1f),
+				highlight, 2f, antialiased: true);
+			DrawCircle(a, 4f, wood, filled: true, width: -1f, antialiased: true);
+			DrawCircle(b, 4f, wood, filled: true, width: -1f, antialiased: true);
+
+			var branchRoot = centre + axis * 5f;
+			var branchEnd = branchRoot + new Vector2(8f, 2f);
+			DrawLine(branchRoot, branchEnd, outline, 7f, antialiased: true);
+			DrawLine(branchRoot, branchEnd, wood, 4f, antialiased: true);
+		}
 	}
 }
-

@@ -160,6 +160,8 @@ snapshot, not a design target or implementation guide.
   quantities, ready to be serialized independently of scene nodes.
 - Four quick-loadout slots are separate from storage. Plain `1`–`4` selects a slot
   for the right hand; `Shift+1`–`Shift+4` selects it for the left hand.
+- `Z` cycles the left hand through available loadout items and empty; `X` does the
+  same for the right hand.
 - The first concrete item is a stackable, one-handed stick. New games currently begin
   with one stick assigned to quick slot 1.
 - The traveller displays equipped items at articulated hand anchors. `F` charges and
@@ -170,8 +172,9 @@ snapshot, not a design target or implementation guide.
   into inventory. Its loadout assignment survives while its quantity is zero.
 - `U` commands the dog to retrieve the latest thrown stick. The dog travels to it,
   carries it visibly in its mouth, returns, and drops it beside the player for pickup.
-- A compact translucent four-slot quickbar shows item quantity and left/right-hand
-  ownership without introducing a full inventory screen.
+- A compact translucent four-socket cross sits in the lower-left. Its left and right
+  circles show small vector icons for the currently held items; the top and bottom
+  circles are quiet placeholders for future consumable slots.
 
 ## 7. Tools and interface currently present
 

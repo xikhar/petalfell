@@ -48,6 +48,17 @@ public partial class ItemGameplay : Node
 
 		if (key.Pressed)
 		{
+			if (inputEvent.IsActionPressed("cycle_left_hand"))
+			{
+				_inventory.CycleHand(ItemHand.Left);
+				return true;
+			}
+			if (inputEvent.IsActionPressed("cycle_right_hand"))
+			{
+				_inventory.CycleHand(ItemHand.Right);
+				return true;
+			}
+
 			for (int i = 0; i < GlobalInventory.LoadoutCapacity; i++)
 			{
 				if (!inputEvent.IsActionPressed($"loadout_{i + 1}")) continue;
@@ -134,4 +145,3 @@ public partial class ItemGameplay : Node
 		_character?.SetHeldItem(ItemHand.Right, _inventory.HeldItem(ItemHand.Right));
 	}
 }
-
