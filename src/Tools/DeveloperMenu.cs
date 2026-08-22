@@ -165,6 +165,8 @@ public partial class DeveloperMenu : CanvasLayer
 		float width = (float)value;
 		_inkLight.SetShaderParameter("core_width", width);
 		_inkDark.SetShaderParameter("core_width", width);
+		if (_inkLight.NextPass is ShaderMaterial silhouette)
+			silhouette.SetShaderParameter("core_width", width);
 	}
 
 	private void SetMinimumZoom(double value)

@@ -54,7 +54,10 @@ public static class ChunkMesher
 		public Vector3 Start, End;
 		public int Dir0, Dir1;
 		public bool Light;
-		public bool CapStart, CapEnd;
+		// Six four-bit face-pair codes fit exactly in a float-backed custom
+		// channel. The shader evaluates them against the live camera and knows
+		// whether at least two incident edges are actually pale at each endpoint.
+		public uint PaleEdgesAtStart, PaleEdgesAtEnd;
 	}
 
 	public sealed class ChunkMeshData
@@ -320,8 +323,7 @@ public static class ChunkMesher
 
 	/// <summary>
 	/// Walk the edge lattice along each axis and merge adjacent unit edges with
-	/// identical topology into clean long runs, then resolve cap ownership at
-	/// mixed junctions.
+	/// identical topology into clean long runs.
 	/// </summary>
 	private static void MergeRuns(VoxelGrid grid, int x0, int z0, int x1, int z1, int yTop)
 	{
@@ -383,7 +385,7 @@ public static class ChunkMesher
 			}
 		}
 
-		ResolveCaps();
+		EncodeEndpointTopology(grid, x0, z0);
 	}
 
 	private static bool IsLight(in EdgeRec r) =>
@@ -414,43 +416,59 @@ public static class ChunkMesher
 			Start = start, End = end,
 			Dir0 = d0, Dir1 = d1,
 			Light = IsLight(rec),
-			CapStart = true, CapEnd = true,
 		});
 	}
 
 	/// <summary>
-	/// A round cap exists to close the crack at a stroke's free end. Where two
-	/// or more runs meet, every one of them already fills that corner, and each
-	/// cap then extends half a stroke past the vertex and lies on top of its
-	/// neighbours. Ink is composited by mixing rather than by a max blend, so
-	/// overlapping strokes settle further toward the ink colour than a single
-	/// one does and every junction comes out darker and heavier than the lines
-	/// feeding it — a visible blob at every corner of every block.
-	///
-	/// So a cap survives only at a genuinely free end. At a junction all
-	/// incident runs stop dead at the vertex plane, and the corner is filled by
-	/// the strokes themselves.
+	/// Packs every pale-eligible unit edge incident to each run endpoint. This is
+	/// read from the complete edge lattice rather than from merged runs, so a
+	/// dark branch meeting the middle of one long pale run still sees the two
+	/// pale directions passing through that vertex.
 	/// </summary>
-	private static void ResolveCaps()
+	private static void EncodeEndpointTopology(VoxelGrid grid, int x0, int z0)
 	{
-		// No caps, anywhere.
-		//
-		// A cap extends the stroke half a width past its endpoint. In a blocky
-		// world a run almost always terminates at a vertex where other runs
-		// meet, so the extension is never needed to close a corner — but where
-		// the run it was meant to meet is hidden, in the next chunk, or simply
-		// perpendicular and pointing away from the camera, the extension has
-		// nothing to hide behind and reads as a short tick sticking out of the
-		// corner at right angles to both lines. That artifact is far more
-		// visible than the hairline it was added to prevent, and it also stops
-		// overlapping caps from settling the junction darker than the strokes
-		// feeding it.
 		for (int i = 0; i < _runs.Count; i++)
 		{
-			var r = _runs[i];
-			r.CapStart = false;
-			r.CapEnd = false;
-			_runs[i] = r;
+			var run = _runs[i];
+			run.PaleEdgesAtStart = PackPaleEdges(run.Start);
+			run.PaleEdgesAtEnd = PackPaleEdges(run.End);
+			_runs[i] = run;
+		}
+
+		uint PackPaleEdges(Vector3 point)
+		{
+			int lx = Mathf.RoundToInt(point.X) - x0 + 1;
+			int ly = Mathf.RoundToInt(point.Y);
+			int lz = Mathf.RoundToInt(point.Z) - z0 + 1;
+			uint packed = 0;
+			int shift = 0;
+
+			for (int axis = 0; axis < 3; axis++)
+			{
+				Add(lx, ly, lz, axis);
+				int ex = lx, ey = ly, ez = lz;
+				if (axis == 0) ex--;
+				else if (axis == 1) ey--;
+				else ez--;
+				Add(ex, ey, ez, axis);
+			}
+			return packed;
+
+			void Add(int ex, int ey, int ez, int axis)
+			{
+				if (shift >= 24 || ex < 0 || ez < 0 || ey < 0 ||
+					ex >= Span || ez >= Span || ey >= grid.Height) return;
+				var edge = _edges[EdgeIndex(ex, ey, ez, axis)];
+				if (!IsLight(edge)) return;
+
+				int a = edge.Dir0 - 1;
+				int b = edge.Dir1 - 1;
+				if (a > b) (a, b) = (b, a);
+				if (a < 0 || b <= a) return;
+				int code = 1 + a * (11 - a) / 2 + (b - a - 1);
+				packed |= (uint)code << shift;
+				shift += 4;
+			}
 		}
 	}
 
@@ -498,9 +516,9 @@ public static class ChunkMesher
 
 					int o = (v + k) * 4;
 					c0[o + 0] = r.Start.X; c0[o + 1] = r.Start.Y; c0[o + 2] = r.Start.Z;
-					c0[o + 3] = r.CapStart ? 1f : 0f;
+					c0[o + 3] = r.PaleEdgesAtStart;
 					c1[o + 0] = r.End.X; c1[o + 1] = r.End.Y; c1[o + 2] = r.End.Z;
-					c1[o + 3] = r.CapEnd ? 1f : 0f;
+					c1[o + 3] = r.PaleEdgesAtEnd;
 					c2[o + 0] = na.X; c2[o + 1] = na.Y; c2[o + 2] = na.Z;
 					c2[o + 3] = r.Light ? 1f : 0f;
 					c3[o + 0] = nb.X; c3[o + 1] = nb.Y; c3[o + 2] = nb.Z;

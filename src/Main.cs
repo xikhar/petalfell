@@ -461,25 +461,23 @@ public partial class Main : Node3D
 	{
 		var inkShader = GD.Load<Shader>("res://shaders/ink.gdshader");
 
-		// Both materials carry identical settings. The shader decides pale
-		// versus dark per fragment from the camera, so the split into two
-		// materials exists only to control draw order: pale-eligible runs first,
-		// runs that can never be pale second, so dark coverage wins at a mixed
-		// junction and the joint stays continuous.
-		ShaderMaterial Ink(int priority)
+		// Pale runs draw first and dark runs draw over them by default. Endpoint
+		// topology in the shader makes the sole exception: at least two actually
+		// pale incident edges mask dark coverage inside their shared vertex.
+		ShaderMaterial Ink(int priority, int pass = 0)
 		{
 			var m = new ShaderMaterial { Shader = inkShader, RenderPriority = priority };
 			m.SetShaderParameter("ink_dark", Palette.InkDark);
 			m.SetShaderParameter("ink_light", Palette.InkLight);
-			m.SetShaderParameter("dark_opacity", Palette.InkDarkOpacity);
-			m.SetShaderParameter("light_opacity", Palette.InkLightOpacity);
 			m.SetShaderParameter("core_width", Palette.InkWidth);
+			m.SetShaderParameter("ink_pass", pass);
 			m.SetShaderParameter("water_level", Palette.WaterLevel);
 			return m;
 		}
 
-		_inkLight = Ink(1);
-		_inkDark = Ink(2);
+		_inkLight = Ink(1, pass: 0);
+		_inkDark = Ink(2, pass: 2);
+		_inkLight.NextPass = Ink(3, pass: 1);
 	}
 
 	private ShaderMaterial MakeDetailMaterial() =>

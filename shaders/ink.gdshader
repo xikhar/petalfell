@@ -27,17 +27,15 @@ render_mode unshaded, blend_mix, depth_draw_never, depth_test_disabled,
 // laid over a pastel painting.
 uniform vec3 ink_dark : source_color = vec3(0.47, 0.42, 0.52);
 uniform vec3 ink_light : source_color = vec3(0.97, 0.95, 0.97);
-uniform float dark_opacity : hint_range(0.0, 1.0) = 0.55;
-uniform float light_opacity : hint_range(0.0, 1.0) = 0.22;
-
 uniform float core_width = 3.2;
+// Pass 0 draws only pale fragments, pass 1 only the dark silhouette fragments
+// of that same eligible geometry, and pass 2 draws permanently-dark runs.
+// Splitting rather than overdrawing also keeps the antialias fringe single-width.
+uniform int ink_pass = 0;
 uniform float water_level = 24.35;
 // How much of a stroke survives below the waterline. The transition is a hard
 // stop with only the softness needed for clean antialiasing.
 uniform float submerged_ink : hint_range(0.0, 1.0) = 0.0;
-uniform float fade_start = 150.0;
-uniform float fade_end = 420.0;
-
 uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
 
 varying flat vec2 v_screen_start;
@@ -46,18 +44,57 @@ varying flat float v_depth_start;
 varying flat float v_depth_end;
 varying flat vec3 v_ws_start;
 varying flat vec3 v_ws_end;
-varying flat vec2 v_caps;
+varying flat vec2 v_endpoint_pale_count;
 varying flat vec3 v_normal_a;
 varying flat vec3 v_normal_b;
 varying flat float v_pale_eligible;
+
+vec3 face_direction(int direction) {
+	if (direction == 0) return vec3(1.0, 0.0, 0.0);
+	if (direction == 1) return vec3(-1.0, 0.0, 0.0);
+	if (direction == 2) return vec3(0.0, 1.0, 0.0);
+	if (direction == 3) return vec3(0.0, -1.0, 0.0);
+	if (direction == 4) return vec3(0.0, 0.0, 1.0);
+	return vec3(0.0, 0.0, -1.0);
+}
+
+ivec2 decode_face_pair(int code) {
+	int pair = code - 1;
+	if (pair < 5) return ivec2(0, pair + 1);
+	pair -= 5;
+	if (pair < 4) return ivec2(1, pair + 2);
+	pair -= 4;
+	if (pair < 3) return ivec2(2, pair + 3);
+	pair -= 3;
+	if (pair < 2) return ivec2(3, pair + 4);
+	return ivec2(4, 5);
+}
+
+float pale_incident_count(float packed_value, vec3 to_camera, mat3 model_basis) {
+	int packed = int(packed_value + 0.5);
+	float count = 0.0;
+	for (int edge = 0; edge < 6; edge++) {
+		int code = packed % 16;
+		packed /= 16;
+		if (code == 0) break;
+		ivec2 pair = decode_face_pair(code);
+		vec3 normal_a = normalize(model_basis * face_direction(pair.x));
+		vec3 normal_b = normalize(model_basis * face_direction(pair.y));
+		count += step(0.02, min(dot(normal_a, to_camera), dot(normal_b, to_camera)));
+	}
+	return count;
+}
 
 void vertex() {
 	vec3 ws_start = (MODEL_MATRIX * vec4(CUSTOM0.xyz, 1.0)).xyz;
 	vec3 ws_end = (MODEL_MATRIX * vec4(CUSTOM1.xyz, 1.0)).xyz;
 
-	v_normal_a = normalize(mat3(MODEL_MATRIX) * CUSTOM2.xyz);
-	v_normal_b = normalize(mat3(MODEL_MATRIX) * CUSTOM3.xyz);
-	v_caps = vec2(CUSTOM0.w, CUSTOM1.w);
+	mat3 model_basis = mat3(MODEL_MATRIX);
+	v_normal_a = normalize(model_basis * CUSTOM2.xyz);
+	v_normal_b = normalize(model_basis * CUSTOM3.xyz);
+	v_endpoint_pale_count = vec2(
+		pale_incident_count(CUSTOM0.w, normalize(CAMERA_POSITION_WORLD - ws_start), model_basis),
+		pale_incident_count(CUSTOM1.w, normalize(CAMERA_POSITION_WORLD - ws_end), model_basis));
 	// Baked half of the rule: both owning faces pale, manifold, not a concave
 	// fold. The camera half is decided in the fragment stage.
 	v_pale_eligible = CUSTOM2.w;
@@ -118,8 +155,7 @@ void vertex() {
 		bool at_end = VERTEX.x > 0.5;
 		vec4 pick = at_end ? ce : cs;
 		vec2 base = at_end ? se : ss;
-		float cap = at_end ? CUSTOM1.w : CUSTOM0.w;
-		float extend = at_end ? half_w * cap : -half_w * cap;
+		float extend = at_end ? half_w : -half_w;
 
 		vec2 screen = base + perp * (VERTEX.y * half_w) + dir * extend;
 		vec2 ndc = (screen / VIEWPORT_SIZE) * 2.0 - 1.0;
@@ -141,11 +177,6 @@ void fragment() {
 	float bb = dot(ba, ba);
 	float t = bb > 0.0001 ? dot(pa, ba) / bb : 0.0;
 	float tc = clamp(t, 0.0, 1.0);
-
-	// A run that does not own its cap stops dead at the vertex plane, so a dark
-	// stroke cannot protrude half a width into the pale run it meets.
-	if (t < 0.0 && v_caps.x < 0.5) discard;
-	if (t > 1.0 && v_caps.y < 0.5) discard;
 
 	float dist = length(pa - ba * tc);
 	float coverage = 1.0 - smoothstep(core_width * 0.5 - 0.5, core_width * 0.5 + 0.5, dist);
@@ -176,19 +207,29 @@ void fragment() {
 	// Pale only where BOTH faces front the camera. Where one has turned away the
 	// edge is a silhouette, and a silhouette is always dark — that contrast is
 	// what separates a shape from whatever is behind it.
-	float both = smoothstep(0.0, 0.16, min(face_a, face_b));
+	float both = step(0.02, min(face_a, face_b));
 	float pale = v_pale_eligible * both;
+	if (ink_pass == 0 && pale < 0.5) discard;
+	if (ink_pass == 1 && pale > 0.5) discard;
+
+
+	// All strokes keep their full round reach. Dark wins normally, including at
+	// one-pale/one-dark and one-pale/many-dark vertices. Only a vertex with two
+	// or more camera-visible pale incident edges masks dark ink in the shared
+	// cap region, revealing the already-connected pale lines underneath.
+	if (pale < 0.5) {
+		float joint_radius = core_width * 0.5 + 0.5;
+		if (v_endpoint_pale_count.x >= 2.0 &&
+			length(FRAGCOORD.xy - v_screen_start) <= joint_radius) discard;
+		if (v_endpoint_pale_count.y >= 2.0 &&
+			length(FRAGCOORD.xy - v_screen_end) <= joint_radius) discard;
+	}
 
 	vec3 col = mix(ink_dark, ink_light, pale);
-	float op = mix(dark_opacity, light_opacity, pale);
 
 	// The waterline is a hard visual stop, not a fade.
 	float submerged = smoothstep(water_level - 0.06, water_level + 0.06, point.y);
 	float wet = mix(submerged_ink, 1.0, submerged);
-
-	// Far ink crawls with aliasing and adds nothing once the air has eaten the
-	// contrast anyway.
-	float fade = 1.0 - smoothstep(fade_start, fade_end, edge_depth);
 
 	// Test visibility at the mathematical centreline, not at each pixel of the
 	// expanded strip. Sampling a sloping owner face at the strip's outside edge
@@ -212,5 +253,8 @@ void fragment() {
 	if (scene_depth > 0.0 && edge_depth > scene_depth + tol) discard;
 
 	ALBEDO = col;
-	ALPHA = coverage * op * wet * fade;
+	// The stroke body is genuinely opaque. Alpha exists only for the one-pixel
+	// analytic fringe (and the waterline cut), so intersecting same-colour lines
+	// are idempotent instead of becoming darker at every vertex.
+	ALPHA = coverage * wet;
 }

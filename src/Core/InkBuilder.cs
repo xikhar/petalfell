@@ -53,6 +53,27 @@ public static class InkBuilder
 				sx > 0 ? 0 : 1, sy > 0 ? 2 : 3));
 
 		int n = runs.Count;
+		var endpointTopology = new Dictionary<Vector3, uint>(8);
+		if (light)
+		{
+			foreach (var run in runs)
+			{
+				int a = Math.Min(run.f0, run.f1);
+				int b = Math.Max(run.f0, run.f1);
+				uint code = (uint)(1 + a * (11 - a) / 2 + (b - a - 1));
+				AddEndpoint(run.a, code);
+				AddEndpoint(run.b, code);
+			}
+		}
+
+		void AddEndpoint(Vector3 point, uint code)
+		{
+			endpointTopology.TryGetValue(point, out uint packed);
+			int shift = 0;
+			while (shift < 24 && ((packed >> shift) & 0xfu) != 0) shift += 4;
+			if (shift < 24) endpointTopology[point] = packed | (code << shift);
+		}
+
 		var verts = new Vector3[n * 4];
 		var c0 = new float[n * 16];
 		var c1 = new float[n * 16];
@@ -71,8 +92,10 @@ public static class InkBuilder
 				float side = (k >= 2) ? 1f : -1f;
 				verts[v + k] = new Vector3(along, side, 0f);
 				int o = (v + k) * 4;
-				c0[o + 0] = r.a.X; c0[o + 1] = r.a.Y; c0[o + 2] = r.a.Z; c0[o + 3] = 1f;
-				c1[o + 0] = r.b.X; c1[o + 1] = r.b.Y; c1[o + 2] = r.b.Z; c1[o + 3] = 1f;
+				c0[o + 0] = r.a.X; c0[o + 1] = r.a.Y; c0[o + 2] = r.a.Z;
+				c0[o + 3] = endpointTopology.GetValueOrDefault(r.a);
+				c1[o + 0] = r.b.X; c1[o + 1] = r.b.Y; c1[o + 2] = r.b.Z;
+				c1[o + 3] = endpointTopology.GetValueOrDefault(r.b);
 				c2[o + 0] = na.X; c2[o + 1] = na.Y; c2[o + 2] = na.Z; c2[o + 3] = light ? 1f : 0f;
 				c3[o + 0] = nb.X; c3[o + 1] = nb.Y; c3[o + 2] = nb.Z; c3[o + 3] = 0f;
 			}

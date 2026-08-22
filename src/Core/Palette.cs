@@ -68,13 +68,15 @@ public static class Palette
 	/// black: the only genuinely dark values in this world are tree trunks, and
 	/// an outline that reaches black reads as a cartoon stroke laid over a
 	/// pastel painting rather than as part of it. Light is a restrained warm
-	/// white, and its opacity is low on purpose — a pale edge is a hint that a
-	/// surface turned, not a highlight.
+	/// white: a pale edge is a hint that a surface turned, not an emitted
+	/// highlight. Their restrained authored colours keep that softness while the
+	/// stroke cores remain opaque and overlap-safe.
 	/// </summary>
-	public static readonly Color InkDark = new Color(0.39f, 0.32f, 0.43f).SrgbToLinear();
-	public static readonly Color InkLight = new Color(0.97f, 0.95f, 0.97f).SrgbToLinear();
-	public const float InkDarkOpacity = 0.62f;
-	public const float InkLightOpacity = 0.30f;
+	// Shader `source_color` uniforms perform the sRGB-to-linear conversion.
+	// Supplying an already-linear value here would convert it twice and make this
+	// intended mid-grey ink render almost black.
+	public static readonly Color InkDark = new Color(0.30f, 0.28f, 0.33f);
+	public static readonly Color InkLight = new Color(0.84f, 0.83f, 0.85f);
 	/// <summary>
 	/// Stroke width in framebuffer pixels. The reference ships 1.85 as its
 	/// authored default; the settings slider reaches 3.2 and that is what the
