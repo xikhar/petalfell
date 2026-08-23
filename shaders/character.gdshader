@@ -9,12 +9,16 @@ uniform vec4 albedo : source_color = vec4(0.9, 0.9, 0.9, 1.0);
 uniform vec3 warm_tint : source_color = vec3(1.03, 1.00, 0.975);
 uniform vec3 cool_tint : source_color = vec3(0.965, 0.972, 1.04);
 uniform float face_tint : hint_range(0.0, 1.0) = 0.55;
-uniform vec3 sun_dir = vec3(-0.55, 0.78, -0.32);
+// Driven by DayCycle. Global rather than per-material: the character shader
+// alone builds a material for every box of every figure in the world, and a
+// clock that had to find them all would spend the frame chasing references.
+global uniform vec3 pf_sun_dir;
+global uniform float pf_night;
 uniform float emission_amount = 0.0;
 
 void fragment() {
 	vec3 wn = normalize((INV_VIEW_MATRIX * vec4(normalize(NORMAL), 0.0)).xyz);
-	float facing = dot(wn, normalize(sun_dir));
+	float facing = dot(wn, normalize(pf_sun_dir));
 	vec3 tint = mix(cool_tint, warm_tint, smoothstep(-0.6, 0.9, facing));
 
 	ALBEDO = albedo.rgb * mix(vec3(1.0), tint, face_tint);

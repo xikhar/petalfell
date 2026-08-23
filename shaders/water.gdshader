@@ -50,6 +50,7 @@ uniform vec3 sky_low : source_color = vec3(0.86, 0.84, 0.96);
 uniform vec3 sky_high : source_color = vec3(0.72, 0.70, 0.91);
 uniform vec3 sun_colour : source_color = vec3(1.0, 0.96, 0.94);
 uniform vec3 sun_dir = vec3(-0.55, 0.78, -0.32);
+global uniform float pf_night;
 // World height of the surface plane. Needed to reconstruct the fragment's
 // position analytically — see the note in fragment().
 uniform float plane_y = 24.35;
@@ -445,7 +446,10 @@ void fragment() {
 	float glint = fbm(warp(wpos.xz * 3.4, 2.2) + vec2(TIME * 0.09, -TIME * 0.07));
 	// Not weighted by the wave height: that is periodic, and periodic structure
 	// scaling a threshold puts the sparkle on a grid.
-	col += smoothstep(0.82, 0.98, glint) * sparkle * vec3(1.05, 0.98, 1.02);
+	// Glints survive the night and gain a little: moonlight on water is mostly
+	// specular, so it is the one thing that should NOT go dim after dusk.
+	col += smoothstep(0.82, 0.98, glint) * sparkle * (1.0 + pf_night * 0.5)
+	     * vec3(1.05, 0.98, 1.02);
 
 	// Averaging two colour stops always loses chroma toward the middle; this puts
 	// the midrange back without touching either end.

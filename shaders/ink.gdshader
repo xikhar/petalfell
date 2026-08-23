@@ -26,7 +26,18 @@ render_mode unshaded, blend_mix, depth_draw_never, depth_test_disabled,
 // world are tree trunks, and ink that goes to black reads as a cartoon stroke
 // laid over a pastel painting.
 uniform vec3 ink_dark : source_color = vec3(0.47, 0.42, 0.52);
-uniform vec3 ink_light : source_color = vec3(0.81, 0.80, 0.82);
+uniform vec3 ink_light : source_color = vec3(0.62, 0.61, 0.65);
+// How far the pale ink falls once it is fully night, and in how many jumps.
+//
+// STEPPED rather than continuous, on purpose. A pale edge is a drawing
+// convention, not a lit surface, and sliding it smoothly down with the sun makes
+// it behave like one — the line quietly follows the light and the trick of it
+// shows. Moving in a few discrete jumps reads instead like the scene being
+// re-inked a handful of times between dusk and dark, which is what a
+// hand-drawn frame would do and what this world's whole look is imitating.
+uniform float ink_night_scale : hint_range(0.1, 1.0) = 0.40;
+uniform float ink_night_steps : hint_range(1.0, 8.0) = 4.0;
+global uniform float pf_night;
 uniform float core_width = 3.2;
 // Pass 0 draws only pale fragments, pass 1 only the dark silhouette fragments
 // of that same eligible geometry, and pass 2 draws permanently-dark runs.
@@ -225,7 +236,15 @@ void fragment() {
 			length(FRAGCOORD.xy - v_screen_end) <= joint_radius) discard;
 	}
 
-	vec3 col = mix(ink_dark, ink_light, pale);
+	// Quantise the night factor before it touches the ink. Rounding to the
+	// nearest level rather than flooring puts each jump in the middle of its
+	// band, so the first step happens partway into dusk instead of the instant
+	// the sun clears the horizon — and the same on the way back up at dawn.
+	float night = clamp(pf_night, 0.0, 1.0);
+	float stepped = floor(night * ink_night_steps + 0.5) / ink_night_steps;
+	vec3 pale_ink = ink_light * mix(1.0, ink_night_scale, stepped);
+
+	vec3 col = mix(ink_dark, pale_ink, pale);
 
 	// The waterline is a hard visual stop, not a fade.
 	float submerged = smoothstep(water_level - 0.06, water_level + 0.06, point.y);

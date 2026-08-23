@@ -207,7 +207,7 @@ the player.**
 
 The voxel store is runtime representation, not map authorship. Each map is a content
 package under `content/` whose normalized definition owns its boundary, macro elevation
-zones, biome zones, major lakes and waterways, plus settlement, road and landmark anchors.
+zones, biome zones, major lakes and waterways, plus remnant, road and landmark anchors.
 The planner consumes that fixed intent and supplies deterministic natural infill. Major
 features are never inferred from map area unless that map explicitly requests additional
 procedural counts.
@@ -257,6 +257,40 @@ that now; we are keeping the mesher's inputs narrow enough that it stays possibl
 
 ---
 
+## 4a. The world is post-population — what that changes in code
+
+`plan.md` §2.1 sets the world after a slow human withdrawal. The engineering
+consequence is smaller than it sounds, and worth writing down because the instinct is
+to assume a rewrite.
+
+**The settlement planner survives almost intact.** Its site scoring — flat ground, fresh
+water within walking distance, a province that will grow something — is a model of why
+anyone would settle somewhere. Those reasons did not stop being true when the people
+left. The same pass now decides where the RUINS are, which means the world's history and
+its present come out of one piece of code and cannot contradict each other.
+
+What changes:
+
+- `SettlementKind` stops describing a size and starts describing a **state**: holdout,
+  remnant, ruin, monument. Layout code is shared; a decay mask differs.
+- The layout work already built (platform terracing, plaza, radial and ring streets,
+  market, lots, palisade) is *more* useful ruined than intact — grass through a plaza and
+  a wall with fallen sections is a better object than the tidy version, and it is the
+  same generator plus reclamation.
+- `RoadNetwork` keeps its graph but re-points its anchors at remnants and landmarks. The
+  reclamation pass is new: road mask thinned and broken as a function of how long the
+  place it served has been empty (`plan.md` §12.4).
+- Landmarks are promoted from a `MapDefinition` marker nobody consumes to a primary
+  generated layer, because with no settlements they carry orientation and pacing alone.
+- `Fauna` gains weight: with nobody about, ambient life is a main carrier of "alive".
+- **Deleted from scope:** village populations, NPC schedules, crowd behaviour, shop
+  interiors. This is a large saving and it is the reason the pivot is affordable
+  alongside §22b.
+
+The one genuine addition is the threat layer, which is M5 and is costed there.
+
+---
+
 ## 4b. Implementation status
 
 The mutable build inventory is kept in [`CURRENT_STATE.md`](CURRENT_STATE.md). It is
@@ -288,12 +322,25 @@ starts until a capture of this scene stands next to `shots/` and holds up.
 **M3 — Traversal.** Controller, swimming, click-to-move with the white hemispherical
 pulse, the dog, camera polish, pause/settings/developer view.
 
-**M4 — First authored content.** The Blender edge-export tool (§2.4), the wooden village
-kit, one village, one road loop. This is where the asset pipeline gets proven on
-something small before kit production scales up.
+**M4 — First authored content.** The Blender edge-export tool (§2.4), the wooden building
+kit in intact/shuttered/ruined variants, one remnant, one road loop. This is where the
+asset pipeline gets proven on something small before kit production scales up.
 
-Interaction, dialogue, inventory, crafting, trading, NPC populations, map, audio and
-Chapter 1 story content stay in `plan.md` and are scheduled after M4.
+**M5 — The wilds** (`plan.md` §22b). One creature, one region of the map, taken all the
+way to finished: perception, needs and routine, approach, attack, disengage, and
+behaviour toward other creatures; player and creature damage, death and recovery; one
+weapon; the dog's warning behaviour; the audio to carry it. This is the largest addition
+the plan has taken on and none of it exists today, so it gets its own milestone.
+
+Note the shape this implies. The plan's creature model is ecological rather than
+territorial, so `Fauna` is not a separate system from the threat layer — it is the same
+system with needs and consequences added. That argues for growing the existing streamed
+`Fauna` into it rather than building a parallel enemy system beside it, and for the
+streaming radius and population budget being revisited at the same time, since creatures
+that have lives must keep having them slightly beyond where the player can see.
+
+Interaction, dialogue, inventory, crafting, trading, map, audio and Chapter 1 story
+content stay in `plan.md` and are scheduled after M4.
 
 ---
 
@@ -398,6 +445,6 @@ plan.md         product and creative plan
 - **Block scale in metres**, which fixes character height, walk speed and the units every
   future asset is authored against.
 - **Interiors** (§31) — seamless, separate scenes, or implied. Affects streaming and the
-  settlement kits, so it is wanted before M4, not before M1.
+  remnant kits, so it is wanted before M4, not before M1.
 - **Browser delivery** (§31) — choosing C# closes it. Confirm that is acceptable; it is
   the only decision in this document that is expensive to reverse later.

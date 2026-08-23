@@ -75,6 +75,8 @@ public sealed class Terrain
 	public string Timings = "";
 	/// <summary>The road network laid over the finished heightfield.</summary>
 	public RoadNetwork Roads { get; private set; }
+	/// <summary>Everything worth walking to that is not a remnant.</summary>
+	public List<Landmark> Marks { get; private set; } = new();
 
 	private struct Disc
 	{
@@ -90,7 +92,7 @@ public sealed class Terrain
 	{
 		Size = size;
 		Plan = plan;
-		Grid = new VoxelGrid(size, Height);
+		Grid = new VoxelGrid(size, Height, seed);
 		Level = new short[size * size];
 		Land = new byte[size * size];
 		RiverDist = new float[size * size];
@@ -148,8 +150,14 @@ public sealed class Terrain
 
 		for (int i = 0; i < size * size; i++)
 			Land[i] = (byte)(Level[i] > Sea || IsFordGround(i) ? 1 : 0);
+		// Stair COUNT scales with area, like every other feature count here. The
+		// old fixed ninety was tuned against a 1024 map; leaving it there on a
+		// world eleven times the size would connect one corner of it and strand
+		// the rest.
+		float stairArea = (Size / 256f) * (Size / 256f);
 		StairMask = TerrainShape.CarveStairs(Level, size, Land,
-			minArea: 34, tread: 2, width: 3, maxStairs: 90, skip: noStair);
+			minArea: 34, tread: 2, width: 3,
+			maxStairs: Math.Max(90, (int)(6f * stairArea)), skip: noStair);
 		Stage("stairs");
 		RockMask = ScatterBoulders(noStair);
 		Stage("boulders");
@@ -165,12 +173,18 @@ public sealed class Terrain
 		// material caps a column, so every contour invariant established above
 		// survives intact. See RoadNetwork for why that restraint is load-bearing.
 		Sites = Settlements.PlanSites(this, seed);
+		// Level the town platforms BEFORE the roads are routed over them.
+		Settlements.TerraceSites(this);
 		Stage("sites");
-		Roads = RoadNetwork.Build(this, Sites, seed);
+		// Landmarks before roads, so trails can be routed out to them; cairns
+		// after, because a cairn's whole job is to stand beside a road.
+		Marks = Landmarks.PlanSignificant(this, Sites, seed);
+		Roads = RoadNetwork.Build(this, Sites, Marks, seed);
+		Landmarks.PlanCairns(this, Sites, Marks, seed);
 		Stage("roads");
 
-		FillVoxels();
-		Stage("voxels");
+		DescribeColumns();
+		Stage("columns");
 	}
 
 	/* ================================================================
@@ -268,6 +282,17 @@ public sealed class Terrain
 	/// rather than an approximation — every term was already quantised — and it
 	/// is what makes a large world affordable.
 	/// </summary>
+	/// <summary>
+	/// Rasterise the disc stack into a terraced heightfield.
+	///
+	/// Discs are BUCKETED by centre, and that is not an optimisation so much as
+	/// the difference between a big world and no big world. Testing every column
+	/// against every disc costs cells x discs, and BOTH of those scale with area
+	/// — so the term is quadratic in area, and a world eleven times the size paid
+	/// a hundred and fifty times the cost. It was twenty seconds of a
+	/// twenty-six-second generation. Bucketing turns the inner loop into the
+	/// handful of discs that could actually reach this column.
+	/// </summary>
 	private void BuildHeights()
 	{
 		int cw = Size / EdgeGrid + 1;
@@ -275,48 +300,79 @@ public sealed class Terrain
 		float centreX = Plan.Definition.Boundary.Centre.X * Size;
 		float centreZ = Plan.Definition.Boundary.Centre.Z * Size;
 
-		for (int cz = 0; cz < cw; cz++)
-		for (int cx = 0; cx < cw; cx++)
-		{
-			float wx = cx * EdgeGrid + EdgeGrid * 0.5f;
-			float wz = cz * EdgeGrid + EdgeGrid * 0.5f;
+		const int Bucket = 64;
+		int bw = Size / Bucket + 2;
+		var buckets = new List<int>[bw * bw];
+		for (int i = 0; i < buckets.Length; i++) buckets[i] = new List<int>();
 
-			// Elevation is centred exactly where the authored valley floor sits.
-			// Omitting -0.34 lifted the median region almost four whole terraces.
-			float sum = (Plan.ElevationAt(wx, wz) - 0.34f) * MacroRelief;
-			foreach (var d in _discs)
+		float maxReach = 0f;
+		for (int d = 0; d < _discs.Count; d++)
+		{
+			var disc = _discs[d];
+			float reach = disc.R * MathF.Max(disc.Ax, disc.Az) + disc.WAmp + EdgeGrid * 2f;
+			if (reach > maxReach) maxReach = reach;
+			int bx = Rng.ClampI((int)(disc.Cx / Bucket), 0, bw - 1);
+			int bz = Rng.ClampI((int)(disc.Cz / Bucket), 0, bw - 1);
+			buckets[bz * bw + bx].Add(d);
+		}
+		// One extra ring, because a column sits anywhere inside its own bucket.
+		int rings = (int)MathF.Ceiling(maxReach / Bucket) + 1;
+
+		System.Threading.Tasks.Parallel.For(0, cw, cz =>
+		{
+			for (int cx = 0; cx < cw; cx++)
 			{
-				// Cheap reject: a column lies inside a handful of the few
-				// hundred discs a large map stacks up, and testing every one
-				// made cost grow with area squared.
-				float dx = wx - d.Cx, dz = wz - d.Cz;
-				float reach = d.R * MathF.Max(d.Ax, d.Az) + d.WAmp + EdgeGrid * 2f;
-				if (dx * dx + dz * dz > reach * reach) continue;
-				sum += DiscAt(wx, wz, d);
+				float wx = cx * EdgeGrid + EdgeGrid * 0.5f;
+				float wz = cz * EdgeGrid + EdgeGrid * 0.5f;
+
+				// Elevation is centred exactly where the authored valley floor sits.
+				// Omitting -0.34 lifted the median region almost four whole terraces.
+				float sum = (Plan.ElevationAt(wx, wz) - 0.34f) * MacroRelief;
+
+				int bx0 = Rng.ClampI((int)(wx / Bucket) - rings, 0, bw - 1);
+				int bx1 = Rng.ClampI((int)(wx / Bucket) + rings, 0, bw - 1);
+				int bz0 = Rng.ClampI((int)(wz / Bucket) - rings, 0, bw - 1);
+				int bz1 = Rng.ClampI((int)(wz / Bucket) + rings, 0, bw - 1);
+
+				for (int bz = bz0; bz <= bz1; bz++)
+				for (int bxi = bx0; bxi <= bx1; bxi++)
+				{
+					var list = buckets[bz * bw + bxi];
+					for (int k = 0; k < list.Count; k++)
+					{
+						var d = _discs[list[k]];
+						float dx = wx - d.Cx, dz = wz - d.Cz;
+						float reach = d.R * MathF.Max(d.Ax, d.Az) + d.WAmp + EdgeGrid * 2f;
+						if (dx * dx + dz * dz > reach * reach) continue;
+						sum += DiscAt(wx, wz, d);
+					}
+				}
+
+				int h = Base + Step * (int)MathF.Floor(sum + 0.5f);
+
+				// The island terminates in a plinth that vanishes into the haze.
+				float rx = wx - centreX, rz = wz - centreZ;
+				float r = MathF.Sqrt(rx * rx + rz * rz);
+				float R = Plan.RimRadius(wx, wz);
+				const float K = 256f / 192f;
+				if (r > R - 20f * K) h = Math.Min(h, Base + Step);
+				if (r > R - 9f * K) h = Math.Min(h, Base);
+				if (r > R)
+					h = Math.Max(1, (int)MathF.Floor(Sea - 5f - Rng.Smoothstep(R, R + 26f * K, r) * 3f + 0.5f));
+
+				cellLevel[cz * cw + cx] = (short)Rng.ClampI(h, 2, Height - 12);
 			}
+		});
 
-			int h = Base + Step * (int)MathF.Floor(sum + 0.5f);
-
-			// The island terminates in a plinth that vanishes into the haze.
-			float rx = wx - centreX, rz = wz - centreZ;
-			float r = MathF.Sqrt(rx * rx + rz * rz);
-			float R = Plan.RimRadius(wx, wz);
-			const float K = 256f / 192f;
-			if (r > R - 20f * K) h = Math.Min(h, Base + Step);
-			if (r > R - 9f * K) h = Math.Min(h, Base);
-			if (r > R)
-				h = Math.Max(1, (int)MathF.Floor(Sea - 5f - Rng.Smoothstep(R, R + 26f * K, r) * 3f + 0.5f));
-
-			cellLevel[cz * cw + cx] = (short)Rng.ClampI(h, 2, Height - 12);
-		}
-
-		for (int z = 0; z < Size; z++)
-		for (int x = 0; x < Size; x++)
+		System.Threading.Tasks.Parallel.For(0, Size, z =>
 		{
-			int cx = x / EdgeGrid, cz = z / EdgeGrid;
-			Level[z * Size + x] = cellLevel[cz * cw + cx];
-			Land[z * Size + x] = (byte)(Level[z * Size + x] > Sea ? 1 : 0);
-		}
+			for (int x = 0; x < Size; x++)
+			{
+				int cx = x / EdgeGrid, cz = z / EdgeGrid;
+				Level[z * Size + x] = cellLevel[cz * cw + cx];
+				Land[z * Size + x] = (byte)(Level[z * Size + x] > Sea ? 1 : 0);
+			}
+		});
 	}
 
 	private void AddLedges()
@@ -733,7 +789,7 @@ public sealed class Terrain
 	/* ================================================================
 	 * 3. Voxels
 	 * ================================================================ */
-	private void FillVoxels()
+	private void DescribeColumns()
 	{
 		// Parallel over rows. Every column writes only its own slice of the block
 		// array and its own height entry, so there is nothing to contend over, and
@@ -800,17 +856,11 @@ public sealed class Terrain
 			// cap and its geological substrate (soil or stone). Deeper stone still
 			// exists for intentionally tall cliffs, river cuts and the world rim,
 			// but never appears as a third stripe on an ordinary terrace.
-			int soilTop = h - 1;
-			int soilBottom = Math.Max(1, h - 2);
-			for (int y = 0; y < soilBottom; y++)
-			{
-				float n = _nRock.Fbm(x * 0.035f, (z + y * 5.3f) * 0.035f, 2);
-				byte stone = n > 0.24f ? Palette.STONE_WARM
-				           : n < -0.28f ? Palette.STONE_PALE : Palette.STONE;
-				Grid.Set(x, y, z, stone);
-			}
-			Grid.Column(x, z, soilBottom, soilTop, substrate);
-			Grid.Column(x, z, soilTop, h, cap);
+			//
+			// Recorded rather than written out. Two bytes and a height describe the
+			// whole column; VoxelGrid reconstitutes any block in it on demand. See
+			// the note there for why the dense array had to go.
+			Grid.Describe(x, z, h, cap, substrate);
 			Grid.Heights[i] = (short)h;
 		}
 		});

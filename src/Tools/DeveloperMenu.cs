@@ -28,15 +28,19 @@ public partial class DeveloperMenu : CanvasLayer
 	private ShaderMaterial _inkLight;
 	private ShaderMaterial _inkDark;
 	private CameraRig _camera;
+	private DayCycle _day;
+	private SliderRow _timeRow;
 	private Control _root;
 	private SliderRow _minZoom;
 	private SliderRow _maxZoom;
 
-	public void Setup(ShaderMaterial inkLight, ShaderMaterial inkDark, CameraRig camera)
+	public void Setup(ShaderMaterial inkLight, ShaderMaterial inkDark, CameraRig camera,
+		DayCycle day = null)
 	{
 		_inkLight = inkLight;
 		_inkDark = inkDark;
 		_camera = camera;
+		_day = day;
 	}
 
 	public override void _Ready()
@@ -96,10 +100,42 @@ public partial class DeveloperMenu : CanvasLayer
 
 		_minZoom = AddSlider(content, "Minimum zoom", 20.0, 180.0, 1.0,
 			_camera.MinDistance, value => $"{value:0}", SetMinimumZoom);
+		if (_day != null)
+		{
+			var pause = new CheckBox { Text = "Freeze time", ButtonPressed = _day.Paused };
+			pause.AddThemeColorOverride("font_color", new Color(0.80f, 0.82f, 0.88f));
+			pause.Toggled += on => _day.Paused = on;
+			content.AddChild(pause);
+
+			// Reads back every frame, so dragging the slider scrubs the sky and
+			// letting it run shows the clock moving on its own.
+			_timeRow = AddSlider(content, "Time of day", 0.0, 0.9999, 0.001, _day.TimeOfDay,
+				_ => _day.Clock(),
+				value =>
+				{
+					_day.TimeOfDay = (float)value;
+					// Scrubbing implies you want to look at it, not watch it leave.
+					_day.Paused = true;
+					pause.SetPressedNoSignal(true);
+				});
+
+			AddSlider(content, "Day length", 30.0, 3600.0, 10.0, _day.DayLength,
+				v => $"{v / 60.0:F1} min", v => _day.DayLength = (float)v);
+		}
+
 		_maxZoom = AddSlider(content, "Maximum zoom", 24.0, 240.0, 1.0,
 			_camera.MaxDistance, value => $"{value:0}", SetMaximumZoom);
 
 		_root.Visible = false;
+	}
+
+	public override void _Process(double delta)
+	{
+		// Follow the clock while it is running, so the slider is a readout as well
+		// as a control. Without a signal, or the change handler would fire every
+		// frame and pause the very cycle it is reporting on.
+		if (_day != null && _timeRow != null && _root.Visible && !_day.Paused)
+			_timeRow.SetWithoutSignal(_day.TimeOfDay);
 	}
 
 	public override void _Input(InputEvent inputEvent)

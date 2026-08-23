@@ -24,10 +24,14 @@ public static class Capture
 		public readonly float Distance, Yaw, Pitch;
 		/// <summary>What to frame: 0 spawn, 1 tallest cliff nearby, 2 nearest water edge.</summary>
 		public readonly int Subject;
+		/// <summary>Time of day to force, or negative to leave the clock alone.</summary>
+		public readonly float Time;
 
-		public Shot(string name, float distance, float yaw, float pitch, int subject = 0)
+		public Shot(string name, float distance, float yaw, float pitch, int subject = 0,
+			float time = -1f)
 		{
 			Name = name; Distance = distance; Yaw = yaw; Pitch = pitch; Subject = subject;
+			Time = time;
 		}
 	}
 
@@ -55,7 +59,23 @@ public static class Capture
 		// Somewhere people live. The roads, the houses and the wildlife are all
 		// placed away from the spawn by construction, so without a viewpoint that
 		// seeks them out the review loop can never see any of them.
-		new("village", 38f, 45f, 31f, 7),
+		new("ruin", 96f, 45f, 38f, 7),
+		// The lit window is the whole life/death signal in this world and had
+		// never once been reviewed, because holdouts are rare and every other
+		// subject picks whichever site has the most buildings.
+		new("holdout", 74f, 45f, 34f, 8),
+		new("monument", 110f, 45f, 40f, 9),
+		new("tower", 62f, 45f, 30f, 10),
+		new("stones", 52f, 45f, 32f, 11),
+		new("farmstead", 48f, 45f, 32f, 12),
+		// The same holdout around the clock. A day cycle can only be judged as a
+		// SEQUENCE — any single frame of it looks plausible, and what goes wrong
+		// is the transitions between them.
+		new("t_dawn", 74f, 45f, 34f, 8, 0.27f),
+		new("t_morning", 74f, 45f, 34f, 8, 0.36f),
+		new("t_noon", 74f, 45f, 34f, 8, 0.50f),
+		new("t_dusk", 74f, 45f, 34f, 8, 0.76f),
+		new("t_night", 74f, 45f, 34f, 8, 0.98f),
 	};
 
 	public static (string dir, HashSet<string> only) ParseArgs()

@@ -25,6 +25,30 @@ public static class ChunkMesher
 	/// <summary>Local edge lattice spans the chunk plus one voxel of margin on each side.</summary>
 	private const int Span = ChunkSize + 3;
 
+	/// <summary>
+	/// The chunk's block neighbourhood, resolved once per build.
+	///
+	/// Padded well past the chunk on every side: the ambient-occlusion probes and
+	/// the edge collector reach two blocks beyond the voxel they are shading, and
+	/// that voxel may itself be one outside the chunk. Four is margin, and the
+	/// buffer is eighty kilobytes either way.
+	/// </summary>
+	private const int WinPad = 4;
+	private const int WinW = ChunkSize + WinPad * 2;
+	private static byte[] _win;
+	private static int _winX0, _winZ0, _winTop;
+
+	private static byte WinAt(int x, int y, int z)
+	{
+		int lx = x - _winX0, lz = z - _winZ0;
+		if (lx < 0 || lz < 0 || lx >= WinW || lz >= WinW || y < 0 || y >= _winTop)
+			return Palette.AIR;
+		return _win[(y * WinW + lz) * WinW + lx];
+	}
+
+	private static bool WinSolid(int x, int y, int z) => Palette.IsSolid(WinAt(x, y, z));
+
+
 	private static readonly int[,] Normals =
 	{
 		{ 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 },
@@ -109,12 +133,18 @@ public static class ChunkMesher
 		}
 		yTop = Math.Min(grid.Height, yTop + 1);
 
+		_win ??= new byte[WinW * WinW * ChunkMesherHeight(grid)];
+		_winX0 = x0 - WinPad;
+		_winZ0 = z0 - WinPad;
+		_winTop = yTop;
+		grid.FillWindow(_win, _winX0, _winZ0, WinW, yTop);
+
 		for (int y = 0; y < yTop; y++)
 		for (int z = z0 - 1; z <= z1; z++)
 		for (int x = x0 - 1; x <= x1; x++)
 		{
 			if (x < 0 || z < 0 || x >= grid.Size || z >= grid.Size) continue;
-			byte id = grid.Blocks[grid.Index(x, y, z)];
+			byte id = WinAt(x, y, z);
 			if (id == Palette.AIR) continue;
 			bool inside = x >= x0 && x < x1 && z >= z0 && z < z1;
 			var def = Palette.Get(id);
@@ -122,7 +152,7 @@ public static class ChunkMesher
 			for (int f = 0; f < 6; f++)
 			{
 				int nx = Normals[f, 0], ny = Normals[f, 1], nz = Normals[f, 2];
-				if (grid.SolidAt(x + nx, y + ny, z + nz)) continue;
+				if (WinSolid(x + nx, y + ny, z + nz)) continue;
 
 				Color face = f == 2 ? def.Top : (f == 3 ? def.Bottom : def.Side);
 				bool faceLight = f == 2 ? def.TopLight : (f == 3 ? def.BottomLight : def.SideLight);
@@ -190,7 +220,7 @@ public static class ChunkMesher
 		var fringeColor = default(Color);
 		if (na != 1)   // side faces only; a top or bottom face has no lip
 		{
-			byte above = grid.At(x, y + 1, z);
+			byte above = WinAt(x, y + 1, z);
 			if (Palette.IsGrassSurface(above) || above == Palette.MOSS)
 			{
 				fringe = 1f;
@@ -265,13 +295,15 @@ public static class ChunkMesher
 		return 1f - occ * 0.127f;
 	}
 
+	private static int ChunkMesherHeight(VoxelGrid grid) => grid.Height;
+
 	private static bool SolidOffset(VoxelGrid grid, Span<int> c, int a1, int d1, int a2, int d2)
 	{
 		Span<int> p = stackalloc int[3];
 		p[0] = c[0]; p[1] = c[1]; p[2] = c[2];
 		p[a1] += d1;
 		if (a2 >= 0) p[a2] += d2;
-		return grid.SolidAt(p[0], p[1], p[2]);
+		return WinSolid(p[0], p[1], p[2]);
 	}
 
 	/* ================================================================
@@ -310,11 +342,11 @@ public static class ChunkMesher
 
 			a[0] = x; a[1] = y; a[2] = z;
 			a[axis] += dir;
-			bool aSolid = grid.SolidAt(a[0], a[1], a[2]);
+			bool aSolid = WinSolid(a[0], a[1], a[2]);
 
 			b[0] = a[0]; b[1] = a[1]; b[2] = a[2];
 			b[na] += sign;
-			bool bSolid = grid.SolidAt(b[0], b[1], b[2]);
+			bool bSolid = WinSolid(b[0], b[1], b[2]);
 
 			bool concave = bSolid;
 			if (!concave && aSolid) continue;   // coplanar continuation

@@ -1,5 +1,11 @@
 # Petalfell — Current Implementation State
 
+> **Direction change.** Petalfell is now set on a continent people have left —
+> see `plan.md` §2.1. Settlement generation described below still produces intact,
+> populated-looking places; converting those to holdouts, remnants and ruins is
+> pending work, not a description of the current build.
+
+
 Last updated: 23 August 2026
 
 This document records what is present in the Godot project today. It is a factual
@@ -32,13 +38,15 @@ snapshot, not a design target or implementation guide.
   - the playable boundary and chapter spawn;
   - six elevation zones and six authored biome zones;
   - two lakes and two connected waterways;
-  - village and town markers;
+  - remnant and holdout markers;
   - a major road loop, an abandoned road, and a ridge trail;
   - ruin, overlook, shrine, and crossing markers.
 - Deterministic RNG, unsigned value-noise hashing, and stable procedural fields.
 - A planner that combines the authored map with natural regions and supports meadow,
   forest, plains, sakura, highland, snowy-hill, shore, and wetland biomes.
-- A dense voxel grid plus terrain height, land, wetness, river, stair, and rock data.
+- Terrain height, land, wetness, river, stair and rock data per column. Blocks are
+  DERIVED from a cap, a substrate and a height per column rather than stored; anything
+  placed on top (bridges, buildings, canopies) lives in a sparse overlay.
 - Shaped island boundary, macro elevation, stepped contours, shelves, plinths,
   channels, lakes, beaches, stairs, and cleaned terrain transitions.
 - The standard walkable terrace is two blocks high. Grass terrain exposes a grass
@@ -48,7 +56,7 @@ snapshot, not a design target or implementation guide.
 - Procedural bridges, short approach paths, and lanterns generated from suitable
   river crossings.
 - Natural decoration respects the reserved space around authored roads,
-  settlements, landmarks, spawns, and generated structures.
+  remnants, landmarks, spawns, and generated structures.
 
 ### Streaming state
 
@@ -193,11 +201,14 @@ snapshot, not a design target or implementation guide.
 The Chapter 1 map package already reserves and identifies several future features, but
 the markers are not the same as completed locations.
 
-- Settlement markers exist; village/town buildings, walls, markets, and populations do
-  not.
+- Settlement generation exists and produces terraced platforms, plazas, streets,
+  markets, lots, cottages and palisades — but it builds them INTACT. The pivot to a
+  post-population world (`plan.md` §2.1) needs the decay layer: reclamation, shuttering,
+  collapse, and the holdout/remnant/ruin states described in `plan.md` §11.
 - Road and trail markers exist; the complete authored road network is not rendered.
-- Landmark markers exist; the ruin, shrine, overlook, and other landmark scenes/stamps
-  are not built.
+- Landmark markers exist and nothing consumes them. Under the new direction landmarks
+  are the primary content layer (`plan.md` §13), so this is now the largest single gap
+  between the plan and the build.
 - Biome identities affect terrain, flora, ground detail, and airborne detail, but the
   complete biome-specific fauna, encounters, resources, audio, and weather do not exist.
 - Generated river bridges exist, but the broader authored structure and building kits
@@ -205,7 +216,9 @@ the markers are not the same as completed locations.
 
 ## 9. Major game systems not yet present
 
-- NPC populations, dialogue, schedules, and reputation.
+- The living: hermits, traders and named characters, plus dialogue and trading. Note
+  that populations, schedules and crowd behaviour are no longer in scope at all — see
+  `plan.md` §20.
 - General NPC, structure, artifact, and contextual interaction systems beyond world-item pickup.
 - Full inventory management, loadout assignment UI, consumables, tools, weapons,
   crafting, trading, and two-handed item behavior.
@@ -214,6 +227,7 @@ the markers are not the same as completed locations.
 - Audio and music systems.
 - Pause, settings, accessibility, and final game-facing UI.
 - Blender-authored production assets and their final import/outline pipeline.
-- Finished villages, towns, city-scale areas, ruins, abandoned buildings, and authored
-  road network.
+- Ruins, abandoned buildings, monuments and the authored road network.
+- The wilds: creature AI, damage, death, weapons, and everything else in `plan.md`
+  §22b. None of it exists; it is milestone M5.
 - The target compositor-based union-coverage outline renderer.

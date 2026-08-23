@@ -11,6 +11,11 @@ public sealed class Region
 	public int Id;
 	public float Cx, Cz;
 	public float Elevation, Temperature, Moisture, Magic;
+	/// <summary>
+	/// How long ago people gave this ground up. 0 is still held, 1 is gone for
+	/// generations. See Planner.SampleAbandonment.
+	/// </summary>
+	public float Abandonment;
 	public Biome Biome;
 	public uint Seed;
 	public float Importance;
@@ -57,6 +62,7 @@ public sealed class Planner
 	public readonly int[] CellRegion;
 	public readonly byte[] CellBiome;
 	public readonly float[] CellElevation;
+	public readonly float[] CellAbandonment;
 	public readonly List<Channel> Rivers = new();
 	public readonly List<LakePlan> Lakes = new();
 	public Region LakeRegion;
@@ -77,6 +83,7 @@ public sealed class Planner
 		CellRegion = new int[CellW * CellW];
 		CellBiome = new byte[CellW * CellW];
 		CellElevation = new float[CellW * CellW];
+		CellAbandonment = new float[CellW * CellW];
 		IslandR = size * MathF.Min(Definition.Boundary.RadiusX, Definition.Boundary.RadiusZ);
 
 		var rng = new Rng(unchecked(seed ^ (int)0x9e3779b9u));
@@ -100,8 +107,10 @@ public sealed class Planner
 			_buckets[bz * _bucketW + bx].Add(r);
 		}
 
+		SampleAbandonment(seed);
 		BuildCellMap();
 		BuildCellElevation();
+		BuildCellAbandonment();
 		RouteWater(rng);
 	}
 
@@ -199,6 +208,96 @@ public sealed class Planner
 
 			r.Seed = unchecked((uint)(seed ^ (r.Id * unchecked((int)0x85ebca6bu))));
 		}
+	}
+
+	/// <summary>
+	/// How long ago each region was given up.
+	///
+	/// This is the field the whole post-population world hangs off, and it exists
+	/// as ONE authority on purpose. Remnant decay, road reclamation, how far
+	/// vegetation has taken a building back, which landmarks appear and later how
+	/// densely the wilds hold a place all have to answer "how gone is this?" — and
+	/// if each of them derives its own answer they disagree, visibly, because the
+	/// player reads all of them in the same glance.
+	///
+	/// The shape of it is the retreat described in plan.md §2.1. People fell back
+	/// toward the coast and the surviving roads, so abandonment grows INLAND and
+	/// UPWARD: the shore was held longest, the high country went first. Province
+	/// matters too — nobody fought to keep a bog or a snowfield, and the good
+	/// meadows were the last to be let go.
+	///
+	/// The noise is deliberately coarse and warped rather than smooth, so the
+	/// frontier of the retreat is ragged. A tidy radial gradient would read as a
+	/// difficulty ring painted on the map, which is exactly what §8.1 says this
+	/// must not be.
+	/// </summary>
+	private void SampleAbandonment(int seed)
+	{
+		var nAge = new Noise2D(seed + 61);
+		foreach (var r in Regions)
+		{
+			float nx = r.Cx / Size, nz = r.Cz / Size;
+			// Distance from the rim, 0 at the coast and 1 deep inland.
+			float inland = 1f - Rng.Clamp(Definition.BoundaryDistance(nx, nz), 0f, 1f);
+
+			// The constant is doing real work. Regions are spread over a disc, so
+			// area — and therefore most of the map — sits well away from the rim;
+			// without a floor the mean landed at 0.23 and half the continent came
+			// out "still held", which is the opposite of the premise. The country
+			// that was kept is a THIN fringe, and everything behind it is gone.
+			float age = 0.30f + inland * 0.62f + Rng.Clamp(r.Elevation, 0f, 1f) * 0.30f;
+
+			// What the ground was worth staying for.
+			age += r.Biome switch
+			{
+				Biome.Meadow => -0.16f,
+				Biome.Plains => -0.12f,
+				Biome.Shore => -0.18f,
+				Biome.Forest => -0.02f,
+				Biome.Sakura => 0.02f,
+				Biome.Highland => 0.12f,
+				Biome.Wetland => 0.16f,
+				Biome.SnowyHills => 0.20f,
+				_ => 0f,
+			};
+
+			age += nAge.Fbm(r.Cx / 260f, r.Cz / 260f, 3) * 0.26f;
+			r.Abandonment = Rng.Clamp(age, 0f, 1f);
+		}
+	}
+
+	private void BuildCellAbandonment()
+	{
+		var scratch = new List<Region>(96);
+		for (int cz = 0; cz < CellW; cz++)
+		for (int cx = 0; cx < CellW; cx++)
+		{
+			float wx = (cx + 0.5f) * Cell, wz = (cz + 0.5f) * Cell;
+			float num = 0f, den = 0f;
+			foreach (var r in Nearby(wx, wz, 2, scratch))
+			{
+				float dx = r.Cx - wx, dz = r.Cz - wz;
+				float d2 = MathF.Max(dx * dx + dz * dz, 1f);
+				float w = 1f / (d2 * d2);
+				num += r.Abandonment * w;
+				den += w;
+			}
+			CellAbandonment[cz * CellW + cx] = den > 0f ? num / den : 0.5f;
+		}
+	}
+
+	/// <summary>How long ago this ground was given up, 0 still held to 1 long gone.</summary>
+	public float AbandonmentAt(float x, float z)
+	{
+		float fx = Rng.Clamp(x / Cell - 0.5f, 0f, CellW - 1.001f);
+		float fz = Rng.Clamp(z / Cell - 0.5f, 0f, CellW - 1.001f);
+		int x0 = (int)MathF.Floor(fx), z0 = (int)MathF.Floor(fz);
+		float tx = fx - x0, tz = fz - z0;
+		float a = CellAbandonment[z0 * CellW + x0];
+		float b = CellAbandonment[z0 * CellW + x0 + 1];
+		float c = CellAbandonment[(z0 + 1) * CellW + x0];
+		float d = CellAbandonment[(z0 + 1) * CellW + x0 + 1];
+		return Rng.Lerp(Rng.Lerp(a, b, tx), Rng.Lerp(c, d, tx), tz);
 	}
 
 	private List<Region> Nearby(float x, float z, int rings, List<Region> output)

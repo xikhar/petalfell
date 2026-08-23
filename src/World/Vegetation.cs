@@ -94,22 +94,39 @@ public static class Vegetation
 			int i = z * S + x;
 			if (terrain.Land[i] == 0) continue;
 			if (terrain.Plan.Definition.ReservesNaturalDetail(x / (float)S, z / (float)S, 5f / S)) continue;
-			// Roads and their verges. A canopy closing over a route turns it into
-			// a tunnel and hides the one thing the player navigates by.
-			if (terrain.Roads != null && terrain.Roads.Clear[i] != 0) continue;
+			// How long ago this ground was given up. Everything below reads from
+			// it: on a road somebody still walks, growth is kept back; on one
+			// nobody has walked in generations, the wood closes over it.
+			float age = terrain.Plan.AbandonmentAt(x, z);
+
+			// Roads and their verges. A canopy closing over a live route turns it
+			// into a tunnel and hides the one thing the player navigates by — but
+			// a route with nobody left to keep it open is SUPPOSED to close, and
+			// a road disappearing into a wood is the clearest possible statement
+			// that its far end no longer matters.
+			if (terrain.Roads != null && terrain.Roads.Clear[i] != 0 && rng.Next() > age * 0.85f)
+				continue;
 			int h = terrain.Level[i];
 			if (h <= Terrain.Sea + 1) continue;
 			if (terrain.StairMask[i] == 1) continue;
 
-			// Structures and paths own their composition before scatter does. A
-			// raised column marks bridge decks, rails, lanterns and later authored
-			// props; reserve a small apron around all of them so a tree never grows
-			// through a crossing or turns its approach into a tunnel.
+			// The apron around built things, which used to be a flat six blocks.
+			//
+			// That was right for a world with people in it and is exactly wrong
+			// for this one: it guaranteed a ring of bare ground around every
+			// structure on the continent, so the one image the whole direction
+			// depends on — a wood standing in a building — was impossible to
+			// generate. A clearance is something somebody MAINTAINS. Nobody has,
+			// for generations, so it closes at the same rate everything else does.
+			//
+			// It does not go to zero. Even in the oldest country a trunk should
+			// not stand in the middle of a doorway; the tree's own column test
+			// below still requires plantable ground, and the last two blocks of
+			// apron keep a canopy from swallowing a ruin whole and hiding it.
+			int apron = (int)MathF.Round(Rng.Lerp(6f, 1.6f, Rng.Smoothstep(0.15f, 0.8f, age)));
 			bool reserved = false;
-			// Six blocks also accounts for the footprint of a large canopy whose
-			// trunk stands outside the immediate prop buffer.
-			for (int rz = -6; rz <= 6 && !reserved; rz++)
-			for (int rx = -6; rx <= 6; rx++)
+			for (int rz = -apron; rz <= apron && !reserved; rz++)
+			for (int rx = -apron; rx <= apron; rx++)
 			{
 				int xx = x + rx, zz = z + rz;
 				if (xx < 0 || zz < 0 || xx >= S || zz >= S) { reserved = true; break; }
@@ -117,6 +134,11 @@ public static class Vegetation
 				if (grid.Heights[ri] > terrain.Level[ri]) { reserved = true; break; }
 			}
 			if (reserved) continue;
+
+			// With the apron this small a trunk can now be planted hard against a
+			// standing wall, so its own column has to be checked explicitly —
+			// something the six-block reserve used to do by accident.
+			if (grid.At(x, h, z) != Palette.AIR) continue;
 
 			byte surface = grid.At(x, h - 1, z);
 			bool plantable = Palette.IsGrassSurface(surface) || surface == Palette.MOSS ||

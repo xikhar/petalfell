@@ -17,6 +17,12 @@
 /export/
 /exports/
 
+# Generated screenshots and render captures
+/shots/
+/screenshots/
+/captures/
+/renders/
+
 # Editor and operating-system files
 .DS_Store
 Thumbs.db

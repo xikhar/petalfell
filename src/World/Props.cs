@@ -177,8 +177,22 @@ public sealed class BuiltProps
 			SetRaised(grid, x, y, z, id);
 		}
 
+		// How much of the deck is left. A crossing on a route somebody still walks
+		// is whole; one on a road into the old country is two abutments facing
+		// each other across the water, which plan.md §12.4 names as one of the
+		// strongest things this world can put in front of the player — a route
+		// that plainly used to continue.
+		float age = terrain.Plan.AbandonmentAt(cx, cz);
+		float fallen = Rng.Smoothstep(0.35f, 0.85f, age);
+		int span = right - left;
+		int keep = (int)MathF.Ceiling(span * 0.5f * (1f - fallen));
+
 		for (int i = left; i <= right; i++)
 		{
+			// The middle goes first and the ends last, because that is where the
+			// load is and where the abutment holds it.
+			bool down = fallen > 0.02f && i > left + keep && i < right - keep;
+			if (down) continue;
 			for (int j = -halfW; j <= halfW; j++) Put(i, j, deckY, Palette.PLANK);
 			foreach (int side in new[] { -halfW - 1, halfW + 1 })
 			{
@@ -200,7 +214,8 @@ public sealed class BuiltProps
 		foreach (int i in new[] { left + 1, right - 1 })
 		{
 			Put(i, -halfW - 1, deckY + 3, Palette.BEAM);
-			Put(i, -halfW - 1, deckY + 4, Palette.LANTERN);
+			// Nobody left to light it.
+			Put(i, -halfW - 1, deckY + 4, age < 0.4f ? Palette.LANTERN : Palette.BEAM);
 		}
 
 		return new Bridge

@@ -30,6 +30,16 @@ public partial class WorldMap : CanvasLayer
 
 	public bool IsOpen => _open;
 
+	/// <summary>
+	/// Shift-click on the map: put the traveller down there.
+	///
+	/// A development convenience and deliberately not hidden behind the developer
+	/// menu, because on a continent this size the alternative to it is walking for
+	/// twenty minutes to look at one ruin. The map already knows where everything
+	/// is, so it is the natural place to ask to be somewhere.
+	/// </summary>
+	public event Action<Vector3> TeleportRequested;
+
 	public void Setup(Terrain terrain)
 	{
 		_terrain = terrain;
@@ -44,6 +54,7 @@ public partial class WorldMap : CanvasLayer
 		AddChild(dim);
 
 		_canvas = new Canvas { Owner_ = this };
+		_canvas.Teleport = world => TeleportRequested?.Invoke(world);
 		_canvas.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 		AddChild(_canvas);
 
@@ -110,7 +121,21 @@ public partial class WorldMap : CanvasLayer
 	public static Image Render(Terrain t, bool markers = false)
 	{
 		int S = t.Size;
-		var img = Image.CreateEmpty(S, S, false, Image.Format.Rgb8);
+
+		// Built as a raw byte buffer, not with SetPixel.
+		//
+		// At 3456 across that is eleven point nine MILLION calls through a bound
+		// method, on the keypress the player is waiting behind. Writing three
+		// bytes per pixel into an array and handing the whole thing over once is
+		// the same picture for a fraction of the cost.
+		//
+		// Downsampled as well. A map wider than the screen it is drawn on cannot
+		// show its extra pixels, and a continent this size does not need one pixel
+		// per block to be legible — the terraces are what matter and they are six
+		// blocks wide.
+		int step = Math.Max(1, S / 1536);
+		int W = S / step;
+		var buf = new byte[W * W * 3];
 
 		var shallow = new Color(0.62f, 0.68f, 0.90f);
 		var deep = new Color(0.24f, 0.28f, 0.62f);
@@ -118,9 +143,10 @@ public partial class WorldMap : CanvasLayer
 		var localRoad = new Color(0.90f, 0.86f, 0.92f);
 		var trailRoad = new Color(0.76f, 0.56f, 0.48f);
 
-		for (int z = 0; z < S; z++)
-		for (int x = 0; x < S; x++)
+		for (int oz = 0; oz < W; oz++)
+		for (int ox = 0; ox < W; ox++)
 		{
+			int x = ox * step, z = oz * step;
 			int i = z * S + x;
 			int h = t.Level[i];
 			Color c;
@@ -150,41 +176,88 @@ public partial class WorldMap : CanvasLayer
 				if (terrace % 2 == 0) c = c.Darkened(0.045f);
 			}
 
-			if (t.Roads != null && t.Roads.Mask[i] != 0 && t.Land[i] != 0)
-				c = t.Roads.Mask[i] switch
+			// Roads are thinner than the sampling step, so a straight lookup drops
+			// most of the network. Take any road within the cell this pixel stands
+			// for — a map that loses the roads loses the only thing on it the
+			// player navigates by.
+			if (t.Roads != null && t.Land[i] != 0)
+			{
+				byte road = 0;
+				for (int dz = 0; dz < step && road == 0; dz++)
+				for (int dx = 0; dx < step; dx++)
 				{
-					(byte)RoadClass.Major + 1 => majorRoad,
-					(byte)RoadClass.Local + 1 => localRoad,
-					_ => trailRoad,
-				};
+					int xx = x + dx, zz = z + dz;
+					if (xx >= S || zz >= S) continue;
+					byte m = t.Roads.Mask[zz * S + xx];
+					if (m != 0 && (road == 0 || m < road)) road = m;
+				}
+				if (road != 0)
+					c = road switch
+					{
+						(byte)RoadClass.Major + 1 => majorRoad,
+						(byte)RoadClass.Local + 1 => localRoad,
+						_ => trailRoad,
+					};
+			}
 
-			img.SetPixel(x, z, c);
+			int o = (oz * W + ox) * 3;
+			buf[o] = (byte)(Mathf.Clamp(c.R, 0f, 1f) * 255f);
+			buf[o + 1] = (byte)(Mathf.Clamp(c.G, 0f, 1f) * 255f);
+			buf[o + 2] = (byte)(Mathf.Clamp(c.B, 0f, 1f) * 255f);
 		}
 
+		var img = Image.CreateFromData(W, W, false, Image.Format.Rgb8, buf);
+
 		if (markers)
-			foreach (var site in t.Sites)
+		{
+			void Dot(int wx, int wz, int r, Color fill)
 			{
-				int r = site.Kind switch
-				{
-					SettlementKind.Town => 5,
-					SettlementKind.Village => 4,
-					_ => 3,
-				};
-				var fill = site.Kind == SettlementKind.Town ? new Color(0.99f, 0.80f, 0.36f)
-					: site.Kind == SettlementKind.Village ? new Color(0.97f, 0.66f, 0.60f)
-					: new Color(0.80f, 0.76f, 0.82f);
+				int px = wx / step, pz = wz / step;
 				for (int dz = -r; dz <= r; dz++)
 				for (int dx = -r; dx <= r; dx++)
 				{
-					int x = site.X + dx, z = site.Z + dz;
-					if (x < 0 || z < 0 || x >= S || z >= S) continue;
-					float d = MathF.Sqrt(dx * dx + dz * dz);
-					if (d > r) continue;
-					img.SetPixel(x, z, d > r - 1.6f ? new Color(0.16f, 0.13f, 0.18f) : fill);
+					int x = px + dx, z = pz + dz;
+					if (x < 0 || z < 0 || x >= W || z >= W) continue;
+					if (dx * dx + dz * dz > r * r) continue;
+					img.SetPixel(x, z, dx * dx + dz * dz > (r - 1.4f) * (r - 1.4f)
+						? new Color(0.16f, 0.13f, 0.18f) : fill);
 				}
 			}
+
+			// Landmarks first, so a remnant is never hidden behind a cairn.
+			foreach (var m in t.Marks)
+			{
+				if (m.Form == LandmarkForm.Cairn) continue;
+				Dot(m.X, m.Z, 2, LandmarkColour(m.Form));
+			}
+			foreach (var site in t.Sites)
+				Dot(site.X, site.Z, site.Kind == SettlementKind.Town ? 5
+					: site.Kind == SettlementKind.Village ? 4 : 3, StateColour(site.State));
+		}
 		return img;
 	}
+
+	/// <summary>
+	/// Colour by STATE, not by size. On a map of an emptied continent the useful
+	/// question is not how big a place was but whether anybody is there — so the
+	/// one gold dot on the map is a holdout, and finding it is the point.
+	/// </summary>
+	private static Color StateColour(RemnantState s) => s switch
+	{
+		RemnantState.Holdout => new Color(1.00f, 0.84f, 0.36f),
+		RemnantState.Remnant => new Color(0.93f, 0.72f, 0.66f),
+		RemnantState.Ruin => new Color(0.74f, 0.66f, 0.70f),
+		_ => new Color(0.62f, 0.60f, 0.66f),
+	};
+
+	private static Color LandmarkColour(LandmarkForm f) => f switch
+	{
+		LandmarkForm.Watchtower => new Color(0.86f, 0.86f, 0.94f),
+		LandmarkForm.StandingStones => new Color(0.72f, 0.68f, 0.84f),
+		LandmarkForm.Shrine => new Color(0.72f, 0.88f, 0.92f),
+		LandmarkForm.Farmstead => new Color(0.88f, 0.82f, 0.62f),
+		_ => new Color(0.78f, 0.76f, 0.78f),
+	};
 
 	/* ================================================================
 	 * The interactive surface
@@ -195,6 +268,7 @@ public partial class WorldMap : CanvasLayer
 		public Texture2D Texture;
 		public Terrain Terrain;
 		public Vector3 Player;
+		public Action<Vector3> Teleport;
 
 		private float _zoom = 1f;
 		private Vector2 _pan;
@@ -235,7 +309,22 @@ public partial class WorldMap : CanvasLayer
 					_zoom = Mathf.Max(_zoom / 1.18f, 1f);
 					if (_zoom <= 1.001f) _pan = Vector2.Zero;
 				}
-				else if (mb.ButtonIndex == MouseButton.Left) _dragging = mb.Pressed;
+				else if (mb.ButtonIndex == MouseButton.Left)
+				{
+					// Shift-click asks to be moved. Plain click still pans, so the
+					// two never fight over the same gesture.
+					if (mb.Pressed && mb.ShiftPressed && Terrain != null)
+					{
+						var r = MapRect();
+						if (r.HasPoint(mb.Position))
+						{
+							float nx = (mb.Position.X - r.Position.X) / r.Size.X;
+							float nz = (mb.Position.Y - r.Position.Y) / r.Size.Y;
+							Teleport?.Invoke(new Vector3(nx * Terrain.Size, 0f, nz * Terrain.Size));
+						}
+					}
+					else _dragging = mb.Pressed;
+				}
 				QueueRedraw();
 			}
 			else if (e is InputEventMouseMotion mm && _dragging)

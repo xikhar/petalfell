@@ -15,10 +15,14 @@ shader_type spatial;
 // voxel ends and the next begins.
 render_mode cull_back, diffuse_burley, specular_disabled;
 
-uniform vec3 warm_tint : source_color = vec3(1.03, 1.00, 0.975);
-uniform vec3 cool_tint : source_color = vec3(0.965, 0.972, 1.04);
-uniform float face_tint : hint_range(0.0, 1.0) = 0.35;
-uniform vec3 sun_dir = vec3(-0.55, 0.78, -0.32);
+uniform vec3 warm_tint : source_color = vec3(1.02, 1.00, 0.985);
+uniform vec3 cool_tint : source_color = vec3(0.945, 0.958, 1.06);
+uniform float face_tint : hint_range(0.0, 1.0) = 0.38;
+// Driven by DayCycle. Global rather than per-material: the character shader
+// alone builds a material for every box of every figure in the world, and a
+// clock that had to find them all would spend the frame chasing references.
+global uniform vec3 pf_sun_dir;
+global uniform float pf_night;
 
 // How far the pattern is allowed to darken its own surface. Restrained on
 // purpose: this is tonal variation within one material, not a drawn line.
@@ -83,9 +87,13 @@ void fragment() {
 	// A constant axis ramp, applied before Lambert. Deliberately independent of
 	// the sun: the same terrace stays legible through camera and light changes,
 	// with Z sides a little deeper than X.
+	// Widened. At 0.94 and 0.88 the two vertical faces of a cube were within six
+	// percent of its top, so a block read as a flat hexagon rather than as a
+	// solid — the ramp is the main thing describing form here and it was barely
+	// doing anything.
 	float face_shade = wn.y > 0.5 ? 1.0
-		: wn.y < -0.5 ? 0.72
-		: abs(wn.x) > 0.5 ? 0.94 : 0.88;
+		: wn.y < -0.5 ? 0.62
+		: abs(wn.x) > 0.5 ? 0.88 : 0.78;
 	base *= face_shade;
 
 	// The face plane, in world units. A top face reads its XZ; a wall reads its
@@ -193,7 +201,7 @@ void fragment() {
 		base = mix(base, v_surface.yzw * face_shade, lip);
 	}
 
-	float facing = dot(wn, normalize(sun_dir));
+	float facing = dot(wn, normalize(pf_sun_dir));
 	vec3 tint = mix(cool_tint, warm_tint, smoothstep(-0.6, 0.9, facing));
 	base *= mix(vec3(1.0), tint, face_tint);
 
@@ -201,7 +209,15 @@ void fragment() {
 	ROUGHNESS = 0.92;
 	SPECULAR = 0.0;
 	METALLIC = 0.0;
-	// The mesher parks per-block emissive in the vertex alpha; lanterns and
-	// cascades are the only things in the world allowed to glow.
-	EMISSION = base * COLOR.a * 2.2;
+	// The mesher parks per-block emissive in the vertex alpha; lanterns, lit
+	// windows and cascades are the only things in the world allowed to glow.
+	//
+	// After dark they are the only warm light on the continent, and they have to
+	// grow to carry that — at daylight strength a lantern is invisible against a
+	// night ambient, and the one signal that says somebody lives here would go
+	// out exactly when it matters most.
+	// Boosted after dark, but nowhere near enough to clip: at 7x the windows
+	// came back as pure white rectangles, which reads as a hole in the wall
+	// rather than as a warm room behind it. The COLOUR is the point.
+	EMISSION = base * COLOR.a * (2.2 + pf_night * 1.9);
 }

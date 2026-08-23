@@ -18,7 +18,7 @@ namespace Petalfell;
 public partial class Main : Node3D
 {
 	[Export] public int Seed = 20260820;
-	[Export] public int WorldSize = 1024;
+	[Export] public int WorldSize = 3456;
 	[Export] public int StreamRadius = 8;
 	[Export(PropertyHint.File, "*.json")] public string MapDefinitionPath = "res://content/chapter_01/map.json";
 
@@ -41,12 +41,16 @@ public partial class Main : Node3D
 	private AmbientDrift _ambientDrift;
 	private UI.WorldMap _worldMap;
 	private Fauna _fauna;
+	private DayCycle _day;
 	private Vector3? _focusOverride;
 	private ShaderMaterial _inkLight, _inkDark, _waterMat;
 	private Tools.DeveloperMenu _developerMenu;
 
 	public override void _Ready()
 	{
+		// Before any material is built: a shader naming a global uniform that has
+		// not been registered fails to compile.
+		DayCycle.RegisterGlobals();
 		SetupInput();
 		Map = MapDefinition.Load(MapDefinitionPath);
 		if (Seed == 0) Seed = Map.DefaultSeed;
@@ -62,6 +66,7 @@ public partial class Main : Node3D
 		// After the bridges: a house may not stand where a crossing lands, and
 		// Fits() tests that by looking for columns already built above ground.
 		Settlements.Build(Terrain, Terrain.Sites, Seed);
+		Landmarks.Build(Terrain, Terrain.Marks);
 		var tTown = Time.GetTicksMsec();
 		Vegetation.Populate(Terrain, Seed);
 		var t3 = Time.GetTicksMsec();
@@ -71,8 +76,14 @@ public partial class Main : Node3D
 		         $"bridges {Props.Bridges.Count} ({Props.RoadDecks} for roads, {Terrain.Roads.Crossings.Count} crossings)  " +
 		         $"roads {Terrain.Roads.Segments.Count} (+{Terrain.Roads.Unreachable} unreachable)  " +
 		         $"settlements {Terrain.Sites.Count}  " +
-		         $"buildings {Settlements.LastBuildingCount}");
+		         $"buildings {Settlements.LastBuildingCount}  landmarks {Terrain.Marks.Count}");
+		{
+			var st = new int[4];
+			foreach (var site in Terrain.Sites) st[(int)site.State]++;
+			GD.Print($"[remnants] holdout {st[0]}  remnant {st[1]}  ruin {st[2]}  monument {st[3]}");
+		}
 		GD.Print($"[terrain] {Terrain.Timings}");
+		ReportAbandonment();
 		ReportTerrain();
 
 		GroundDetail.Seed = Seed;
@@ -80,8 +91,10 @@ public partial class Main : Node3D
 		BuildMaterials();
 
 		AddChild(Atmosphere.Build());
-		AddChild(Atmosphere.Sun());
-		AddChild(Atmosphere.Fill());
+		var sun = Atmosphere.Sun();
+		var fill = Atmosphere.Fill();
+		AddChild(sun);
+		AddChild(fill);
 
 		_streamer = new ChunkStreamer { Name = "Chunks", LoadRadius = StreamRadius };
 		AddChild(_streamer);
@@ -145,8 +158,16 @@ public partial class Main : Node3D
 
 		// Kept separate from game-facing UI. This is a disposable live-tuning
 		// surface, toggled with tilde, and owns no gameplay or menu state.
+		// The clock is built BEFORE the developer overlay, which takes it as a
+		// constructor dependency. Built after, Setup received a null and quietly
+		// skipped every time-of-day control — the overlay builds its whole panel
+		// in _Ready, so there is no second chance to add them later.
+		_day = new DayCycle { Name = "DayCycle" };
+		AddChild(_day);
+		_day.Setup(Atmosphere.LastEnvironment, sun, fill, Atmosphere.LastSky, _waterMat);
+
 		_developerMenu = new Tools.DeveloperMenu { Name = "DeveloperSettings" };
-		_developerMenu.Setup(_inkLight, _inkDark, Rig);
+		_developerMenu.Setup(_inkLight, _inkDark, Rig, _day);
 		AddChild(_developerMenu);
 
 		_fauna = new Fauna { Name = "Fauna" };
@@ -156,6 +177,7 @@ public partial class Main : Node3D
 		_worldMap = new UI.WorldMap { Name = "WorldMap" };
 		AddChild(_worldMap);
 		_worldMap.Setup(Terrain);
+		_worldMap.TeleportRequested += TeleportTo;
 
 		_ambientDrift = new AmbientDrift { Name = "AmbientDrift" };
 		_ambientDrift.Setup(Terrain, spawn);
@@ -166,6 +188,27 @@ public partial class Main : Node3D
 
 		var (shotDir, only) = Tools.Capture.ParseArgs();
 		if (shotDir != null) _ = RunCapture(shotDir, only, spawn);
+	}
+
+	/// <summary>
+	/// How the retreat fell across the map. Printed because every decaying system
+	/// reads this field, so if its distribution is wrong everything downstream is
+	/// wrong in the same direction and it is far cheaper to see it here.
+	/// </summary>
+	private void ReportAbandonment()
+	{
+		var band = new int[5];
+		float sum = 0f;
+		foreach (var r in Plan.Regions)
+		{
+			sum += r.Abandonment;
+			band[Math.Clamp((int)(r.Abandonment * 5f), 0, 4)]++;
+		}
+		var sb = new System.Text.StringBuilder();
+		string[] names = { "held", "recent", "old", "older", "long-gone" };
+		for (int i = 0; i < 5; i++)
+			sb.Append($"{names[i]}:{band[i] * 100f / Math.Max(1, Plan.Regions.Count):F0}%  ");
+		GD.Print($"[retreat] mean {sum / Math.Max(1, Plan.Regions.Count):F2}  {sb}");
 	}
 
 	/// <summary>
@@ -228,7 +271,7 @@ public partial class Main : Node3D
 			caps.TryGetValue(cap, out int c);
 			caps[cap] = c + 1;
 		}
-		foreach (byte b in Terrain.Grid.Blocks)
+		foreach (byte b in Terrain.Grid.Placed)
 		{
 			if (b >= Palette.LEAF_PINK && b <= Palette.LEAF_ROSE) leaves++;
 			else if (b == Palette.TRUNK || b == Palette.TRUNK_PALE || b == Palette.TRUNK_ROSE) trunks++;
@@ -253,7 +296,8 @@ public partial class Main : Node3D
 		var bs = new System.Text.StringBuilder();
 		foreach (var kv in biomes) bs.Append($"{kv.Key}:{kv.Value * 100f / Plan.Regions.Count:F0}%  ");
 		GD.Print($"[biomes] {bs}");
-		GD.Print($"[flora] leaf blocks {leaves}  trunk blocks {trunks}  trees {Vegetation.LastTreeCount}");
+		GD.Print($"[flora] leaf blocks {leaves}  trunk blocks {trunks}  trees {Vegetation.LastTreeCount}  " +
+		         $"placed blocks {Terrain.Grid.PlacedCount}");
 
 		// The surface pass reads a noise field to pick grass tones; if that
 		// field never crosses its thresholds the world comes out one colour.
@@ -308,13 +352,24 @@ public partial class Main : Node3D
 					: spawn,
 				4 => FindTreeFeature(spawn),
 				5 => FindBiomeFeature(World.Biome.Sakura),
-				7 => FindSettlementFeature(),
+				7 => FindSettlementFeature(RemnantState.Ruin),
+				8 => FindSettlementFeature(RemnantState.Holdout),
+				9 => FindSettlementFeature(RemnantState.Monument),
+				10 => FindLandmark(LandmarkForm.Watchtower),
+				11 => FindLandmark(LandmarkForm.StandingStones),
+				12 => FindLandmark(LandmarkForm.Farmstead),
 				6 => Plan.Lakes.Count > 0
 					? new Vector3(Plan.Lakes[0].Cx, Terrain.Sea, Plan.Lakes[0].Cz)
 					: FindRiverFeature(),
 				_ => spawn,
 			};
 			focus += new Vector3(0, 1.6f, 0);
+
+			if (shot.Time >= 0f && _day != null)
+			{
+				_day.TimeOfDay = shot.Time;
+				_day.Paused = true;
+			}
 
 			// The drift follows the player, and the player is not where a review
 			// shot is framed. Without re-seating it, every captured frame is
@@ -385,23 +440,59 @@ public partial class Main : Node3D
 		GD.Print($"[capture] {dir}/map.png");
 	}
 
-	/// <summary>The largest settlement, for a shot of somewhere inhabited.</summary>
-	private Vector3 FindSettlementFeature()
+	/// <summary>
+	/// Put the traveller down near a point on the map, on ground they can stand on.
+	///
+	/// FindSpawn does the search — it already knows what a safe surface is, and
+	/// reusing it means a teleport cannot land somewhere the game would never have
+	/// spawned anyone. The chunks around the destination are primed before the
+	/// move, because arriving inside unstreamed world drops the player through it.
+	/// </summary>
+	private void TeleportTo(Vector3 world)
+	{
+		var wanted = new MapPoint
+		{
+			X = Mathf.Clamp(world.X / WorldSize, 0f, 1f),
+			Z = Mathf.Clamp(world.Z / WorldSize, 0f, 1f),
+		};
+		var (sx, sz) = Terrain.FindSpawn(wanted);
+		var landing = new Vector3(sx + 0.5f, Terrain.Level[sz * WorldSize + sx] + 0.2f, sz + 0.5f);
+
+		_streamer.UpdateAround(landing, prime: true);
+		Player.Velocity = Vector3.Zero;
+		Player.Route = null;
+		Player.GlobalPosition = landing;
+		Player.ResetPhysicsInterpolation();
+		_dog.GlobalPosition = landing + new Vector3(2.2f, 0, 1.4f);
+		_ambientDrift?.Setup(Terrain, landing);
+		_worldMap.SetPlayer(landing);
+		Rig.Follow(landing, Vector3.Zero, 1.0);
+		if (_worldMap.IsOpen) _worldMap.Toggle();
+		GD.Print($"[teleport] {landing}");
+	}
+
+	/// <summary>Somewhere to stand and look at one of the generated landmarks.</summary>
+	private Vector3 FindLandmark(LandmarkForm want)
+	{
+		foreach (var m in Terrain.Marks)
+			if (m.Form == want) return new Vector3(m.X + 0.5f, m.Level, m.Z + 0.5f);
+		return new Vector3(WorldSize * 0.5f, Terrain.Sea, WorldSize * 0.5f);
+	}
+
+	/// <summary>The largest remnant of a given state, for a shot of one.</summary>
+	private Vector3 FindSettlementFeature(RemnantState want = RemnantState.Ruin)
 	{
 		SettlementSite best = null;
 		foreach (var site in Terrain.Sites)
-			if (site.Buildings.Count > 0 &&
+			if (site.State == want && site.Buildings.Count > 0 &&
 				(best == null || site.Buildings.Count > best.Buildings.Count)) best = site;
+		// Monuments have no buildings at all, so fall back to any site of the kind.
+		if (best == null)
+			foreach (var site in Terrain.Sites)
+				if (site.State == want) { best = site; break; }
 		if (best == null) return new Vector3(WorldSize * 0.5f, Terrain.Sea, WorldSize * 0.5f);
 		// Frame a HOUSE, not the middle of the site. The centre of a settlement is
 		// its square, and a review shot of a square is a review shot of paving.
-		if (best.Buildings.Count > 0)
-		{
-			var b = best.Buildings[best.Buildings.Count / 2];
-			int bx = Mathf.Clamp(b.x + b.w / 2, 1, WorldSize - 2);
-			int bz = Mathf.Clamp(b.z + b.d / 2, 1, WorldSize - 2);
-			return new Vector3(bx + 0.5f, Terrain.Level[bz * WorldSize + bx], bz + 0.5f);
-		}
 		return new Vector3(best.X + 0.5f, best.Level, best.Z + 0.5f);
 	}
 

@@ -45,6 +45,9 @@ public partial class Controller : CharacterBody3D
 	private float _buffer;
 	private bool _autoJumping;
 	private Vector3 _autoJumpFlat;
+	private float _autoJumpAge;
+	/// <summary>An automatic hop cannot physically last longer than this.</summary>
+	private const float AutoJumpMax = 0.9f;
 	private Terrain _terrain;
 
 	/// <summary>World-space destination from click-to-move, or null.</summary>
@@ -174,12 +177,44 @@ public partial class Controller : CharacterBody3D
 		{
 			_autoJumping = false;
 			_autoJumpFlat = Vector3.Zero;
+			_autoJumpAge = 0f;
 		}
 		_coyote = grounded ? Coyote : Mathf.Max(0f, _coyote - dt);
 		_buffer = Mathf.Max(0f, _buffer - dt);
 
 		float accel = grounded ? Accel : AirAccel;
 		var flat = new Vector3(vel.X, 0, vel.Z);
+
+		if (_autoJumping)
+		{
+			_autoJumpAge += dt;
+
+			// Two ways out, on top of landing.
+			//
+			// While this flag is set the traveller's heading is FORCED to the
+			// stored vector and player input is discarded entirely — which is
+			// correct for the third of a second an arc lasts and catastrophic if
+			// the flag ever fails to clear. It did: the reset needs grounded AND
+			// a downward velocity, gravity used to be applied only when NOT
+			// grounded, so a body that ended up standing on the floor with upward
+			// velocity had nothing to bring it down, never met the reset, and
+			// walked off in a straight line ignoring the controls forever. The
+			// gravity rule below is the actual repair; these two are the guarantee.
+			if (_autoJumpAge > AutoJumpMax)
+			{
+				GD.Print("[controller] auto-jump outlived its arc and was cancelled");
+				_autoJumping = false;
+				_autoJumpFlat = Vector3.Zero;
+			}
+			// A deliberate shove in the opposite direction always wins. Whatever
+			// else is wrong, the player must be able to stop.
+			else if (wish.LengthSquared() > 0.0001f && _autoJumpFlat.LengthSquared() > 0.0001f &&
+				wish.Normalized().Dot(_autoJumpFlat.Normalized()) < -0.1f)
+			{
+				_autoJumping = false;
+				_autoJumpFlat = Vector3.Zero;
+			}
+		}
 
 		if (_autoJumping)
 		{
@@ -212,9 +247,19 @@ public partial class Controller : CharacterBody3D
 			_buffer = 0f;
 			_coyote = 0f;
 		}
-		else if (!grounded)
+		else if (!grounded || vel.Y > 0f)
 		{
-			// Variable jump height: releasing early cuts the arc short.
+			// Gravity applies to anything RISING, not merely to anything airborne.
+			//
+			// The old test was `!grounded` alone, and it left a hole the whole
+			// controller could fall through. An automatic hop sets an upward
+			// velocity while IsOnFloor() is still true, and if that upward move is
+			// then blocked — a bridge deck, a roof, a surviving course of wall, a
+			// canopy grown into a doorway, all of which this world now has a great
+			// deal more of than it used to — the body stays on the floor with
+			// positive Y. Grounded, so no gravity; rising, so the auto-jump reset
+			// never fires. Nothing in the loop could break the tie, and the
+			// traveller walked in one direction with the controls dead.
 			if (vel.Y > 0f && !_autoJumping && !Input.IsActionPressed("jump"))
 				vel.Y -= Gravity * 1.7f * dt;
 			vel.Y = Mathf.Max(Terminal, vel.Y - Gravity * dt);
@@ -226,6 +271,7 @@ public partial class Controller : CharacterBody3D
 	{
 		_autoJumping = false;
 		_autoJumpFlat = Vector3.Zero;
+		_autoJumpAge = 0f;
 		// The traveller floats rather than sinks: water deeper than a stride is
 		// common, and the surface is where the scene is.
 		float target = Palette.WaterLevel - 0.85f;
@@ -304,6 +350,7 @@ public partial class Controller : CharacterBody3D
 			_autoJumpFlat = crossingVelocity;
 			Velocity = new Vector3(_autoJumpFlat.X, launchY, _autoJumpFlat.Z);
 			_autoJumping = true;
+			_autoJumpAge = 0f;
 			_coyote = 0f;
 			_buffer = 0f;
 			return;

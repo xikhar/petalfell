@@ -76,21 +76,124 @@ public static class Palette
 	// Supplying an already-linear value here would convert it twice and make this
 	// intended mid-grey ink render almost black.
 	public static readonly Color InkDark = new Color(0.30f, 0.28f, 0.33f);
-	public static readonly Color InkLight = new Color(0.81f, 0.80f, 0.82f);
+	// Dimmed. The pale ink was authored against a much flatter render; once the
+	// grade gained real contrast it stopped reading as "this surface turned" and
+	// started reading as a drawn white highlight sitting on top of the picture.
+	public static readonly Color InkLight = new Color(0.62f, 0.61f, 0.65f);
 	/// <summary>
 	/// Stroke width in framebuffer pixels. Kept here so the renderer and the
 	/// developer control always start from the same authored value.
 	/// </summary>
 	public const float InkWidth = 1.30f;
 
-	/* ---------------- grade ---------------- */
+	/* ---------------- grade ----------------
+	 *
+	 * These values are pushed into grade.gdshader from Main and OVERRIDE the
+	 * shader's own defaults, which is worth knowing because for a long time they
+	 * were quietly making the picture worse than the shader would have on its
+	 * own: the shader defaults to 1.19 saturation and 1.10 contrast, and this
+	 * table was sending 1.02 and 0.94. A contrast below one does not merely fail
+	 * to add punch, it actively takes it out — half the flatness in the frame was
+	 * being applied deliberately, in the last pass, after everything else had got
+	 * it right.
+	 *
+	 * Pastel is a HUE choice, not a contrast choice. Soft colours with real
+	 * separation between light and shade read as storybook; soft colours with no
+	 * separation read as fog. */
 	public const float GradeExposure = 1.12f;
-	public static readonly Vector3 GradeLift = new(0.006f, 0.004f, 0.014f);
+	public static readonly Vector3 GradeLift = new(0.002f, 0.000f, 0.010f);
 	public static readonly Vector3 GradeGamma = new(1.00f, 1.005f, 0.99f);
-	public static readonly Vector3 GradeGain = new(1.03f, 1.02f, 1.03f);
-	public const float GradeSaturation = 1.02f;
-	public const float GradeContrast = 0.94f;
-	public const float GradeVignette = 0.03f;
+	public static readonly Vector3 GradeGain = new(1.015f, 1.02f, 1.05f);
+	public const float GradeSaturation = 1.26f;
+	public const float GradeContrast = 1.16f;
+	public const float GradeVignette = 0.06f;
+
+	/* ---------------- time of day ----------------
+	 *
+	 * One keyframe per hour that matters, interpolated around the clock. Every
+	 * value the atmosphere owns lives here rather than in Atmosphere.cs, for the
+	 * same reason every block colour does: this file is the art bible, and a
+	 * lighting rig that carries its own private colours is a second bible that
+	 * will disagree with this one.
+	 *
+	 * Night is NOT simply day scaled down. A dark scene lit by a dimmed version
+	 * of a daylight rig reads as underexposed footage; a night that reads as
+	 * night has its own hues — deep blue ambient, a cold key from the wrong side
+	 * of the sky, and warm points of light doing all the work. That last part is
+	 * what makes this worth having in a world about abandonment: after dusk the
+	 * only warm light on the continent is coming from the handful of windows
+	 * somebody still lives behind.
+	 *
+	 * Night is also kept LIT. The first pass took it down to a moon of 0.10 and
+	 * an ambient of 0.16, which is roughly physically honest and produced a black
+	 * screen with a few electric-blue facets — the world stopped existing between
+	 * the lanterns. This is a game about looking at a landscape, so the moon here
+	 * is a stage moon: bright enough to read every terrace and keep the palette's
+	 * hues alive, dim and cold enough that a lit window still reads as the
+	 * warmest thing for miles.
+	 *
+	 * ONE RULE for the twilight keys: the SKY may be as hot as it likes, the KEY
+	 * LIGHT may not. A saturated orange key does not tint a scene, it REPLACES
+	 * every albedo in it with its own hue — and with the grade running at 1.26
+	 * saturation the first dusk came back a uniform neon crimson with no material
+	 * distinguishable from any other. Sunset colour belongs in the sky, the fog
+	 * and the bloom; what actually lands on surfaces stays close to white. */
+	public readonly struct SkyState
+	{
+		public readonly float At;
+		public readonly Color Zenith, Horizon, Ground;
+		public readonly Color Sun; public readonly float SunEnergy;
+		public readonly Color Ambient; public readonly float AmbientEnergy;
+		public readonly Color Fog;
+		public readonly float ShadowOpacity;
+		public readonly float Night;
+		public readonly float GlowThreshold;
+		/// <summary>
+		/// How much of the ambient is taken from the SKY rather than from the
+		/// authored ambient colour.
+		///
+		/// Time-varying, and it has to be. A blue midday sky makes an excellent
+		/// cool fill and should supply nearly all of it. A sunset sky is a hot
+		/// orange, and letting THAT supply the fill means the key and the fill are
+		/// both warm and there is nothing cool left anywhere in the frame — the
+		/// first dusk came back a uniform crimson for exactly this reason, and
+		/// neutralising the key alone did not fix it, because the sky was still
+		/// pouring orange into the shadows.
+		/// </summary>
+		public readonly float SkyMix;
+
+		public SkyState(float at, uint zenith, uint horizon, uint ground,
+			uint sun, float sunEnergy, uint ambient, float ambientEnergy,
+			uint fog, float shadow, float night, float glow, float skyMix)
+		{
+			At = at;
+			Zenith = C(zenith); Horizon = C(horizon); Ground = C(ground);
+			Sun = C(sun); SunEnergy = sunEnergy;
+			Ambient = Srgb(ambient); AmbientEnergy = ambientEnergy;
+			Fog = C(fog);
+			ShadowOpacity = shadow; Night = night; GlowThreshold = glow; SkyMix = skyMix;
+		}
+	}
+
+	/// <summary>
+	/// The day, keyed. Times are fractions of a full cycle: 0 midnight, 0.25
+	/// sunrise, 0.5 noon, 0.75 sunset.
+	/// </summary>
+	public static readonly SkyState[] Day =
+	{
+		//              t     zenith    horizon   ground    sun       energy ambient   energy fog       shad night glow
+		new SkyState(0.00f, 0x232c5e, 0x3b4478, 0x272a4c, 0xc3d0ff, 0.34f, 0xaeb6e2, 0.40f, 0x3a3f6a, 0.46f, 1.00f, 0.40f, 0.62f),
+		new SkyState(0.21f, 0x33356a, 0x64507f, 0x36335a, 0xc7aae4, 0.38f, 0xb0a8dc, 0.42f, 0x54497a, 0.48f, 0.90f, 0.44f, 0.52f),
+		// The sun on the horizon: the long, low, orange half hour.
+		new SkyState(0.27f, 0x6f74c0, 0xe8a290, 0x8b7196, 0xffd2b4, 0.60f, 0xbcb4e0, 0.38f, 0xd6b4b0, 0.66f, 0.42f, 0.70f, 0.26f),
+		new SkyState(0.33f, 0x9aa0e0, 0xf0cdc4, 0xc0aec4, 0xffe6d6, 0.92f, 0xd6d4f2, 0.40f, 0xe6cfda, 0.72f, 0.12f, 0.92f, 0.56f),
+		new SkyState(0.50f, 0xb9b4e8, 0xdcd6f4, 0xd2cbef, 0xfff0ee, 0.98f, 0xebeeff, 0.42f, 0xcdc6ef, 0.74f, 0.00f, 1.05f, 0.78f),
+		new SkyState(0.68f, 0xb0aae6, 0xe4d2e2, 0xcdc2ea, 0xffeee2, 0.94f, 0xe4e2f8, 0.42f, 0xd6c8ea, 0.74f, 0.02f, 1.00f, 0.68f),
+		// Dusk. Warmer and deeper than dawn, because the day has to end
+		// differently from how it began or the cycle reads as a loop.
+		new SkyState(0.76f, 0x6a63b4, 0xe8ab96, 0x8f6f92, 0xffc8a4, 0.56f, 0xb4aeda, 0.38f, 0xd8b2ae, 0.64f, 0.46f, 0.66f, 0.24f),
+		new SkyState(0.83f, 0x35326a, 0x6b4a7c, 0x38335c, 0xbb9edd, 0.38f, 0xaea6da, 0.42f, 0x584878, 0.48f, 0.92f, 0.44f, 0.52f),
+	};
 
 	/* ---------------- petals ---------------- */
 	public static readonly Color[] PetalColors =

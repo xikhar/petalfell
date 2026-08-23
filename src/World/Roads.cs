@@ -79,7 +79,8 @@ public sealed class RoadNetwork
 
 	private const float Blocked = float.MaxValue;
 
-	public static RoadNetwork Build(Terrain terrain, List<SettlementSite> sites, int seed)
+	public static RoadNetwork Build(Terrain terrain, List<SettlementSite> sites,
+		List<Landmark> marks, int seed)
 	{
 		var net = new RoadNetwork(terrain.Size);
 		if (sites == null || sites.Count < 2) return net;
@@ -107,6 +108,52 @@ public sealed class RoadNetwork
 			foreach (var (x, z) in Smooth(raw))
 				seg.Points.Add(((int)MathF.Round(x), (int)MathF.Round(z)));
 			net.Segments.Add(seg);
+		}
+
+		// Trails out to the landmarks.
+		//
+		// This is what stops the road network being a closed loop between places
+		// nobody lives and turns it into something that leads somewhere. A trail
+		// is routed from each significant landmark back to its nearest remnant,
+		// and because routes see earlier ones at a deep discount it will find the
+		// existing network and join it rather than cutting its own line home —
+		// so what actually appears is a spur off the road, which is what a track
+		// to a watchtower is.
+		if (marks != null && sites.Count > 0)
+		{
+			int budget = 24 + sites.Count * 2;
+			foreach (var mark in marks)
+			{
+				if (budget <= 0) break;
+				if (!mark.Significant) continue;
+
+				int nearest = -1;
+				float best = float.MaxValue;
+				for (int i = 0; i < sites.Count; i++)
+				{
+					float dx = sites[i].X - mark.X, dz = sites[i].Z - mark.Z;
+					float d = dx * dx + dz * dz;
+					if (d < best) { best = d; nearest = i; }
+				}
+				// Too far and the trail is longer than the thing it leads to is
+				// worth; those landmarks are found by wandering, which is fine.
+				if (nearest < 0 || best > 260f * 260f) continue;
+
+				var lattice = router.Route(router.NodeOf(mark.X, mark.Z), nodes[nearest]);
+				if (lattice == null) continue;
+
+				var seg = new RoadSegment { Class = RoadClass.Trail, A = -1, B = nearest };
+				var raw = new List<(float x, float z)>(lattice.Count);
+				foreach (int n in lattice)
+				{
+					raw.Add((n % lw * Cell + Cell / 2, n / lw * Cell + Cell / 2));
+					router.MarkUsed(n);
+				}
+				foreach (var (x, z) in Smooth(raw))
+					seg.Points.Add(((int)MathF.Round(x), (int)MathF.Round(z)));
+				net.Segments.Add(seg);
+				budget--;
+			}
 		}
 
 		net.Stamp(terrain);
@@ -312,6 +359,19 @@ public sealed class RoadNetwork
 			int i = z * S + x;
 			if (Clear[i] == 0) Clear[i] = 1;
 			if (d > half) continue;
+
+			// Reclamation. plan.md §12.4: most of this network is being taken
+			// back, and how far depends on how long ago the far end stopped
+			// mattering. Sampled as coherent patches rather than per block — a
+			// road fails in stretches, and a per-block sprinkle reads as a
+			// dithered texture rather than as a surface going under.
+			float age = terrain.Plan.AbandonmentAt(x, z);
+			if (age > 0.18f)
+			{
+				float patch = 0.5f + 0.5f
+					* MathF.Sin(x * 0.055f + z * 0.021f) * MathF.Cos(z * 0.048f - x * 0.017f);
+				if (patch < (age - 0.18f) * 1.45f) continue;
+			}
 			// A road may not be painted onto a cliff face. The router avoids them,
 			// but the stamp has width, and half a carriageway hanging over a
 			// two-block riser reads as a paint spill rather than a surface.

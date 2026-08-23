@@ -178,6 +178,11 @@ public partial class Critter : Node3D
 	private float _speed;
 	private double _decide;
 	private float _startle;
+	private float _spookCooldown;
+	/// <summary>Vertical state. Land animals leave the ground to change terrace.</summary>
+	private float _vy;
+	private bool _airborne;
+	private float _groundY;
 
 	public void Setup(Species kind, Terrain terrain, ShaderMaterial inkLight,
 		ShaderMaterial inkDark, int seed)
@@ -189,6 +194,22 @@ public partial class Critter : Node3D
 		_rng = new Rng(seed);
 		_phase = _rng.Next() * 6f;
 		_yaw = _rng.Next() * Mathf.Tau;
+
+		// Seed the ground height from the terrain, not from the first successful
+		// Legal() call.
+		//
+		// This was a chicken and egg that dropped every land animal through the
+		// floor. Legal() decides whether a square is reachable by comparing it to
+		// _groundY, and _groundY was only ever assigned when Legal() succeeded —
+		// so on a creature that started at zero, every test read "that ledge is
+		// twenty-six blocks up, unreachable", nothing ever set the field, and
+		// Vertical() saw a twenty-six block drop below it and started falling.
+		// They appeared for a second and sank.
+		int S = terrain.Size;
+		int gx = Mathf.Clamp((int)GlobalPosition.X, 0, S - 1);
+		int gz = Mathf.Clamp((int)GlobalPosition.Z, 0, S - 1);
+		_groundY = terrain.Level[gz * S + gx];
+
 		Build();
 	}
 
@@ -205,8 +226,8 @@ public partial class Critter : Node3D
 			case Species.Deer: Quadruped(new Tone(0xc59a86), new Tone(0xf1e2d6), 3.0f, 2.6f, 5.4f, 3.1f, 0.9f); break;
 			case Species.Goat: Quadruped(new Tone(0xe8e2ea), new Tone(0xb9aec0), 2.7f, 2.4f, 4.4f, 2.4f, 0.8f); break;
 			case Species.Rabbit: Quadruped(new Tone(0xe3d5cf), new Tone(0xf4ece6), 1.9f, 1.7f, 2.7f, 1.1f, 0.6f); break;
-			case Species.Bird: Flyer(new Tone(0xdfe6f2), new Tone(0xb9c2d8), 1.5f); break;
-			case Species.Butterfly: Flyer(new Tone(0xf8ccda), new Tone(0xdccef1), 0.75f); break;
+			case Species.Bird: Flyer(new Tone(0xdfe6f2), new Tone(0xb9c2d8), 0.95f); break;
+			case Species.Butterfly: Flyer(new Tone(0xf8ccda), new Tone(0xdccef1), 0.34f); break;
 			case Species.Fish: Swimmer(new Tone(0xa9c2d8)); break;
 		}
 	}
@@ -218,9 +239,17 @@ public partial class Critter : Node3D
 		Box(_body, w * 0.86f, h * 0.34f, d * 0.9f, belly,
 			new Vector3(0, (legLen + h * 0.18f) * S, 0), outlined: false);
 
-		_head = Pivot(_body, new Vector3(0, (legLen + h * 0.85f) * S, -d * 0.42f * S));
+		// Nose toward +Z.
+		//
+		// The whole menagerie was walking backwards. Yaw is derived with
+		// Atan2(heading.x, heading.z), which turns +Z to face the heading — the
+		// convention Character.cs is built to — but these bodies had the head at
+		// NEGATIVE Z, so every animal presented its tail to wherever it was going.
+		// Fixed in the model rather than by adding a half-turn to the yaw, so the
+		// project keeps one facing convention instead of two.
+		_head = Pivot(_body, new Vector3(0, (legLen + h * 0.85f) * S, d * 0.42f * S));
 		Box(_head, w * 0.72f * headScale, h * 0.72f * headScale, w * 0.8f * headScale,
-			coat, new Vector3(0, 0, -w * 0.3f * headScale * S));
+			coat, new Vector3(0, 0, w * 0.3f * headScale * S));
 		if (_kind == Species.Rabbit)
 		{
 			// Ears. The one piece of species-specific modelling in here, because a
@@ -260,8 +289,9 @@ public partial class Critter : Node3D
 	private void Swimmer(Tone tone)
 	{
 		Box(_body, 0.75f, 1.0f, 2.2f, tone, Vector3.Zero);
-		var tail = Pivot(_body, new Vector3(0, 0, 1.1f * S));
-		Box(tail, 0.2f, 1.1f, 1.0f, tone, new Vector3(0, 0, 0.5f * S), outlined: false);
+		// Tail behind, which is now -Z. See the note in Quadruped.
+		var tail = Pivot(_body, new Vector3(0, 0, -1.1f * S));
+		Box(tail, 0.2f, 1.1f, 1.0f, tone, new Vector3(0, 0, -0.5f * S), outlined: false);
 		_limbs.Add(tail);
 	}
 
@@ -319,19 +349,30 @@ public partial class Critter : Node3D
 		float dt = (float)delta;
 		var here = GlobalPosition;
 
-		// Flight. Anything the player walks up to should leave, because a wild
-		// animal that lets you stand next to it stops reading as wild — and the
-		// bolt is most of the character these creatures have.
+		// Flight, at TOUCHING distance and once.
+		//
+		// The first version bolted at seven to thirteen units and re-triggered
+		// every frame the player stayed inside that ring, so a meadow emptied
+		// ahead of you and nothing ever settled — which is the opposite of a world
+		// that is supposed to feel alive and indifferent. An animal should let you
+		// walk up to it, move off a little when you are almost on top of it, and
+		// then go back to what it was doing.
 		float near = new Vector2(player.X - here.X, player.Z - here.Z).Length();
-		float radius = _kind is Species.Bird or Species.Butterfly ? 7f : 13f;
-		if (near < radius)
+		float radius = _kind is Species.Bird or Species.Butterfly ? 3.4f : 2.6f;
+		_spookCooldown = Mathf.Max(0f, _spookCooldown - dt);
+		if (near < radius && _spookCooldown <= 0f)
 		{
 			_startle = 1f;
+			// A refractory period, so standing next to something does not hold it
+			// in a permanent panic.
+			_spookCooldown = 7f;
 			var away = new Vector3(here.X - player.X, 0, here.Z - player.Z);
 			if (away.LengthSquared() > 0.01f) _heading = away.Normalized();
-			_decide = 1.4f;
+			_decide = 0.9f;
 		}
-		_startle = Mathf.Max(0f, _startle - dt * 0.55f);
+		// Short. A second and a half of trotting is a few units of ground, which
+		// is "moved off a bit" rather than "fled the province".
+		_startle = Mathf.Max(0f, _startle - dt * 1.5f);
 
 		_decide -= delta;
 		if (_decide <= 0.0)
@@ -358,20 +399,16 @@ public partial class Critter : Node3D
 			}
 			else
 			{
-				want.Y = _kind switch
-				{
-					Species.Fish => Mathf.Lerp(here.Y, Palette.WaterLevel - 1.1f, 1f - Mathf.Exp(-2f * dt)),
-					Species.Bird => Mathf.Lerp(here.Y, ground + 10f, 1f - Mathf.Exp(-1.2f * dt))
-						+ Mathf.Sin(_phase * 0.7f) * 0.02f,
-					Species.Butterfly => Mathf.Lerp(here.Y, ground + 1.9f, 1f - Mathf.Exp(-2f * dt))
-						+ Mathf.Sin(_phase * 3.1f) * 0.03f,
-					_ => ground,
-				};
+				want.Y = here.Y;
 				GlobalPosition = want;
+				_groundY = ground;
 			}
 
 			_yaw = Mathf.LerpAngle(_yaw, Mathf.Atan2(_heading.X, _heading.Z), 1f - Mathf.Exp(-7f * dt));
 		}
+		else if (Legal(here, out float standing)) _groundY = standing;
+
+		Vertical(dt);
 		Rotation = new Vector3(0, _yaw, 0);
 
 		// One phase accumulator drives the gait, exactly as the traveller's does:
@@ -386,6 +423,93 @@ public partial class Critter : Node3D
 		});
 
 		Gait(cadence, dt);
+	}
+
+	/// <summary>
+	/// Height, and how a creature changes terrace.
+	///
+	/// Snapping straight to whatever the ground turned out to be is what the
+	/// first version did, and on a world built entirely out of two-block terraces
+	/// that means every animal teleports up and down all day. A terrace is a step
+	/// a creature has to LEAVE THE GROUND to take, so it does: an upward change
+	/// launches a hop with enough speed to clear it, a downward one just walks off
+	/// the edge, and gravity handles both. The gait tucks the legs while the feet
+	/// are off the ground, which is the whole reason the hop reads as a hop rather
+	/// than as a smoothed slide.
+	///
+	/// Swimmers and flyers never touch this: they have no feet on anything.
+	/// </summary>
+	private void Vertical(float dt)
+	{
+		var at = GlobalPosition;
+
+		if (_kind is Species.Fish or Species.Bird or Species.Butterfly)
+		{
+			float want = _kind switch
+			{
+				Species.Fish => Palette.WaterLevel - 1.1f,
+				Species.Bird => _groundY + 10f,
+				_ => _groundY + 1.9f,
+			};
+			float bob = _kind switch
+			{
+				Species.Bird => Mathf.Sin(_phase * 0.7f) * 0.10f,
+				Species.Butterfly => Mathf.Sin(_phase * 0.5f) * 0.16f,
+				_ => 0f,
+			};
+			float rate = _kind == Species.Fish ? 2f : 1.4f;
+			GlobalPosition = new Vector3(at.X,
+				Mathf.Lerp(at.Y, want + bob, 1f - Mathf.Exp(-rate * dt)), at.Z);
+			return;
+		}
+
+		const float Gravity = 34f;
+		float foot = at.Y;
+
+		// A creature that has somehow ended up well under the terrain is put back
+		// on it rather than left to fall for ever. Nothing should reach this, but
+		// an animal quietly sinking out of the world is both the worst-looking
+		// possible failure and the hardest to notice in code.
+		if (foot < _groundY - 24f)
+		{
+			GlobalPosition = new Vector3(at.X, _groundY, at.Z);
+			_vy = 0f;
+			_airborne = false;
+			return;
+		}
+
+		if (!_airborne)
+		{
+			float rise = _groundY - foot;
+			if (rise > 0.35f)
+			{
+				// Enough to clear the step with a little over, which is what makes
+				// the arc visible rather than a scramble.
+				_vy = Mathf.Sqrt(2f * Gravity * (rise + 0.45f));
+				_airborne = true;
+			}
+			else if (rise < -0.35f)
+			{
+				// Walked off a lip. No push, just let go.
+				_vy = 0f;
+				_airborne = true;
+			}
+			else
+			{
+				GlobalPosition = new Vector3(at.X, _groundY, at.Z);
+				return;
+			}
+		}
+
+		_vy -= Gravity * dt;
+		float y = foot + _vy * dt;
+		if (_vy <= 0f && y <= _groundY)
+		{
+			y = _groundY;
+			_vy = 0f;
+			_airborne = false;
+		}
+		GlobalPosition = new Vector3(at.X, y, at.Z);
 	}
 
 	private void Gait(float cadence, float dt)
@@ -414,6 +538,22 @@ public partial class Critter : Node3D
 			}
 			default:
 			{
+				// Off the ground: legs tucked, front reaching. Without this the
+				// animal runs on air through the whole arc and the hop reads as a
+				// glitch rather than as a jump.
+				if (_airborne)
+				{
+					float t = Mathf.Clamp(_vy / 6f, -1f, 1f);
+					for (int i = 0; i < _limbs.Count; i++)
+					{
+						bool front = i < 2;
+						_limbs[i].Rotation = new Vector3(front ? 0.85f + t * 0.4f : -0.7f - t * 0.3f, 0, 0);
+					}
+					_body.Position = new Vector3(0, 0, 0);
+					if (_head != null) _head.Rotation = new Vector3(-t * 0.25f, 0, 0);
+					break;
+				}
+
 				// Diagonal pairs, which is what a quadruped actually does and reads
 				// correctly even at this size.
 				float swing = Mathf.Sin(_phase) * cadence * 0.75f;
@@ -455,8 +595,10 @@ public partial class Critter : Node3D
 
 		if (water) return false;
 		int level = _terrain.Level[i];
-		// A terrace step is climbable; a cliff is not.
-		if (MathF.Abs(level - at.Y) > Terrain.Step + 0.5f) return false;
+		// Measured against the ground the creature is walking on, not against its
+		// current height. Mid-hop those differ by most of a terrace, and testing
+		// the live Y made a creature reject the very ledge it was jumping onto.
+		if (MathF.Abs(level - _groundY) > Terrain.Step + 0.5f) return false;
 		if (_terrain.Grid.Heights[i] > level) return false;
 		ground = level;
 		return true;

@@ -27,41 +27,51 @@ public static class TerrainShape
 	public static short[] ModeFilter(short[] lev, int S, int radius, byte[] land, int iterations = 1)
 	{
 		var src = lev;
-		var counts = new Dictionary<short, int>(64);
 		for (int it = 0; it < iterations; it++)
 		{
 			var outp = (short[])src.Clone();
-			for (int z = 0; z < S; z++)
-			for (int x = 0; x < S; x++)
-			{
-				int i = z * S + x;
-				if (land[i] == 0) continue;
-				counts.Clear();
-				short self = src[i];
-				for (int dz = -radius; dz <= radius; dz++)
+			var input = src;
+			// Parallel over rows, with the tally kept per partition. Rows are
+			// independent — every column reads the source and writes only its own
+			// cell — and the result does not depend on ordering, so a seed still
+			// gives one world.
+			System.Threading.Tasks.Parallel.For(0, S,
+				() => new Dictionary<short, int>(64),
+				(z, _, counts) =>
 				{
-					int zz = Rng.ClampI(z + dz, 0, S - 1);
-					for (int dx = -radius; dx <= radius; dx++)
+					for (int x = 0; x < S; x++)
 					{
-						int j = zz * S + Rng.ClampI(x + dx, 0, S - 1);
-						if (land[j] == 0) continue;
-						short v = src[j];
-						counts.TryGetValue(v, out int c);
-						counts[v] = c + 1;
+						int i = z * S + x;
+						if (land[i] == 0) continue;
+						counts.Clear();
+						short self = input[i];
+						for (int dz = -radius; dz <= radius; dz++)
+						{
+							int zz = Rng.ClampI(z + dz, 0, S - 1);
+							for (int dx = -radius; dx <= radius; dx++)
+							{
+								int j = zz * S + Rng.ClampI(x + dx, 0, S - 1);
+								if (land[j] == 0) continue;
+								short v = input[j];
+								counts.TryGetValue(v, out int c);
+								counts[v] = c + 1;
+							}
+						}
+						short best = self;
+						int bestC = -1;
+						foreach (var kv in counts)
+						{
+							if (kv.Value > bestC ||
+							    (kv.Value == bestC && Math.Abs(kv.Key - self) < Math.Abs(best - self)))
+							{
+								best = kv.Key; bestC = kv.Value;
+							}
+						}
+						outp[i] = best;
 					}
-				}
-				short best = self;
-				int bestC = -1;
-				foreach (var kv in counts)
-				{
-					if (kv.Value > bestC ||
-					    (kv.Value == bestC && Math.Abs(kv.Key - self) < Math.Abs(best - self)))
-					{
-						best = kv.Key; bestC = kv.Value;
-					}
-				}
-				outp[i] = best;
-			}
+					return counts;
+				},
+				_ => { });
 			src = outp;
 		}
 		return src;
@@ -119,18 +129,31 @@ public static class TerrainShape
 	{
 		var outp = (short[])lev.Clone();
 		var (label, sizes) = LabelWalk(lev, S, land, 0);
-		var border = new Dictionary<short, int>(32);
-		var members = new List<int>();
 
+		// Bucket every cell by its region in ONE pass.
+		//
+		// This used to sweep the entire map once per small region looking for its
+		// members — O(regions x area), and a large map has tens of thousands of
+		// specks, so the cost went up with the SQUARE of the area. It was the
+		// second thing standing between this project and a big world.
+		var head = new int[sizes.Count];
+		Array.Fill(head, -1);
+		var next = new int[S * S];
+		for (int i = S * S - 1; i >= 0; i--)
+		{
+			int id = label[i];
+			if (id < 0) continue;
+			next[i] = head[id];
+			head[id] = i;
+		}
+
+		var border = new Dictionary<short, int>(32);
 		for (int id = 0; id < sizes.Count; id++)
 		{
 			if (sizes[id] >= minArea) continue;
 			border.Clear();
-			members.Clear();
-			for (int i = 0; i < S * S; i++)
+			for (int i = head[id]; i >= 0; i = next[i])
 			{
-				if (label[i] != id) continue;
-				members.Add(i);
 				int x = i % S, z = i / S;
 				for (int d = 0; d < 4; d++)
 				{
@@ -147,7 +170,7 @@ public static class TerrainShape
 			int bestC = 0;
 			foreach (var kv in border) if (kv.Value > bestC) { best = kv.Key; bestC = kv.Value; }
 			if (bestC == 0) continue;
-			foreach (int i in members) outp[i] = best;
+			for (int i = head[id]; i >= 0; i = next[i]) outp[i] = best;
 		}
 		return outp;
 	}
@@ -160,18 +183,32 @@ public static class TerrainShape
 	/// get mush — leave them sharp and carve a small number of deliberate
 	/// notched staircases, the same move the reference images make.
 	/// </summary>
+	/// <summary>
+	/// Cut stairs until every worthwhile shelf is reachable from the main one.
+	///
+	/// Connectivity is a global property, so the only honest way to know what is
+	/// still stranded is to re-label the whole map — and that is expensive. The
+	/// first version paid it PER STAIR: label the map, scan it for the single
+	/// cheapest boundary anywhere, cut one stair, repeat ninety times. At a
+	/// thousand blocks across that was already the most expensive thing in world
+	/// generation, and it scales with area times the number of stairs, so a map
+	/// ten times the area needs ten times as many cuts over ten times as much
+	/// ground — a hundredfold. It would have taken half a minute on its own.
+	///
+	/// Cutting is now batched by ROUND. One labelling, then the cheapest boundary
+	/// for EVERY stranded region at once, then all of those cuts together. Five
+	/// or six rounds settle a map that previously took ninety passes, because the
+	/// regions are largely independent — connecting one rarely changes where
+	/// another one's cheapest way out is.
+	/// </summary>
 	public static byte[] CarveStairs(short[] lev, int S, byte[] land,
 		int minArea = 30, int tread = 2, int width = 3, int maxStairs = 90,
 		byte[] skip = null)
 	{
 		var mask = new byte[S * S];
-		// A flat array rather than a HashSet.
-		//
-		// This is tested once per cell per direction per iteration — four million
-		// times per pass, ninety passes — and at a large world size the hashing
-		// alone was the single most expensive thing in world generation. Same
-		// semantics, including persisting across iterations; only the lookup
-		// changes.
+		// A flat array rather than a HashSet: this is tested once per cell per
+		// direction per round, and at a large world size the hashing alone was
+		// measurable. Same semantics, including persisting across rounds.
 		var dead = new bool[1024];
 		bool Dead(int id) => id >= 0 && id < dead.Length && dead[id];
 		void Kill(int id)
@@ -181,33 +218,42 @@ public static class TerrainShape
 			dead[id] = true;
 		}
 
-		for (int iter = 0; iter < maxStairs; iter++)
+		int cuts = 0;
+		const int MaxRounds = 24;
+
+		for (int round = 0; round < MaxRounds && cuts < maxStairs; round++)
 		{
 			var (label, sizes) = LabelWalk(lev, S, land, 1);
 			if (sizes.Count <= 1) break;
 
 			int mainId = 0;
 			for (int id = 1; id < sizes.Count; id++) if (sizes[id] > sizes[mainId]) mainId = id;
+
+			// Compact the regions still worth connecting into a dense slot range,
+			// so the per-thread bests are a handful of entries rather than one per
+			// label on the map.
+			var slot = new int[sizes.Count];
+			Array.Fill(slot, -1);
 			int pending = 0;
 			for (int id = 0; id < sizes.Count; id++)
-				if (id != mainId && sizes[id] >= minArea && !Dead(id)) pending++;
+				if (id != mainId && sizes[id] >= minArea && !Dead(id)) slot[id] = pending++;
 			if (pending == 0) break;
 
-			// Cheapest boundary between two different regions, at least one a
-			// real destination. Cheapest == shortest climb == least scarring.
 			// Ties break on the LOWEST CELL INDEX, not on whoever got there first.
-			//
 			// The sequential scan resolved ties by scan order, which is the same
-			// thing — the first cell reached is the lowest index. Saying it
-			// explicitly is what makes the search safe to run across threads:
-			// the answer no longer depends on which row finished when, so a seed
-			// still produces exactly one world.
-			int bestCost = int.MaxValue, bestAt = int.MaxValue;
-			int bx = -1, bz = -1, bnx = 0, bnz = 0;
+			// thing; saying it explicitly is what makes the search safe to run
+			// across threads, so a seed still produces exactly one world.
+			var best = new (int cost, int at, int x, int z, int nx, int nz)[pending];
+			for (int k = 0; k < pending; k++) best[k] = (int.MaxValue, int.MaxValue, -1, -1, 0, 0);
 			var gate = new object();
 
 			System.Threading.Tasks.Parallel.For(1, S - 1,
-				() => (cost: int.MaxValue, at: int.MaxValue, x: -1, z: -1, nx: 0, nz: 0),
+				() =>
+				{
+					var local = new (int cost, int at, int x, int z, int nx, int nz)[pending];
+					for (int k = 0; k < pending; k++) local[k] = (int.MaxValue, int.MaxValue, -1, -1, 0, 0);
+					return local;
+				},
 				(z, _, local) =>
 				{
 					for (int x = 1; x < S - 1; x++)
@@ -215,7 +261,8 @@ public static class TerrainShape
 						int i = z * S + x;
 						if (land[i] == 0) continue;
 						int a = label[i];
-						if (a < 0 || sizes[a] < minArea || Dead(a)) continue;
+						if (a < 0 || slot[a] < 0) continue;
+						int k = slot[a];
 						for (int d = 0; d < 4; d++)
 						{
 							int nx = x + (d == 0 ? 1 : d == 1 ? -1 : 0);
@@ -226,32 +273,44 @@ public static class TerrainShape
 							int dh = Math.Abs(lev[j] - lev[i]);
 							if (dh < 2) continue;
 							int cost = dh * 4 + ((label[j] == mainId || a == mainId) ? 0 : 6);
-							if (cost < local.cost || (cost == local.cost && i < local.at))
-								local = (cost, i, x, z, nx, nz);
+							if (cost < local[k].cost || (cost == local[k].cost && i < local[k].at))
+								local[k] = (cost, i, x, z, nx, nz);
 						}
 					}
 					return local;
 				},
 				local =>
 				{
-					if (local.x < 0) return;
 					lock (gate)
 					{
-						if (local.cost > bestCost || (local.cost == bestCost && local.at >= bestAt)) return;
-						bestCost = local.cost; bestAt = local.at;
-						bx = local.x; bz = local.z; bnx = local.nx; bnz = local.nz;
+						for (int k = 0; k < pending; k++)
+						{
+							if (local[k].x < 0) continue;
+							if (local[k].cost > best[k].cost ||
+								(local[k].cost == best[k].cost && local[k].at >= best[k].at)) continue;
+							best[k] = local[k];
+						}
 					}
 				});
-			if (bx < 0)
-			{
-				for (int id = 0; id < sizes.Count; id++) if (id != mainId) Kill(id);
-				break;
-			}
 
-			bool firstIsHigh = lev[bz * S + bx] > lev[bnz * S + bnx];
-			int hx = firstIsHigh ? bx : bnx, hz = firstIsHigh ? bz : bnz;
-			int lx = firstIsHigh ? bnx : bx, lz = firstIsHigh ? bnz : bz;
-			CutStair(lev, S, land, mask, lx, lz, hx - lx, hz - lz, tread, width, skip);
+			// Cut in slot order, which is label order, which is scan order — so a
+			// round is as deterministic as a single cut was.
+			int cutThisRound = 0;
+			for (int id = 0; id < sizes.Count && cuts < maxStairs; id++)
+			{
+				int k = slot[id];
+				if (k < 0) continue;
+				if (best[k].x < 0) { Kill(id); continue; }
+
+				int bx = best[k].x, bz = best[k].z, bnx = best[k].nx, bnz = best[k].nz;
+				bool firstIsHigh = lev[bz * S + bx] > lev[bnz * S + bnx];
+				int hx = firstIsHigh ? bx : bnx, hz = firstIsHigh ? bz : bnz;
+				int lx = firstIsHigh ? bnx : bx, lz = firstIsHigh ? bnz : bz;
+				CutStair(lev, S, land, mask, lx, lz, hx - lx, hz - lz, tread, width, skip);
+				cuts++;
+				cutThisRound++;
+			}
+			if (cutThisRound == 0) break;
 		}
 		return mask;
 	}

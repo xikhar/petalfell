@@ -17,6 +17,10 @@ namespace Petalfell.Render;
 /// </summary>
 public static class Atmosphere
 {
+	/// <summary>Handed to DayCycle, which owns these once the world is running.</summary>
+	public static ShaderMaterial LastSky { get; private set; }
+	public static Godot.Environment LastEnvironment { get; private set; }
+
 	public static WorldEnvironment Build()
 	{
 		var env = new Godot.Environment();
@@ -32,6 +36,18 @@ public static class Atmosphere
 		skyMat.SetShaderParameter("sun_tint", Palette.SunTint);
 		skyMat.SetShaderParameter("sun_dir", Palette.SunDir);
 		sky.SkyMaterial = skyMat;
+		// A sky that CHANGES is a completely different cost to a sky that does not.
+		//
+		// Ambient here is taken from the sky, so Godot bakes a radiance cubemap
+		// from it — and at the default quality that bake is a heavy, multi-pass
+		// job it is happy to do once at load. The moment a day cycle started
+		// rewriting the sky every frame, the game was re-baking high-quality
+		// radiance a hundred times a second, which is exactly when the frame rate
+		// fell over. Real-time mode and a small radiance map are what a moving sky
+		// is supposed to use.
+		sky.ProcessMode = Sky.ProcessModeEnum.Realtime;
+		// Realtime skies are fixed at 256 internally; asking for less only warns.
+		sky.RadianceSize = Sky.RadianceSizeEnum.Size256;
 
 		env.BackgroundMode = Godot.Environment.BGMode.Sky;
 		env.Sky = sky;
@@ -41,8 +57,15 @@ public static class Atmosphere
 		// its own colour: measured against raw albedo, sage grass arrived beige.
 		// Half the fill comes from a warm neutral so the greens and terracottas
 		// survive the wash while the frame keeps its lilac air.
-		env.AmbientLightColor = new Color(1.0f, 0.965f, 0.93f);
-		env.AmbientLightSkyContribution = 0.45f;
+		// Cool, and mostly sky.
+		//
+		// With ambient turned down to let the key light do its job, whatever tint
+		// is left in it matters far more per unit. A warm ambient at low energy
+		// stops balancing the warm sun and starts agreeing with it, and the whole
+		// frame drifts to cream — which is what happened the moment the lighting
+		// ratio was fixed. The shadows in this world are supposed to be lilac.
+		env.AmbientLightColor = new Color(0.92f, 0.935f, 1.0f);
+		env.AmbientLightSkyContribution = 0.78f;
 		// The reference's intensities are three.js units and do not survive the
 		// trip: sun 2.2 plus a full-strength sky ambient pushes a pastel palette
 		// straight through the ACES shoulder and the whole world comes out
@@ -57,7 +80,15 @@ public static class Atmosphere
 		// approaches white, so a pastel palette pushed past the mid range comes
 		// out grey. Bright and saturated means keeping the values in the middle,
 		// not turning everything up.
-		env.AmbientLightEnergy = 0.62f;
+		// Ambient is FILL, and fill must lose to the key.
+		//
+		// At 0.62 against a sun of 0.45 it was winning, and a scene lit mostly by
+		// a uniform hemisphere has no form in it at all — every face of every cube
+		// receives nearly the same light, so nothing reads as turning away from
+		// anything. That single inversion was the largest cause of the world
+		// looking flat, and no amount of grading downstream can put back a
+		// light/shade separation that was never rendered.
+		env.AmbientLightEnergy = 0.42f;
 
 		// Aerial perspective. The near plane matters as much as the density: a
 		// haze that starts at the camera puts fog on the block in front of you,
@@ -75,8 +106,8 @@ public static class Atmosphere
 		// at is already 60-120 units away. A fog that begins at 26 puts the
 		// whole frame inside it and the world loses its colour entirely; it has
 		// to clear the subject first and then fall away hard.
-		env.FogDepthBegin = 78f;
-		env.FogDepthEnd = 430f;
+		env.FogDepthBegin = 130f;
+		env.FogDepthEnd = 580f;
 		env.FogDepthCurve = 1.6f;
 		env.FogDensity = 1.0f;
 		// A second, whiter medium pooling in the valleys and around the rim.
@@ -93,7 +124,10 @@ public static class Atmosphere
 		env.GlowIntensity = 0.55f;
 		env.GlowStrength = 1.05f;
 		env.GlowBloom = 0.18f;
-		env.GlowHdrThreshold = 0.82f;
+		// Only genuinely bright things bloom. At 0.82 every pale surface in a
+		// world made of pale surfaces was blooming, which is a very efficient way
+		// to turn a picture into milk.
+		env.GlowHdrThreshold = 1.05f;
 		env.GlowHdrScale = 2.4f;
 		env.GlowBlendMode = Godot.Environment.GlowBlendModeEnum.Softlight;
 		// Wide, soft halo rather than a tight one: the upper mip levels are what
@@ -104,7 +138,11 @@ public static class Atmosphere
 
 		env.TonemapMode = Godot.Environment.ToneMapper.Aces;
 		env.TonemapExposure = 1.0f;
-		env.TonemapWhite = 6.0f;
+		// A white point of six squeezes the entire usable range into the bottom of
+		// the ACES curve, where it is both flat and desaturated. Bringing it down
+		// puts the mid-tones back in the meat of the curve — this is where most of
+		// the colour that was "missing" actually went.
+		env.TonemapWhite = 3.1f;
 
 		// Large-scale contact shading. The mesher bakes AO into block crevices;
 		// what it cannot see is a canopy hanging over grass or the base of a
@@ -118,6 +156,8 @@ public static class Atmosphere
 
 		env.AdjustmentEnabled = false;   // the canvas grade owns display space
 
+		LastSky = skyMat;
+		LastEnvironment = env;
 		return new WorldEnvironment { Environment = env, Name = "Atmosphere" };
 	}
 
@@ -127,13 +167,13 @@ public static class Atmosphere
 		{
 			Name = "Sun",
 			LightColor = Palette.SunColor,
-			LightEnergy = 0.45f,
+			LightEnergy = 0.98f,
 			// Slightly darker than a washed-out pastel, without becoming harsh.
 			ShadowEnabled = true,
 			// The references barely have cast shadows: form is carried by the
 			// occlusion and the face ramp, and a full-strength shadow under
 			// every canopy reads as a hole punched in the meadow.
-			ShadowOpacity = 0.42f,
+			ShadowOpacity = 0.74f,
 			ShadowBias = 0.035f,
 			ShadowNormalBias = 1.4f,
 			ShadowBlur = 3.4f,
@@ -157,7 +197,7 @@ public static class Atmosphere
 		{
 			Name = "Fill",
 			LightColor = Palette.FillColor,
-			LightEnergy = 0.14f,
+			LightEnergy = 0.10f,
 			ShadowEnabled = false,
 			LightSpecular = 0f,
 		};

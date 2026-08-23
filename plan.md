@@ -25,11 +25,70 @@ That document records what exists now; it does not narrow or replace the goals h
 
 ## 2. High-Level Vision
 
-Petalfell is a calm, atmospheric exploration adventure set in a soft, stylized block world. The player travels through connected natural regions, settlements, roads, ruins, and bodies of water with a dog companion. The world should initially feel peaceful and inviting, while containing enough history, mystery, people, artifacts, and abandoned places to support a longer narrative and expanding gameplay.
+Petalfell is a quiet exploration adventure across a continent people have left.
+The player travels with a dog companion through natural regions, old roads,
+ruins and water, in a world that is soft, bright and beautiful — and almost
+empty of anyone to meet.
 
-The world should feel authored rather than random, but still broad, organic, and rich enough that procedural generation remains valuable. Major geography, settlements, roads, story locations, and important environmental compositions are fixed. Natural detail between those places is generated consistently from the fixed world plan.
+It is not a ruined world in the grim sense. Nothing here is ash or rubble under
+a dead sky. The blossom still comes, the water is clear, the light is warm; the
+land is in excellent health. What is missing is people. Petalfell is what a
+lovely place looks like a few generations after the last of them packed up and
+went, and the interest of it is that the world plainly does not need them and is
+carrying on without them.
 
-The first complete target is a playable **Chapter 1**, built on systems that can later support additional regions, maps, chapters, settlements, quests, items, characters, and mechanics without rebuilding the game around each new addition.
+### 2.1 Why it is empty
+
+Two facts explain each other and between them supply most of the world's logic.
+
+**They left slowly.** There was no catastrophe. Over generations the safe ground
+shrank, and people fell back — a farmstead abandoned, then the valley above it,
+then the whole upland. Houses were shuttered, not smashed. Valuables were taken.
+Doors were closed on the way out. What remains is tidy, which is far sadder and
+far stranger than wreckage, and it is also cheaper to author convincingly: an
+empty room that was left neatly needs no story of violence written into it.
+
+**Something drove them.** The wilds are not safe, and were not safe then. What
+lives out there spread, and the retreat was a retreat FROM it. This is the
+engine of the whole map: the deeper into the old country the player goes, the
+longer it has been abandoned, the finer and stranger what is left standing, and
+the worse what holds it. Danger, beauty, age and reward all increase along the
+same axis, and that axis is geography rather than a level number.
+
+### 2.2 Who is left
+
+A handful of people, always in ones and twos, never in communities: a trader
+working a surviving road, a hermit in a valley they refuse to give up, a
+watchman at a crossing nobody crosses. They matter out of all proportion to
+their number. **One hermit implies that everyone else is gone. Zero hermits
+implies that nobody was ever there.** The few inhabitants are what makes the
+emptiness read as loss rather than as unfinished world, and they should never be
+so numerous that meeting one stops being an event.
+
+### 2.3 Reference points, and what is taken from each
+
+- **Shadow of the Colossus / Journey** — that empty, monumental and beautiful can
+  carry a whole game without grimness. This is the tonal target.
+- **Dark Souls / Elden Ring** — that abandonment can be read from architecture,
+  and that danger concentrated in specific places gives a map its shape. The
+  tone is *not* taken; Petalfell stays pastel and warm.
+- **Rain World** — the ecology, and the sense that the world was not built for
+  you. Taken more heavily than the others, and detailed in §22b.
+
+What is deliberately NOT taken from Rain World is its framing of the player as
+small prey inside a food chain. Petalfell has a human traveller, a dog, and a
+near-isometric camera; the player is a walker through a place, not an animal in
+it. The ecology is borrowed, the helplessness is not.
+
+The world should feel authored rather than random, but still broad, organic, and
+rich enough that procedural generation remains valuable. Major geography, the
+places that were left, old roads, story locations, and important environmental
+compositions are fixed. Natural detail between those places is generated
+consistently from the fixed world plan.
+
+The first complete target is a playable **Chapter 1**, built on systems that can
+later support additional regions, maps, chapters, remnants, quests, items,
+characters, and mechanics without rebuilding the game around each new addition.
 
 ---
 
@@ -41,7 +100,9 @@ The world should remain visually clean at both close and default gameplay zoom. 
 
 ### 3.2 Exploration With Purpose
 
-Travel should continually reveal meaningful destinations: villages, overlooks, bridges, ponds, forest clearings, cliff paths, shrines, ruins, markets, abandoned homes, and unusual natural formations. Generated scenery supports these places rather than replacing them.
+Travel should continually reveal meaningful destinations: overlooks, bridges, ponds, forest clearings, cliff paths, shrines, ruins, monuments, waystations, abandoned homes, and unusual natural formations. Generated scenery supports these places rather than replacing them.
+
+With no settlements to structure the map, destinations carry the entire load of pacing and orientation, and there must be correspondingly more of them.
 
 ### 3.3 A Fixed World With Natural Variation
 
@@ -51,11 +112,17 @@ Petalfell should combine deliberate world design with deterministic procedural d
 
 The dog is part of the identity of the game, not a decorative follower. Its movement, waiting, sitting, reactions, and future interactions should make travel feel shared.
 
+In a world this empty the dog is the player's only constant company, which raises its importance rather than lowering it. It is also the natural carrier of warning: a dog that stops and stares at a treeline says more, and costs less, than any interface.
+
 ### 3.5 Gentle Presentation, Deeper Systems
 
 The presentation should remain minimal and approachable even as the game gains inventories, equipment, crafting, trading, conversations, artifacts, combat-capable tools, and world progression.
 
-### 3.6 Reusable Content Foundations
+### 3.6 Beautiful, Not Grim
+
+Desolation here is melancholy, never bleak. The palette stays pastel, the light stays warm, the blossom still falls. The world is in good health and simply has nobody in it — a place that outlived its people rather than a place that was destroyed. Any asset, effect or system that reads as decay-for-horror is wrong for this game, however well it would suit the reference points.
+
+### 3.7 Reusable Content Foundations
 
 Every major Chapter 1 system should make future chapters easier to create. A new map should primarily require new geography, content, assets, characters, and chapter rules—not a duplicate version of the game.
 
@@ -86,7 +153,7 @@ The rebuild should establish one authoritative Godot project containing:
 - The visual rendering language.
 - The reusable world and map structure.
 - A mixed authored/procedural environment pipeline.
-- Reusable settlement, road, biome, landmark, NPC, item, and interaction concepts.
+- Reusable remnant, road, biome, landmark, character, item, and interaction concepts.
 - Saving and persistent world state.
 - Chapter 1 content.
 - A foundation for future maps and chapters.
@@ -116,7 +183,7 @@ Chapter content includes:
 
 - Its fixed map plan.
 - Biome layout.
-- Towns and settlements.
+- Remnants, holdouts and ruins.
 - Roads and travel routes.
 - Story and optional locations.
 - NPC population and dialogue.
@@ -171,7 +238,7 @@ The following should be deliberately planned and stable:
 - Major elevations, cliffs, valleys, and plateaus.
 - Biome regions.
 - Lakes, larger ponds, rivers, wetlands, and important waterfalls.
-- Towns, villages, and other settlements.
+- Remnants, holdouts, ruins, and monuments.
 - Primary and secondary road routes.
 - Bridges, gates, passes, and major stairs.
 - Story locations and progression routes.
@@ -194,7 +261,7 @@ Specific markers should shape important local areas without requiring every indi
 - A forest clearing containing an abandoned home.
 - A swamp island with a notable tree or artifact.
 - A snowy ridge with a narrow pass.
-- A market square or village entrance.
+- A remnant's yard, or the gateway of a ruin.
 
 The current project's manually injected terrain ideas and landmark stamps should be treated as reference material for this approach.
 
@@ -210,7 +277,7 @@ Procedural generation should fill and vary the natural spaces between fixed feat
 - Minor ponds, wet patches, or snow clusters where allowed.
 - Ambient fauna and decorative environmental motion.
 
-Generated content must obey biome identity, authored exclusion areas, road clearance, settlement boundaries, navigation needs, and landmark compositions.
+Generated content must obey biome identity, authored exclusion areas, road clearance, remnant boundaries, navigation needs, and landmark compositions.
 
 ### 7.4 Deterministic Results
 
@@ -220,30 +287,50 @@ The same Chapter 1 world should remain recognizable and stable between sessions 
 
 ## 8. Chapter 1 World Direction
 
-Chapter 1 should be considerably larger than the current experimental world and should feel like a connected region rather than a showcase island.
+Chapter 1 should feel like a connected region of a much larger abandoned
+continent rather than a showcase island.
 
 It should contain:
 
 - Multiple major natural regions.
-- At least one village-scale settlement.
-- At least one larger, more developed town or city-scale destination.
-- A meaningful network of different road types.
+- At least one **holdout** — two or three people still living somewhere
+  defensible, and the closest thing to a settlement in the chapter.
+- At least one large **ruin complex** with a legible former purpose, standing as
+  the chapter's principal destination.
+- Several smaller remnants: a shuttered farmstead, a waystation, an overgrown
+  mill, a chapel with the roof gone.
+- A network of old roads, most of them partly reclaimed.
 - Lakes, ponds, rivers, wetlands, cliffs, and crossings.
 - Several minor locations and scenic landmarks.
-- Abandoned or unexplained structures reserved for story and future gameplay.
+- **Deep zones**: places abandoned longest, held by what drove people out,
+  containing the best of what was left behind.
 - Enough open wilderness for exploration and resource gathering.
 - Multiple travel loops rather than a single linear corridor.
 - Clear visual anchors that help the player understand where they are.
 
-The chapter should have a deliberate progression through these places, but the world should allow optional exploration, alternative routes, revisits, and discoveries away from the main path.
+### 8.1 The gradient
 
-The specific story, names, characters, and final Chapter 1 objective should remain open until the world layout and core interaction loop are established.
+Chapter 1's difficulty and reward curve is a MAP, not a progression track. Near
+the coast and the surviving roads the land was held longest: remnants are recent,
+roads are still walkable, the few living people are here, and little threatens
+you. Inland and upward the abandonment gets older — roads fade into the grass,
+buildings give way to earthworks and monuments, and the wilds are held.
+
+The player should be able to read that gradient from the landscape itself before
+anything tells them, and should be able to walk into trouble early if they
+insist. Nothing should gate the world by fiat; the world should simply get
+harder to survive the further from the shore it gets.
+
+The specific story, names, characters, and final Chapter 1 objective should
+remain open until the world layout and core interaction loop are established.
 
 ---
 
 ## 9. Biomes and Natural Regions
 
-Biomes should be recognizable through terrain, vegetation, water, weather, props, creatures, sound, color, and settlement influence. They should transition naturally instead of appearing as hard, arbitrary zones.
+Biomes should be recognizable through terrain, vegetation, water, weather, props, creatures, sound, color, and what people once did there. They should transition naturally instead of appearing as hard, arbitrary zones.
+
+Each province also has its own relationship with the retreat: how long ago it was given up, what was worth building there, and what holds it now. A biome is a climate and a chapter of the history at the same time.
 
 ### 9.1 Forests
 
@@ -257,7 +344,7 @@ Biomes should be recognizable through terrain, vegetation, water, weather, props
 - Open, flower-rich terrain with gentle elevation.
 - Strong visibility toward landmarks.
 - Frequent petals, grasses, small ponds, and peaceful wildlife.
-- A welcoming region suitable for early exploration and settlement edges.
+- A welcoming region suitable for early exploration, and the last country to be abandoned.
 
 ### 9.3 Plains
 
@@ -274,7 +361,7 @@ Biomes should be recognizable through terrain, vegetation, water, weather, props
 ### 9.5 Lakes and River Regions
 
 - Large water surfaces, islands, banks, bridges, docks, reeds, and shoreline paths.
-- Opportunities for swimming, crossings, fishing-related future content, and waterside settlements.
+- Opportunities for swimming, crossings, fishing-related future content, and waterside remnants.
 - Clear depth, shoreline, and traversal readability.
 
 ### 9.6 Swamps and Wetlands
@@ -285,7 +372,7 @@ Biomes should be recognizable through terrain, vegetation, water, weather, props
 
 ### 9.7 Biome Transitions
 
-Transition regions should mix the visual and ecological features of neighboring biomes. Roads, rivers, elevation changes, settlement land use, and major vegetation lines can help make transitions feel intentional.
+Transition regions should mix the visual and ecological features of neighboring biomes. Roads, rivers, elevation changes, old field boundaries, and major vegetation lines can help make transitions feel intentional.
 
 ---
 
@@ -317,57 +404,91 @@ Terrain generation should avoid isolated single-block grass patches that contrad
 
 ---
 
-## 11. Settlements
+## 11. Remnants, Holdouts, and Ruins
 
-Settlements should have reusable categories while still possessing individual identity. Their design should respond to geography, roads, resources, biome, local history, and social role.
+There are no villages, towns or cities in Petalfell. What the world has instead
+is a graded series of **remnants** — the same kinds of place, at different
+stages of being given up. They should share a reusable vocabulary while keeping
+individual identity, and their design should respond to geography, old roads,
+resources, biome, and the history of the retreat.
 
-### 11.1 Village-Scale Settlements
+The generator chooses where they are using the same reasoning that chose where
+settlements went: flat ground to build on, fresh water in walking distance, a
+province that would grow something. Those were the reasons people settled there
+ONCE. The world's history and its present come out of the same pass.
 
-Villages should feel handmade, practical, and locally protected. Their shared vocabulary may include:
+### 11.1 Holdouts
 
-- Wooden houses and workshops.
-- Layered wooden spike walls, fences, and simple gates.
-- Uneven lanes and compact gathering areas.
-- Gardens, wells, storage sheds, animal pens, carts, and stacked supplies.
-- A modest market or trading point.
-- A small but recognizable population of townspeople.
-- Buildings placed in response to slopes, water, roads, and existing trees.
+Somewhere two or three people still live. A holdout is small, defensible,
+maintained, and obviously outnumbered by the emptiness around it.
 
-Village construction can vary by biome, replacing materials, roof forms, plants, props, and defensive details while preserving a recognizable village scale.
+- Two to four buildings, kept in repair, with the rest of the site derelict.
+- A working palisade — patched, shorter than it once was, enclosing less than
+  the original wall did.
+- Smoke, lamplight, a garden actually being tended, a dog or goats.
+- The remains of a much larger place around it, unmaintained.
 
-### 11.2 Town and City-Scale Settlements
+The contrast is the whole point: a holdout should look like the last lit room in
+a large dark house.
 
-Larger settlements should feel more organized, populated, and polished. Their shared vocabulary may include:
+### 11.2 Remnants
 
-- Stone buildings and more formal architecture.
-- Larger defensive rings, walls, gates, and approach roads.
-- Distinct neighborhoods or functional districts.
-- Markets, workshops, civic spaces, courtyards, inns, storage areas, and public landmarks.
-- More complex road and pedestrian patterns.
-- A larger and more varied population.
-- Strong silhouettes that remain recognizable from outside the settlement.
+Places nobody lives any more but which have not yet gone back to the land.
 
-The city should not simply be a larger village. Its materials, layout, density, social activity, services, and visual hierarchy should communicate a different level of development.
+- Shuttered buildings with roofs mostly intact and doors closed.
+- Streets and yards still legible under grass and drift.
+- Wells, ovens, walls, fences, carts left where they stopped being useful.
+- Almost nothing valuable, because it was carried out.
+- Vegetation reclaiming from the edges inward.
 
-### 11.3 Settlement Population
+### 11.3 Ruins
 
-Residents should be appropriate to the location and its function. A settlement may include:
+Older abandonment, where the structure has begun to lose.
 
-- Families and ordinary residents.
-- Traders and craftspeople.
-- Guards or watch members.
-- Farmers, gatherers, fishers, carriers, and laborers.
-- Travelers and visitors.
+- Roofs open, walls partial, floors under moss and blossom drift.
+- Trees growing through and out of buildings.
+- Collapsed sections that changed the shape of the place.
+- Enough surviving form that its FORMER PURPOSE is readable — a mill without its
+  wheel, a chapel without its roof, a gate with nothing behind it. A generic
+  broken wall is noise; a ruin is only a ruin if the player can tell what it was.
+
+### 11.4 Monuments and deep works
+
+The oldest layer, and the reason to go inland: things built to outlast their
+builders.
+
+- Earthworks, causeways, terraced hillsides, retaining walls holding up nothing.
+- Standing stones, arches, statuary, sealed doors.
+- Structures whose scale plainly exceeded any use the surrounding land could
+  have had for them.
+- Work that is legibly PURPOSEFUL and whose purpose is not available to the
+  player: channels that carry nothing, alignments that point at nothing, doors
+  sized for something other than a person. The strongest version of this idea —
+  Rain World's — is that the world was built by and for something that had its
+  own reasons, and the player is a late visitor who does not get told what they
+  were.
+- Sites that are held, and dangerous, and worth it.
+
+### 11.5 Population
+
+Residents are rare, isolated, and never grouped. A chapter may contain:
+
+- A hermit who will not leave a particular valley.
+- A trader working a surviving stretch of road.
+- A watchman, a scavenger, a cartographer, a keeper of something.
 - Named characters tied to story or systems.
-- Animals and companion creatures.
+- Their animals.
 
-NPC activity should help places feel inhabited without creating visual or behavioral clutter.
+Density is a design constraint, not an accident: meeting a person must remain an
+event. If two inhabitants can be seen at once, there are too many.
 
 ---
 
 ## 12. Roads and Travel Network
 
-Roads should connect geography, settlements, and gameplay. They are both navigation tools and pieces of environmental storytelling.
+Roads connect geography, remnants, and gameplay. They are both the player's main orientation aid and the single richest piece of environmental storytelling in the world — a route is the shape of a journey somebody used to make.
+
+Because the places they served are gone, the network is now a record rather than an amenity. It should be generated as the network that once existed, and then reclaimed.
 
 The road system should include multiple types:
 
@@ -377,9 +498,9 @@ The road system should include multiple types:
 - Broad, well-maintained, and easy to follow.
 - Supported by bridges, signs, lighting, rest points, and regular landmarks.
 
-### 12.2 Village and Local Roads
+### 12.2 Local Roads and Approaches
 
-- Connect homes, fields, workshops, nearby resources, and neighboring settlements.
+- Once connected homes, fields, workshops, resources, and neighbouring places.
 - Narrower and less formal than major roads.
 - Adapt closely to local terrain.
 
@@ -389,37 +510,59 @@ The road system should include multiple types:
 - May be lightly marked by worn ground, stones, plants, or occasional signs.
 - Reward exploration without always appearing on the main route.
 
-### 12.4 Old or Abandoned Roads
+### 12.4 Reclaimed Roads
 
-- Partially overgrown, damaged, flooded, buried, or blocked.
-- Connect ruins, abandoned buildings, former settlements, and future story locations.
-- Suggest earlier movement and history in the landscape.
+**This is now the dominant road class, not a rarity.** Most of the network is
+in some state of being taken back:
+
+- Surface broken by grass, roots, and drift, thinning to a trace.
+- Sections lost entirely to slides, floods, and growth, leaving the route to be
+  inferred across a gap.
+- Bridges down, with the abutments still standing on both banks.
+- Waymarkers and milestones surviving where the road itself has not.
+
+A road that leads somewhere which no longer exists is one of the strongest
+pieces of environmental storytelling available here, and it costs nothing: the
+route was generated to connect places, and then the places were left.
+
+Reclamation should scale with the gradient in §8.1 — near the coast a road is
+merely shabby; deep inland it is a line of paving stones in a meadow.
 
 ### 12.5 Settlement Streets
 
 - Reflect the scale and construction of the settlement.
-- Range from rough village lanes to paved city streets and market routes.
+- Range from rough farm lanes to the paved approaches of the larger works.
 
 Roads should create loops, shortcuts, intersections, scenic approaches, and meaningful decisions. They should also provide reliable paths for the player, dog, NPCs, and future travel systems.
 
 ---
 
-## 13. Landmarks, Ruins, and Future Spaces
+## 13. Landmarks and Discoveries
 
-The world should contain locations that are not immediately explained or exhausted during Chapter 1.
+With no settlements to structure the map, **landmarks carry the whole burden of
+orientation, pacing and reward.** They are promoted from set dressing to the
+primary content layer, and there should be many more of them than the previous
+plan implied.
 
 Examples include:
 
 - Abandoned houses and workshops.
 - Collapsed bridges and unused gates.
-- Old watchtowers.
+- Old watchtowers with something still visible from the top.
 - Ruined walls beneath vegetation.
-- Empty shrines or artifact sites.
-- Sealed caves or inaccessible passages.
-- Forgotten roadside structures.
-- Strange formations around water or cliffs.
+- Empty shrines and artifact sites.
+- Sealed caves and inaccessible passages.
+- Forgotten roadside structures, waymarkers, and graves.
+- Strange formations around water and cliffs.
+- Caches: what somebody hid, or could not carry, or came back for and missed.
 
-Some can support Chapter 1 discoveries, while others can remain hooks for later quests, updates, chapters, or new gameplay systems. They should still belong naturally to the current world and not feel like obvious placeholders.
+Each should answer at least one of: **tell me where I am**, **tell me what
+happened here**, or **give me a reason to have walked over.** A landmark that
+does none of the three is scenery, and scenery belongs to the procedural layer.
+
+Some can support Chapter 1 discoveries, while others can remain hooks for later
+quests, updates, chapters, or new gameplay systems. They should still belong
+naturally to the current world and not feel like obvious placeholders.
 
 ---
 
@@ -429,7 +572,7 @@ Petalfell should use Blender-authored assets where deliberate form, silhouette, 
 
 ### 14.1 Assets Best Authored in Blender
 
-- Modular wooden village building pieces.
+- Modular wooden building pieces, in intact and ruined variants.
 - Modular stone town and city building pieces.
 - Roofs, doors, windows, balconies, supports, stairs, and architectural trim.
 - Wooden spike walls, fences, gates, towers, bridges, docks, and market structures.
@@ -458,8 +601,8 @@ Blender production should favor coordinated kits rather than isolated finished b
 
 Planned kits should include:
 
-- Wooden village kit.
-- Stone town or city kit.
+- Wooden building kit (intact / shuttered / ruined).
+- Stone monument and deep-works kit.
 - Rural farm and roadside kit.
 - Bridge and waterside kit.
 - Defensive wall and gate kit.
@@ -686,22 +829,33 @@ Interactions should be able to produce dialogue, items, choices, world-state cha
 
 ---
 
-## 20. NPCs and Dialogue
+## 20. The Living, and Dialogue
 
-NPCs should make settlements and roads feel inhabited while supporting story, trade, information, and local character.
+There is no ambient population. Every person in Petalfell is a specific
+individual in a specific place, and the systems should be built for depth over
+count rather than for crowds.
 
-The NPC foundation should allow for:
+The foundation should allow for:
 
-- Named and unnamed residents.
-- Daily or contextual activity.
+- Named individuals with a reason to be exactly where they are.
+- Contextual activity tied to their situation rather than a daily schedule.
 - Conversations and short ambient remarks.
-- Trading and services.
+- Trading and services, from people who have chosen to stay near a route.
 - Reactions to player progress or local events.
 - Giving, receiving, requesting, or recognizing items.
-- Moving through settlement streets and nearby routes.
-- Regional appearance and occupation.
+- A small territory they move within, not a settlement to walk around.
 
-Dialogue presentation should fit the minimal visual language: brief, readable, characterful, and free from unnecessary interface framing.
+Because encounters are rare, each one carries far more weight than it would in a
+populated world. It is worth spending on a handful of characters what a
+populated plan would have spread across a hundred.
+
+**The dead outnumber the living, and also talk.** Most of what the player learns
+should come from places rather than people: what was left in a house, what a
+grave says, what a route implies, what somebody wrote on a wall before leaving.
+Environmental storytelling is not a supporting system here; it is the main one.
+
+Dialogue presentation should fit the minimal visual language: brief, readable,
+characterful, and free from unnecessary interface framing.
 
 ---
 
@@ -735,7 +889,7 @@ Crafting should connect natural exploration with useful outcomes. Recipes, works
 
 ### 21.3 Trading
 
-Trading should reflect settlement scale, NPC occupation, local resources, scarcity, and chapter progression. Villages and cities should not all offer identical goods.
+Trading should reflect who the trader is, what route they work, local resources, scarcity, and chapter progression. Because traders are individuals rather than shops, each one's stock is a characterisation as much as an inventory.
 
 ### 21.4 Quick Loadout
 
@@ -760,6 +914,11 @@ These behaviors should belong to a shared item language so that future content c
 
 ## 22. Flora, Fauna, and Environmental Life
 
+Nature is the world's health, and it is doing the heavy lifting that a
+population used to do. With nobody about, **the landscape itself has to carry
+"alive"** — through growth, weather, light, water, and animals going about
+business that has nothing to do with the player.
+
 Each biome should have a thematic set of flora and fauna.
 
 Flora should define:
@@ -769,16 +928,105 @@ Flora should define:
 - Seasonal or regional color.
 - Gatherable resources.
 - Landmark plants and rare variations.
+- **Reclamation**: what specifically grows on, through and over abandoned work,
+  and how that changes with how long the place has been left.
 
 Fauna should define:
 
 - Ambient birds, insects, and small animals.
-- Domestic animals near settlements.
 - Water and wetland life.
 - Larger regional animals where appropriate.
-- Creatures related to resources, interactions, story, or danger.
+- **Feral descendants** of what people kept — goats on a ruined terrace, cats
+  around a shuttered farm, overgrown orchards still fruiting.
+- Creatures related to resources, interactions, or story.
 
-Not every creature needs deep gameplay in Chapter 1. Ambient life can establish the ecology first, while the shared content structure leaves room for later behavior and interaction.
+Not every creature needs deep gameplay in Chapter 1. Ambient life can establish
+the ecology first, while the shared content structure leaves room for later
+behavior and interaction.
+
+---
+
+## 22b. The Wilds
+
+Something drove the people out, and it is still here. This is the chapter's
+threat layer and the reason its geography has a difficulty gradient.
+
+### 22b.1 Design intent — ecology, not encounters
+
+The wilds are **not a bestiary and not an army.** The model to follow is Rain
+World's: creatures are not placed to be fought, they are living somewhere, and
+danger is what happens when the player's route crosses theirs.
+
+This is a genuine correction to the obvious design rather than a flourish. The
+obvious design makes creatures territorial guards standing on treasure, which is
+readable but dead — the creature exists only in relation to the player and does
+nothing when unobserved. An ecological one has animals hunting, drinking,
+sheltering, avoiding each other and moving between places on their own business.
+It generates incident without scripting any, it makes the same creature feel
+different on two visits, and — most importantly for this project — **it is the
+best available answer to the central risk of an emptied world**, which §22 names:
+with no people, something has to make the place feel inhabited, and an ecology
+that carries on regardless of the player does exactly that.
+
+Guiding constraints:
+
+- **Creatures have lives.** Ranges, routines, needs, and relationships with each
+  other. A predator that also avoids something bigger is worth ten that only
+  notice the player.
+- **Danger concentrates where abandonment is oldest.** Not because a level
+  gate says so, but because those are the places nothing has been driven out of.
+  This is what makes §8.1's gradient legible from the landscape.
+- **Announce before engage.** A held place should be readable as held from
+  outside it: signs, sounds, damage, and above all *the absence of ordinary
+  fauna*. A silent wood is information.
+- **Retreat must always work.** Leaving is a valid answer to everything. Nothing
+  should pursue the player across a province.
+- **Indifference over malice.** Nothing in the wilds is evil, and nothing is
+  waiting for the player specifically. That is what keeps the world beautiful
+  while it is also dangerous.
+
+### 22b.2 What this commits the project to
+
+This is the largest single addition to scope in this plan and it should be
+costed honestly. It requires:
+
+- Damage, health, and death for the player and for creatures.
+- A recovery or consequence model for dying.
+- Weapons and defensive items as real item categories, with the reach, timing
+  and feedback that implies.
+- Creature AI beyond the ambient-fauna wander: perception, needs, routine,
+  approach, attack, disengage, and behaviour toward OTHER creatures.
+  An ecological model costs more in AI than a territorial one and much less in
+  authored content, because the incidents are emergent rather than placed. That
+  trade is the right way round for a world this size.
+- Animation sets for all of the above, on both sides.
+- Audio to carry warning and impact.
+- A pass over the dog, who becomes a companion who reacts to danger rather than
+  purely a wandering friend.
+
+None of this exists today. It should be built after the world, the exploration
+loop and the asset pipeline are solid, and it should start with **one** creature
+in **one** held ruin, taken all the way to finished, before a second is designed.
+
+### 22b.3 A world rhythm — open question
+
+Rain World's other structural idea is the cycle: a world-level event everything
+obeys, which gives the day a shape and drives every creature including the player
+to act. Petalfell has no equivalent and may want one — weather that closes in,
+light that fails, something seasonal — because it would supply pacing that an
+open exploration map otherwise has to get from quests.
+
+Explicitly left open. It is a large systemic commitment, it interacts with
+streaming and save state, and it should not be decided before the exploration
+loop is playable.
+
+### 22b.4 The dog
+
+The dog's role changes and should be handled with care, because the dog is the
+player's only steady company in an empty world. It should notice danger before
+the player does, and its behaviour — stopping, staring, refusing ground — is one
+of the best warning systems available and costs no interface at all. It should
+not become a weapon.
 
 ---
 
@@ -908,7 +1156,7 @@ Optional roads, biome areas, overlooks, ponds, caves, ruins, and small settlemen
 
 ### 27.3 Character Content
 
-NPC conversations, local concerns, trading relationships, dog moments, and recurring characters.
+The few living people, their concerns, trading relationships, dog moments, and recurring characters. Depth over count: a handful of individuals, each written properly, rather than a population.
 
 ### 27.4 Collection and Crafting
 
@@ -916,7 +1164,7 @@ Regional materials, useful recipes, tools, consumables, trade items, and artifac
 
 ### 27.5 Environmental Storytelling
 
-Architecture, abandoned places, damaged roads, old defenses, unusual terrain, and object placement that imply history without always explaining it directly.
+**The primary narrative layer, not a supporting one.** Architecture, abandoned places, reclaimed roads, old defences, unusual terrain, and object placement that imply history without explaining it directly. In a world with almost nobody to talk to, most of what the player learns has to be found rather than told.
 
 ### 27.6 Future Hooks
 
@@ -954,7 +1202,7 @@ These phases describe outcomes rather than implementation procedures.
 
 - Build the primary Blender modular kits.
 - Establish player, dog, NPC, animal, item, and prop asset families.
-- Produce the village and city visual languages.
+- Produce the remnant, ruin and monument visual languages.
 - Produce road, bridge, gate, market, ruin, and waterside content.
 
 ### Phase 5 — Inventory and Object Gameplay
@@ -1028,13 +1276,14 @@ The following creative decisions should be resolved after the reference scene an
 
 - Final Chapter 1 story premise and objective.
 - Player identity and degree of character customization.
-- Exact role of combat, danger, and failure.
+- **Resolved:** the wilds are hostile and hold the abandoned country. What remains open is the exact combat model, the consequence of death, and how many creature families Chapter 1 needs (start with one, finished, before designing a second).
+- **Resolved:** the continent emptied by slow withdrawal, not catastrophe. What remains open is the timeline — how many generations, and which provinces went first.
 - Whether interiors are seamless, separate spaces, limited to key locations, or mostly implied.
 - Final world size and expected chapter duration.
-- The names, cultures, histories, and functions of the village and city.
+- The names, cultures, histories, and functions of the peoples who left, and of the holdout that remains.
 - The role of money, barter, or other trading values.
 - Crafting depth and the number of useful item families.
-- Whether the map is immediately available or discovered gradually.
+- Whether the map is immediately available or discovered gradually. Discovery suits this world better and is worth testing early, since the map view is already built from world data.
 - Travel options beyond walking, swimming, and roads.
 - Target desktop platforms and whether browser delivery remains a requirement.
 
@@ -1049,3 +1298,8 @@ When choosing between more generation and more authored content, use the followi
 > Author the things players remember; generate the variation that makes those things feel naturally embedded in a living world.
 
 Petalfell's towns, roads, landmarks, characters, major geography, and story moments should be memorable and deliberate. Its forests, flowers, stones, terrain variation, ambient life, and small environmental details should make the journey between them feel broad, organic, and alive.
+
+**And the rule this pivot adds:** the world is empty, not dead. Everything built
+for it should make the place feel more alive and more beautiful — the emptiness
+is supplied by the absence of people, and never by making the world itself
+poorer.
