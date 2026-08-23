@@ -94,6 +94,9 @@ public static class Vegetation
 			int i = z * S + x;
 			if (terrain.Land[i] == 0) continue;
 			if (terrain.Plan.Definition.ReservesNaturalDetail(x / (float)S, z / (float)S, 5f / S)) continue;
+			// Roads and their verges. A canopy closing over a route turns it into
+			// a tunnel and hides the one thing the player navigates by.
+			if (terrain.Roads != null && terrain.Roads.Clear[i] != 0) continue;
 			int h = terrain.Level[i];
 			if (h <= Terrain.Sea + 1) continue;
 			if (terrain.StairMask[i] == 1) continue;

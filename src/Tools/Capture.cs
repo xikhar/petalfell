@@ -52,6 +52,10 @@ public static class Capture
 		// narrow cut with the banks filling the frame; the lake is the one
 		// body guaranteed to give a broad surface to judge.
 		new("lake", 58f, 45f, 30f, 6),
+		// Somewhere people live. The roads, the houses and the wildlife are all
+		// placed away from the spawn by construction, so without a viewpoint that
+		// seeks them out the review loop can never see any of them.
+		new("village", 38f, 45f, 31f, 7),
 	};
 
 	public static (string dir, HashSet<string> only) ParseArgs()

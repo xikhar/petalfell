@@ -18,7 +18,7 @@ namespace Petalfell;
 public partial class Main : Node3D
 {
 	[Export] public int Seed = 20260820;
-	[Export] public int WorldSize = 768;
+	[Export] public int WorldSize = 1024;
 	[Export] public int StreamRadius = 8;
 	[Export(PropertyHint.File, "*.json")] public string MapDefinitionPath = "res://content/chapter_01/map.json";
 
@@ -39,6 +39,9 @@ public partial class Main : Node3D
 	private WorldItemSystem _worldItems;
 	private ItemGameplay _itemGameplay;
 	private AmbientDrift _ambientDrift;
+	private UI.WorldMap _worldMap;
+	private Fauna _fauna;
+	private Vector3? _focusOverride;
 	private ShaderMaterial _inkLight, _inkDark, _waterMat;
 	private Tools.DeveloperMenu _developerMenu;
 
@@ -56,10 +59,20 @@ public partial class Main : Node3D
 		var t2 = Time.GetTicksMsec();
 		Props = BuiltProps.Build(Terrain, Seed);
 		var tProps = Time.GetTicksMsec();
+		// After the bridges: a house may not stand where a crossing lands, and
+		// Fits() tests that by looking for columns already built above ground.
+		Settlements.Build(Terrain, Terrain.Sites, Seed);
+		var tTown = Time.GetTicksMsec();
 		Vegetation.Populate(Terrain, Seed);
 		var t3 = Time.GetTicksMsec();
-		GD.Print($"[petalfell] map {Map.Id}  plan {t1 - t0}ms  terrain {t2 - t1}ms  props {tProps - t2}ms  flora {t3 - tProps}ms  " +
-		         $"regions {Plan.Regions.Count}  rivers {Plan.Rivers.Count}  bridges {Props.Bridges.Count}");
+		GD.Print($"[petalfell] map {Map.Id}  plan {t1 - t0}ms  terrain {t2 - t1}ms  props {tProps - t2}ms  " +
+		         $"towns {tTown - tProps}ms  flora {t3 - tTown}ms  " +
+		         $"regions {Plan.Regions.Count}  rivers {Plan.Rivers.Count}  " +
+		         $"bridges {Props.Bridges.Count} ({Props.RoadDecks} for roads, {Terrain.Roads.Crossings.Count} crossings)  " +
+		         $"roads {Terrain.Roads.Segments.Count} (+{Terrain.Roads.Unreachable} unreachable)  " +
+		         $"settlements {Terrain.Sites.Count}  " +
+		         $"buildings {Settlements.LastBuildingCount}");
+		GD.Print($"[terrain] {Terrain.Timings}");
 		ReportTerrain();
 
 		GroundDetail.Seed = Seed;
@@ -135,6 +148,14 @@ public partial class Main : Node3D
 		_developerMenu = new Tools.DeveloperMenu { Name = "DeveloperSettings" };
 		_developerMenu.Setup(_inkLight, _inkDark, Rig);
 		AddChild(_developerMenu);
+
+		_fauna = new Fauna { Name = "Fauna" };
+		AddChild(_fauna);
+		_fauna.Setup(Terrain, _inkLight, _inkDark, Seed);
+
+		_worldMap = new UI.WorldMap { Name = "WorldMap" };
+		AddChild(_worldMap);
+		_worldMap.Setup(Terrain);
 
 		_ambientDrift = new AmbientDrift { Name = "AmbientDrift" };
 		_ambientDrift.Setup(Terrain, spawn);
@@ -278,11 +299,16 @@ public partial class Main : Node3D
 			{
 				1 => FindFeature(spawn, wantCliff: true),
 				2 => FindRiverFeature(),
+				// Road decks are appended after the river ones, so the last bridge
+				// is a crossing that actually carries a route — which is the one
+				// worth reviewing.
 				3 => Props.Bridges.Count > 0
-					? new Vector3(Props.Bridges[0].X + 0.5f, Props.Bridges[0].DeckY + 1f, Props.Bridges[0].Z + 0.5f)
+					? new Vector3(Props.Bridges[^1].X + 0.5f, Props.Bridges[^1].DeckY + 1f,
+						Props.Bridges[^1].Z + 0.5f)
 					: spawn,
 				4 => FindTreeFeature(spawn),
 				5 => FindBiomeFeature(World.Biome.Sakura),
+				7 => FindSettlementFeature(),
 				6 => Plan.Lakes.Count > 0
 					? new Vector3(Plan.Lakes[0].Cx, Terrain.Sea, Plan.Lakes[0].Cz)
 					: FindRiverFeature(),
@@ -296,6 +322,10 @@ public partial class Main : Node3D
 			// exact things being tuned.
 			_ambientDrift.Setup(Terrain, focus);
 			_movementPuffs?.SetProcess(false);
+			// Wildlife is streamed around the traveller, and the traveller is not
+			// where a review shot is framed. Without re-anchoring it, every capture
+			// of a meadow is a capture of an empty meadow.
+			_focusOverride = focus;
 
 			_streamer.UpdateAround(focus, prime: true);
 			for (int i = 0; i < 6; i++)
@@ -318,7 +348,23 @@ public partial class Main : Node3D
 			await RenderingServer.Singleton.ToSignal(
 				RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
 			Tools.Capture.Save(GetViewport(), dir, shot.Name);
+			GD.Print($"[capture] {shot.Name} fauna {_fauna.LiveCount}");
 		}
+		// The live map, shot through the real UI rather than exported from the
+		// renderer behind it. The export proves the cartography; only this proves
+		// the panel, the framing and the markers actually come up on screen.
+		if (only == null || only.Contains("worldmap"))
+		{
+			_worldMap.SetPlayer(spawn);
+			_worldMap.Toggle();
+			for (int i = 0; i < 4; i++)
+				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			await RenderingServer.Singleton.ToSignal(
+				RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+			Tools.Capture.Save(GetViewport(), dir, "worldmap");
+			_worldMap.Toggle();
+		}
+
 		GD.Print("[capture] done");
 		GetTree().Quit();
 	}
@@ -333,30 +379,30 @@ public partial class Main : Node3D
 	/// </summary>
 	private void DumpHeightMap(string dir)
 	{
-		var img = Image.CreateEmpty(WorldSize, WorldSize, false, Image.Format.Rgb8);
-		for (int z = 0; z < WorldSize; z++)
-		for (int x = 0; x < WorldSize; x++)
-		{
-			int h = Terrain.Level[z * WorldSize + x];
-			Color c;
-			if (h <= Terrain.Sea)
-			{
-				float d = Mathf.Clamp((Terrain.Sea - h) / 22f, 0f, 1f);
-				c = new Color(0.55f, 0.62f, 0.90f).Lerp(new Color(0.10f, 0.12f, 0.42f), d);
-			}
-			else
-			{
-				// Banded by terrace so shelf boundaries are unmissable.
-				int terrace = (h - Terrain.Base) / Terrain.Step;
-				float t = Mathf.Clamp(terrace / 12f, 0f, 1f);
-				c = new Color(0.72f, 0.80f, 0.55f).Lerp(new Color(0.98f, 0.94f, 0.90f), t);
-				if (terrace % 2 == 0) c = c.Darkened(0.10f);
-			}
-			img.SetPixel(x, z, c);
-		}
+		var img = UI.WorldMap.Render(Terrain, markers: true);
 		DirAccess.MakeDirRecursiveAbsolute(dir);
 		img.SavePng($"{dir}/map.png");
 		GD.Print($"[capture] {dir}/map.png");
+	}
+
+	/// <summary>The largest settlement, for a shot of somewhere inhabited.</summary>
+	private Vector3 FindSettlementFeature()
+	{
+		SettlementSite best = null;
+		foreach (var site in Terrain.Sites)
+			if (site.Buildings.Count > 0 &&
+				(best == null || site.Buildings.Count > best.Buildings.Count)) best = site;
+		if (best == null) return new Vector3(WorldSize * 0.5f, Terrain.Sea, WorldSize * 0.5f);
+		// Frame a HOUSE, not the middle of the site. The centre of a settlement is
+		// its square, and a review shot of a square is a review shot of paving.
+		if (best.Buildings.Count > 0)
+		{
+			var b = best.Buildings[best.Buildings.Count / 2];
+			int bx = Mathf.Clamp(b.x + b.w / 2, 1, WorldSize - 2);
+			int bz = Mathf.Clamp(b.z + b.d / 2, 1, WorldSize - 2);
+			return new Vector3(bx + 0.5f, Terrain.Level[bz * WorldSize + bx], bz + 0.5f);
+		}
+		return new Vector3(best.X + 0.5f, best.Level, best.Z + 0.5f);
 	}
 
 	/// <summary>
@@ -477,6 +523,8 @@ public partial class Main : Node3D
 		var p = Player.GetGlobalTransformInterpolated().Origin;
 		_movementPuffs?.Advance(p, Player.Velocity, Player.IsOnFloor(), Player.Swimming);
 		_ambientDrift?.Advance(p, delta);
+		_fauna?.Advance(_focusOverride ?? p, delta);
+		_worldMap?.SetPlayer(p);
 		if (_capturing) return;
 
 		_streamer.UpdateAround(p);
@@ -487,6 +535,17 @@ public partial class Main : Node3D
 
 	public override void _UnhandledInput(InputEvent e)
 	{
+		if (e is InputEventKey mk && mk.Pressed && !mk.Echo && mk.PhysicalKeycode == Key.M)
+		{
+			_worldMap?.Toggle();
+			GetViewport().SetInputAsHandled();
+			return;
+		}
+		// While the map is up it owns the mouse: scrolling zooms the map, not the
+		// rig, and a click pans rather than sending the traveller somewhere they
+		// cannot be seen to walk to.
+		if (_worldMap != null && _worldMap.IsOpen) return;
+
 		if (_itemGameplay?.HandleInput(e) == true)
 		{
 			GetViewport().SetInputAsHandled();
@@ -673,5 +732,6 @@ public partial class Main : Node3D
 		Bind("throw_right", Key.G);
 		Bind("interact", Key.R);
 		Bind("dog_fetch", Key.U);
+		Bind("world_map", Key.M);
 	}
 }

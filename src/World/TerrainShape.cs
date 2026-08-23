@@ -165,7 +165,21 @@ public static class TerrainShape
 		byte[] skip = null)
 	{
 		var mask = new byte[S * S];
-		var dead = new HashSet<int>();
+		// A flat array rather than a HashSet.
+		//
+		// This is tested once per cell per direction per iteration — four million
+		// times per pass, ninety passes — and at a large world size the hashing
+		// alone was the single most expensive thing in world generation. Same
+		// semantics, including persisting across iterations; only the lookup
+		// changes.
+		var dead = new bool[1024];
+		bool Dead(int id) => id >= 0 && id < dead.Length && dead[id];
+		void Kill(int id)
+		{
+			if (id < 0) return;
+			if (id >= dead.Length) Array.Resize(ref dead, Math.Max(id + 1, dead.Length * 2));
+			dead[id] = true;
+		}
 
 		for (int iter = 0; iter < maxStairs; iter++)
 		{
@@ -176,35 +190,61 @@ public static class TerrainShape
 			for (int id = 1; id < sizes.Count; id++) if (sizes[id] > sizes[mainId]) mainId = id;
 			int pending = 0;
 			for (int id = 0; id < sizes.Count; id++)
-				if (id != mainId && sizes[id] >= minArea && !dead.Contains(id)) pending++;
+				if (id != mainId && sizes[id] >= minArea && !Dead(id)) pending++;
 			if (pending == 0) break;
 
 			// Cheapest boundary between two different regions, at least one a
 			// real destination. Cheapest == shortest climb == least scarring.
-			int bestCost = int.MaxValue, bx = -1, bz = -1, bnx = 0, bnz = 0;
-			for (int z = 1; z < S - 1; z++)
-			for (int x = 1; x < S - 1; x++)
-			{
-				int i = z * S + x;
-				if (land[i] == 0) continue;
-				int a = label[i];
-				if (a < 0 || sizes[a] < minArea || dead.Contains(a)) continue;
-				for (int d = 0; d < 4; d++)
+			// Ties break on the LOWEST CELL INDEX, not on whoever got there first.
+			//
+			// The sequential scan resolved ties by scan order, which is the same
+			// thing — the first cell reached is the lowest index. Saying it
+			// explicitly is what makes the search safe to run across threads:
+			// the answer no longer depends on which row finished when, so a seed
+			// still produces exactly one world.
+			int bestCost = int.MaxValue, bestAt = int.MaxValue;
+			int bx = -1, bz = -1, bnx = 0, bnz = 0;
+			var gate = new object();
+
+			System.Threading.Tasks.Parallel.For(1, S - 1,
+				() => (cost: int.MaxValue, at: int.MaxValue, x: -1, z: -1, nx: 0, nz: 0),
+				(z, _, local) =>
 				{
-					int nx = x + (d == 0 ? 1 : d == 1 ? -1 : 0);
-					int nz = z + (d == 2 ? 1 : d == 3 ? -1 : 0);
-					int j = nz * S + nx;
-					if (land[j] == 0 || label[j] == a) continue;
-					if (skip != null && (skip[i] != 0 || skip[j] != 0)) continue;
-					int dh = Math.Abs(lev[j] - lev[i]);
-					if (dh < 2) continue;
-					int cost = dh * 4 + ((label[j] == mainId || a == mainId) ? 0 : 6);
-					if (cost < bestCost) { bestCost = cost; bx = x; bz = z; bnx = nx; bnz = nz; }
-				}
-			}
+					for (int x = 1; x < S - 1; x++)
+					{
+						int i = z * S + x;
+						if (land[i] == 0) continue;
+						int a = label[i];
+						if (a < 0 || sizes[a] < minArea || Dead(a)) continue;
+						for (int d = 0; d < 4; d++)
+						{
+							int nx = x + (d == 0 ? 1 : d == 1 ? -1 : 0);
+							int nz = z + (d == 2 ? 1 : d == 3 ? -1 : 0);
+							int j = nz * S + nx;
+							if (land[j] == 0 || label[j] == a) continue;
+							if (skip != null && (skip[i] != 0 || skip[j] != 0)) continue;
+							int dh = Math.Abs(lev[j] - lev[i]);
+							if (dh < 2) continue;
+							int cost = dh * 4 + ((label[j] == mainId || a == mainId) ? 0 : 6);
+							if (cost < local.cost || (cost == local.cost && i < local.at))
+								local = (cost, i, x, z, nx, nz);
+						}
+					}
+					return local;
+				},
+				local =>
+				{
+					if (local.x < 0) return;
+					lock (gate)
+					{
+						if (local.cost > bestCost || (local.cost == bestCost && local.at >= bestAt)) return;
+						bestCost = local.cost; bestAt = local.at;
+						bx = local.x; bz = local.z; bnx = local.nx; bnz = local.nz;
+					}
+				});
 			if (bx < 0)
 			{
-				for (int id = 0; id < sizes.Count; id++) if (id != mainId) dead.Add(id);
+				for (int id = 0; id < sizes.Count; id++) if (id != mainId) Kill(id);
 				break;
 			}
 

@@ -69,6 +69,13 @@ public sealed class Terrain
 	public readonly byte[] Wet;
 	public readonly List<RiverNode> RiverPath = new();
 
+	/// <summary>Where people live. Chosen before roads, because roads connect them.</summary>
+	public List<SettlementSite> Sites { get; private set; } = new();
+	/// <summary>Per-stage generation cost, for the boot diagnostics.</summary>
+	public string Timings = "";
+	/// <summary>The road network laid over the finished heightfield.</summary>
+	public RoadNetwork Roads { get; private set; }
+
 	private struct Disc
 	{
 		public float Cx, Cz, R, O, Ax, Az, WAmp, WFreq;
@@ -104,8 +111,17 @@ public sealed class Terrain
 		_nLake = new Noise2D(seed + 11);
 		_nSand = new Noise2D(seed + 13);
 
+		var clock = System.Diagnostics.Stopwatch.StartNew();
+		long mark = 0;
+		void Stage(string name)
+		{
+			Timings += $"{name} {clock.ElapsedMilliseconds - mark}ms  ";
+			mark = clock.ElapsedMilliseconds;
+		}
+
 		BuildDiscs();
 		BuildHeights();
+		Stage("heights");
 
 		// Tidy the contour field before water cuts it. Running these after the
 		// carve, as the old port did, lets a land filter rewrite the shoreline.
@@ -116,6 +132,7 @@ public sealed class Terrain
 		AddLedges();
 		lev = TerrainShape.Despeckle(Level, size, Land, 12);
 		Array.Copy(lev, Level, lev.Length);
+		Stage("filter");
 
 		RasteriseWater();
 		CarveChannels();
@@ -126,13 +143,16 @@ public sealed class Terrain
 		// islands; a mode filter here would iron the bank flat.
 		lev = TerrainShape.Despeckle(Level, size, Land, 20);
 		Array.Copy(lev, Level, lev.Length);
+		Stage("water");
 		var noStair = AddWaterFeatures();
 
 		for (int i = 0; i < size * size; i++)
 			Land[i] = (byte)(Level[i] > Sea || IsFordGround(i) ? 1 : 0);
 		StairMask = TerrainShape.CarveStairs(Level, size, Land,
 			minArea: 34, tread: 2, width: 3, maxStairs: 90, skip: noStair);
+		Stage("stairs");
 		RockMask = ScatterBoulders(noStair);
+		Stage("boulders");
 
 		for (int i = 0; i < size * size; i++)
 		{
@@ -140,7 +160,17 @@ public sealed class Terrain
 			Land[i] = (byte)(Level[i] > Sea || IsFordGround(i) ? 1 : 0);
 		}
 
+		// Places, then the roads between them, then blocks. Both stages read the
+		// finished heightfield and neither writes to it: roads decide only which
+		// material caps a column, so every contour invariant established above
+		// survives intact. See RoadNetwork for why that restraint is load-bearing.
+		Sites = Settlements.PlanSites(this, seed);
+		Stage("sites");
+		Roads = RoadNetwork.Build(this, Sites, seed);
+		Stage("roads");
+
 		FillVoxels();
+		Stage("voxels");
 	}
 
 	/* ================================================================
@@ -705,7 +735,13 @@ public sealed class Terrain
 	 * ================================================================ */
 	private void FillVoxels()
 	{
-		for (int z = 0; z < Size; z++)
+		// Parallel over rows. Every column writes only its own slice of the block
+		// array and its own height entry, so there is nothing to contend over, and
+		// the noise fields are pure functions of their coordinates — which is what
+		// makes this safe AND keeps it deterministic. A given seed produces the
+		// same world whatever order the rows happen to finish in.
+		System.Threading.Tasks.Parallel.For(0, Size, z =>
+		{
 		for (int x = 0; x < Size; x++)
 		{
 			int i = z * Size + x;
@@ -743,7 +779,16 @@ public sealed class Terrain
 					    : Palette.GRASS_STONE;
 			}
 			if (StairMask[i] == 1 && cap != Palette.SAND) cap = Palette.STONE_PALE;
-			if (RockMask[i] != 0) cap = RockMask[i] == 2 ? Palette.STONE_PALE : Palette.STONE;
+			// Boulders were scattered before the roads were routed, so a few of
+			// them are now standing in one.
+			if (RockMask[i] != 0 && (Roads == null || Roads.Clear[i] == 0))
+				cap = RockMask[i] == 2 ? Palette.STONE_PALE : Palette.STONE;
+
+			// The road surface. A kept road is pale trodden stone; a trail is bare
+			// worn earth, which is both what a track actually is and the only way
+			// to tell the two classes apart from the air.
+			if (Roads != null && Roads.Mask[i] != 0 && Land[i] != 0)
+				cap = Roads.Mask[i] == (byte)RoadClass.Trail + 1 ? Palette.SOIL : Palette.PATH;
 
 			bool grassCap = Palette.IsGrassSurface(cap);
 			bool stoneSubstrate = Palette.HasStoneSubstrate(cap);
@@ -768,6 +813,7 @@ public sealed class Terrain
 			Grid.Column(x, z, soilTop, h, cap);
 			Grid.Heights[i] = (short)h;
 		}
+		});
 	}
 
 	/// <summary>Nearest dry terrain surface to an authored normalized map point.</summary>
@@ -786,6 +832,11 @@ public sealed class Terrain
 			if (x < 4 || z < 4 || x > Size - 5 || z > Size - 5) continue;
 			int i = z * Size + x;
 			int top = Level[i];
+			// DRY land, tested first. Sand is a legitimate surface to stand on and
+			// it is also what the lakebed is made of, so a material check alone
+			// happily spawned the traveller fifteen blocks under the surface of a
+			// lake. Only the waterline can tell those two apart.
+			if (top <= Sea) continue;
 			byte id = Grid.At(x, top - 1, z);
 			bool grass = Palette.IsGrassSurface(id);
 			bool safeSurface = grass || id == Palette.PATH || id == Palette.SAND ||

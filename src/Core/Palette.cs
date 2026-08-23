@@ -156,12 +156,20 @@ public static class Palette
 	public const byte STONE_PALE = 11;
 	public const byte STONE_WARM = 12;
 	public const byte PATH = 13;
+	/// <summary>Flagstone paving for a village square. Laid, not trodden.</summary>
+	public const byte PAVING = 19;
 	public const byte PLANK = 20;
 	public const byte PLANK_PALE = 21;
 	public const byte BEAM = 22;
 	public const byte TRUNK = 23;
 	public const byte TRUNK_PALE = 24;
 	public const byte TRUNK_ROSE = 25;
+	// Building materials. Cottages are plaster panels in a timber frame under a
+	// steep tiled roof, which is the one place in this world a MADE seam is
+	// allowed to show — everything natural is forbidden coursing and grids.
+	public const byte PLASTER = 26;
+	public const byte ROOF_SLATE = 27;
+	public const byte ROOF_TILE = 28;
 	public const byte LEAF_PINK = 30;
 	public const byte LEAF_BLUSH = 31;
 	public const byte LEAF_LILAC = 32;
@@ -170,6 +178,8 @@ public static class Palette
 	public const byte LEAF_ROSE = 35;
 	public const byte LANTERN = 40;
 	public const byte CRYSTAL = 41;
+	/// <summary>A lit window. The reason a village reads as inhabited at dusk.</summary>
+	public const byte WINDOW = 42;
 	public const byte CASCADE = 50;
 
 	/// <summary>
@@ -283,6 +293,20 @@ public static class Palette
 		Def(STONE_WARM, 0xd5c5d2, 0xc8b7c6, 0xb19fad, pattern: PatternRock);
 		Def(PATH, 0xe4dce7, 0xd5cddd, 0xc2bacd, pattern: PatternTrodden);
 
+		Def(PAVING, 0xdcd6e8, 0xcfc8de, 0xbbb3cc, pattern: PatternRock);
+
+		// Cottage fabric. Cream plaster against a rose-brown frame, under roofs
+		// that are the darkest built value in the world — a village has to hold
+		// its silhouette against pale blossom and paler sky, and only the roofs
+		// have the weight to do it.
+		Def(PLASTER, 0xf7efe2, 0xefe5d5, 0xdbd1c2, pattern: PatternPlank,
+			forceLightFaces: true);
+		// Muted, not brick. These are the darkest built values in the world and
+		// they still have to belong to a pastel one: the first pass was a
+		// saturated terracotta that read as a different painting laid on top.
+		Def(ROOF_SLATE, 0x817ba0, 0x746e94, 0x635d82, pattern: PatternPlank);
+		Def(ROOF_TILE, 0xa9807c, 0x9c7570, 0x876460, pattern: PatternPlank);
+
 		Def(PLANK, 0xe7bbb0, 0xdfafa4, 0xcc9a90, pattern: PatternPlank);
 		Def(PLANK_PALE, 0xf0cfc6, 0xe8c2ba, 0xd5aca4, pattern: PatternPlank);
 		Def(BEAM, 0xcc958e, 0xc08a84, 0xac7871, pattern: PatternBark);
@@ -302,6 +326,7 @@ public static class Palette
 
 		Def(LANTERN, 0xffdcb8, 0xffd2a8, 0xf6c79e, emissive: 0.75f);
 		Def(CRYSTAL, 0xdfd0f7, 0xd2c0f1, 0xc2aee5, emissive: 0.42f);
+		Def(WINDOW, 0xffe6bc, 0xffdcac, 0xf3cb9c, emissive: 0.62f);
 		// Falling water is voxels, not a second transparent pass: a pale,
 		// faintly luminous column that catches the bloom and reads as spray.
 		Def(CASCADE, 0xeaf1ff, 0xdde8fb, 0xccdaf2, emissive: 0.14f);

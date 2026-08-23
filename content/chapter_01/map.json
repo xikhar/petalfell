@@ -2,7 +2,7 @@
   "id": "chapter-01",
   "displayName": "Petalfell Chapter 1",
   "defaultSeed": 20260820,
-  "defaultWorldSize": 768,
+  "defaultWorldSize": 1024,
   "boundary": {
     "centre": {
       "x": 0.5,

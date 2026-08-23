@@ -24,6 +24,8 @@ public sealed class BuiltProps
 	public readonly List<Bridge> Bridges = new();
 	public readonly List<List<(int x, int z)>> Paths = new();
 	public readonly List<(int x, int y, int z)> Lanterns = new();
+	/// <summary>How many decks were built specifically because a road needed one.</summary>
+	public int RoadDecks;
 
 	public static BuiltProps Build(Terrain terrain, int seed)
 	{
@@ -64,6 +66,34 @@ public sealed class BuiltProps
 			if (bridge != null) result.Bridges.Add(bridge);
 		}
 
+		// Road crossings.
+		//
+		// Every one of these is a place the router decided it was worth paying
+		// sixteen times the going rate to get wet, which means the alternative was
+		// a long way round — so there had better be a deck there. Before this the
+		// two systems did not speak: bridges were placed on river geometry alone,
+		// roads crossed wherever the search liked, and the two coincided only by
+		// luck. A highway walking into a channel and out the other side with
+		// nothing over it is the most obvious possible hole in a world.
+		int roadDecks = 0;
+		if (terrain.Roads != null)
+			foreach (var (cx, cz, dx, dz) in terrain.Roads.Crossings)
+			{
+				bool close = false;
+				foreach (var old in result.Bridges)
+				{
+					float ox = old.X - cx, oz = old.Z - cz;
+					if (ox * ox + oz * oz < 22f * 22f) { close = true; break; }
+				}
+				if (close) continue;
+				var deck = BuildSpan(terrain, cx, cz, MathF.Abs(dx) >= MathF.Abs(dz),
+					channel: true);
+				if (deck == null) continue;
+				result.Bridges.Add(deck);
+				roadDecks++;
+			}
+		result.RoadDecks = roadDecks;
+
 		foreach (var bridge in result.Bridges)
 		{
 			int dx = Math.Sign(bridge.NearX - bridge.FarX);
@@ -89,14 +119,26 @@ public sealed class BuiltProps
 		return result;
 	}
 
-	private static Bridge BuildBridge(Terrain terrain, in RiverNode node)
+	/// <summary>A crossing on a channel, spanning across the flow.</summary>
+	private static Bridge BuildBridge(Terrain terrain, in RiverNode node) =>
+		BuildSpan(terrain,
+			(int)MathF.Floor(node.X + 0.5f), (int)MathF.Floor(node.Z + 0.5f),
+			Math.Abs(node.Nx) >= Math.Abs(node.Nz));
+
+	/// <summary>
+	/// One deck across open water, from bank to bank along the given axis.
+	///
+	/// Shared by both callers because a bridge is a bridge: what differs is only
+	/// how the axis was decided — a river crossing takes it from the channel
+	/// normal, a road crossing from the direction the traffic was travelling.
+	/// </summary>
+	private static Bridge BuildSpan(Terrain terrain, int cx, int cz, bool alongX,
+		bool channel = false)
 	{
 		var grid = terrain.Grid;
 		int size = terrain.Size;
-		bool alongX = Math.Abs(node.Nx) >= Math.Abs(node.Nz);
 		int ax = alongX ? 1 : 0, az = alongX ? 0 : 1;
 		int px = az, pz = ax;
-		int cx = (int)MathF.Floor(node.X + 0.5f), cz = (int)MathF.Floor(node.Z + 0.5f);
 
 		int Index(int i, int j = 0)
 		{
@@ -107,7 +149,17 @@ public sealed class BuiltProps
 		// Level retains the source heightfield's numeric values even though the
 		// Godot voxel store represents its top block one index lower. Bank finding
 		// is a heightfield test, so use the source waterline verbatim here.
-		bool Bank(int i) => terrain.Level[Index(i)] > Math.Max(terrain.Level[Index(0)] + 1, Terrain.Sea);
+		//
+		// A road crossing needs the other question asked. At a ford the water is
+		// shallow enough to be walkable ground, so the waterline test finds a bank
+		// immediately and reports a nought-length span; what actually bounds the
+		// deck there is the edge of the CHANNEL.
+		bool Bank(int i)
+		{
+			int j = Index(i);
+			if (channel) return terrain.RiverDist[j] > terrain.RiverHalf[j] + 1f;
+			return terrain.Level[j] > Math.Max(terrain.Level[Index(0)] + 1, Terrain.Sea);
+		}
 
 		int left = 0, right = 0;
 		while (left > -40 && !Bank(left)) left--;

@@ -41,6 +41,30 @@ public sealed class Rng
 	public T Pick<T>(T[] items) => items[Math.Min(items.Length - 1, (int)(Next() * items.Length))];
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	/// <summary>
+	/// A stable hash of a string.
+	///
+	/// NOT string.GetHashCode(). That is randomized per process in .NET Core as
+	/// a hash-flooding mitigation, so anything seeded from it produces a
+	/// different result every launch — which cost this project a chapter whose
+	/// authored towns rebuilt themselves differently on every boot, with every
+	/// other stage around them perfectly deterministic. Any identifier that
+	/// reaches a seed has to come through here.
+	/// </summary>
+	public static int StableHash(string text)
+	{
+		unchecked
+		{
+			uint h = 2166136261u;
+			foreach (char c in text ?? "")
+			{
+				h ^= c;
+				h *= 16777619u;
+			}
+			return (int)h;
+		}
+	}
+
 	public static float Clamp(float v, float lo, float hi) => v < lo ? lo : (v > hi ? hi : v);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
