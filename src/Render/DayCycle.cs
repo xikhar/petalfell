@@ -36,6 +36,8 @@ public partial class DayCycle : Node
 	/// <summary>Real seconds for one full cycle.</summary>
 	public float DayLength = 900f;
 	public bool Paused;
+	/// <summary>Authored darkness blend: 0 in daylight, 1 at full night.</summary>
+	public float NightAmount { get; private set; }
 
 	private Godot.Environment _env;
 	private DirectionalLight3D _key;
@@ -150,6 +152,7 @@ public partial class DayCycle : Node
 		Vector3 keyDir = daylight ? sun : -sun;
 
 		float night = Lerp(from.Night, to.Night);
+		NightAmount = night;
 		var sunColour = Blend(from.Sun, to.Sun);
 		float energy = Lerp(from.SunEnergy, to.SunEnergy);
 

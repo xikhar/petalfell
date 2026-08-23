@@ -77,11 +77,14 @@ public partial class Character : Node3D
 	private float _swimPhase;
 	private float _swimBlend;
 	private float _airBlend;
+	private float _sitBlend;
 	private float _airLead = 1f;
 	private bool _wasAirborne;
 	private float _bob;
 	private float _throwChargeL;
 	private float _throwChargeR;
+	private float _torchPoseL;
+	private float _torchPoseR;
 
 	private ShaderMaterial _inkLight, _inkDark;
 
@@ -256,9 +259,14 @@ public partial class Character : Node3D
 
 		visual = ItemVisuals.Build(item, _inkLight, _inkDark);
 		anchor.AddChild(visual);
-		visual.Position = new Vector3(0f, -0.06f, 0.10f);
-		visual.Rotation = new Vector3(0.08f, 0f,
-			hand == ItemHand.Left ? -0.13f : 0.13f);
+		visual.Position = item == ItemCatalog.Torch
+			? new Vector3(0f, 0.20f, 0.06f)
+			: new Vector3(0f, -0.06f, 0.10f);
+		// The torch is counter-rotated at the wrist by Animate so its own model
+		// should begin upright. Sticks keep the relaxed little hand cant.
+		visual.Rotation = item == ItemCatalog.Torch
+			? Vector3.Zero
+			: new Vector3(0.08f, 0f, hand == ItemHand.Left ? -0.13f : 0.13f);
 	}
 
 	public Vector3 HandWorldPosition(ItemHand hand)
@@ -276,10 +284,15 @@ public partial class Character : Node3D
 	/// <summary>
 	/// One phase accumulator drives everything. Speed sets the cadence, so a slow
 	/// walk and a run are the same curve at different rates rather than two clips
-	/// that have to be blended.
+	/// that have to be blended. This compatibility entry point supplies no
+	/// interaction pose.
 	/// </summary>
 	public void Animate(Vector3 velocity, Vector3 facing,
-		bool grounded, bool swimming, double delta)
+		bool grounded, bool swimming, double delta) =>
+		Animate(velocity, facing, grounded, swimming, false, delta);
+
+	public void Animate(Vector3 velocity, Vector3 facing,
+		bool grounded, bool swimming, bool sitting, double delta)
 	{
 		float dt = (float)delta;
 		var flat = new Vector3(velocity.X, 0, velocity.Z);
@@ -303,6 +316,16 @@ public partial class Character : Node3D
 			1f - Mathf.Exp(-(airborne ? 14f : 18f) * dt));
 		if (!airborne && _airBlend < 0.001f) _airBlend = 0f;
 		float air = _airBlend;
+
+		// Sitting is an authored grounded overlay, not a new locomotion mode. It
+		// therefore gives way immediately to water/air poses while still easing at
+		// ordinary interaction boundaries.
+		bool seated = sitting && grounded && !swimming;
+		float sitResponse = seated ? 9.5f : 14f;
+		_sitBlend = Mathf.Lerp(_sitBlend, seated ? 1f : 0f,
+			1f - Mathf.Exp(-sitResponse * dt));
+		if (!seated && _sitBlend < 0.001f) _sitBlend = 0f;
+		float sit = _sitBlend;
 
 		var look = new Vector3(facing.X, 0, facing.Z);
 		if (look.LengthSquared() > 0.0001f)
@@ -389,6 +412,18 @@ public partial class Character : Node3D
 		_legL.Rotation = landLegL.Lerp(swimLegL, swim);
 		_legR.Rotation = landLegR.Lerp(swimLegR, swim);
 
+		// A low, relaxed ground sit: the rigid voxel legs extend toward the fire
+		// while the hands settle near the knees. Keeping this as a late overlay
+		// preserves all existing walk, jump, and swim curves underneath it.
+		var sitArmL = new Vector3(-0.48f, 0.03f, -0.13f);
+		var sitArmR = new Vector3(-0.48f, -0.03f, 0.13f);
+		var sitLegL = new Vector3(-1.03f, 0f, -0.07f);
+		var sitLegR = new Vector3(-1.03f, 0f, 0.07f);
+		_armL.Rotation = _armL.Rotation.Lerp(sitArmL, sit);
+		_armR.Rotation = _armR.Rotation.Lerp(sitArmR, sit);
+		_legL.Rotation = _legL.Rotation.Lerp(sitLegL, sit);
+		_legR.Rotation = _legR.Rotation.Lerp(sitLegR, sit);
+
 		// Pull the selected hand back while charging. This is deliberately layered
 		// after locomotion so the held object remains readable while walking or
 		// swimming instead of fighting the procedural gait for ownership.
@@ -397,6 +432,28 @@ public partial class Character : Node3D
 		_armL.Rotation = _armL.Rotation.Lerp(new Vector3(0.72f, -0.10f, -0.38f), chargeL);
 		_armR.Rotation = _armR.Rotation.Lerp(new Vector3(0.72f, 0.10f, 0.38f), chargeR);
 
+		// A lit torch is carried high and forward, not left at the locomotion
+		// arm's side. The wrist applies the inverse limb rotation so the flame stays
+		// vertical while the hand position still follows the raised shoulder arc.
+		// Both transitions are eased because equipment can change mid-stride.
+		_torchPoseL = Mathf.Lerp(_torchPoseL,
+			_heldLId == ItemCatalog.Torch.Id ? 1f : 0f,
+			1f - Mathf.Exp(-13f * dt));
+		_torchPoseR = Mathf.Lerp(_torchPoseR,
+			_heldRId == ItemCatalog.Torch.Id ? 1f : 0f,
+			1f - Mathf.Exp(-13f * dt));
+		if (_torchPoseL < 0.001f) _torchPoseL = 0f;
+		if (_torchPoseR < 0.001f) _torchPoseR = 0f;
+
+		_armL.Rotation = _armL.Rotation.Lerp(
+			new Vector3(-0.18f, -0.06f, -2.42f), _torchPoseL);
+		_armR.Rotation = _armR.Rotation.Lerp(
+			new Vector3(-0.18f, 0.06f, 2.42f), _torchPoseR);
+		_handL.Quaternion = Quaternion.Identity.Slerp(
+			_armL.Quaternion.Inverse(), _torchPoseL);
+		_handR.Quaternion = Quaternion.Identity.Slerp(
+			_armR.Quaternion.Inverse(), _torchPoseR);
+
 		// Breathing idle plus a two-per-stride bob.
 		float idle = Mathf.Sin(_phase * 0.35f + 1.3f) * 0.012f;
 		_bob = Mathf.Lerp(_bob, Mathf.Abs(Mathf.Sin(_phase)) * cadence * 0.10f + idle,
@@ -404,8 +461,9 @@ public partial class Character : Node3D
 
 		float swimBob = Mathf.Sin(_swimPhase) * Mathf.Lerp(0.035f, 0.065f, swimMotion);
 		float nonSwimBob = Mathf.Lerp(_bob, 0f, air);
-		float visibleBob = Mathf.Lerp(nonSwimBob, swimBob, swim);
-		_swimPivot.Position = new Vector3(0f, SwimPivotHeight + visibleBob, 0f);
+		float visibleBob = Mathf.Lerp(Mathf.Lerp(nonSwimBob, swimBob, swim), 0f, sit);
+		_swimPivot.Position = new Vector3(0f,
+			SwimPivotHeight + visibleBob - 0.46f * sit, 0f);
 
 		// Idle swimmers stay angled enough to read as floating; forward movement
 		// brings the figure close to prone. The true torso pivot keeps that rotation
@@ -415,7 +473,8 @@ public partial class Character : Node3D
 		float airPitch = (0.055f + rising * 0.09f - falling * 0.04f) * air;
 		float airRoll = _airLead * (rising * 0.055f + apex * 0.095f) * air;
 		var landBodyRotation = new Vector3(airPitch, 0f, airRoll);
-		_swimPivot.Rotation = landBodyRotation.Lerp(new Vector3(swimPitch, 0f, 0f), swim);
+		var activeBodyRotation = landBodyRotation.Lerp(new Vector3(swimPitch, 0f, 0f), swim);
+		_swimPivot.Rotation = activeBodyRotation.Lerp(new Vector3(0.09f, 0f, 0f), sit);
 		_body.Position = new Vector3(0f, -SwimPivotHeight, 0f);
 
 		// Keep the voxel proportions rigid in the air. Jump height and limb posing
@@ -431,13 +490,14 @@ public partial class Character : Node3D
 		var activeLandHead = landHead.Lerp(airHead, air);
 		var swimHead = new Vector3(-swimPitch * 0.58f + Mathf.Sin(_swimPhase) * 0.035f,
 			Mathf.Sin(_swimPhase * 0.5f) * 0.055f, 0f);
-		_head.Rotation = activeLandHead.Lerp(swimHead, swim);
+		_head.Rotation = activeLandHead.Lerp(swimHead, swim)
+			.Lerp(new Vector3(-0.055f, 0f, 0f), sit);
 
 		// Keep the cape on its ordinary trailing animation in water. Swimming is
 		// treated as supported rather than airborne, so it does not receive the
 		// extra jump/fall lift merely because the physics body is off the floor.
-		float cloakTarget = 0.16f + cadence * 0.55f
-			+ (grounded || swimming ? 0f : 0.5f);
+		float cloakTarget = Mathf.Lerp(0.16f + cadence * 0.55f
+			+ (grounded || swimming ? 0f : 0.5f), 0.34f, sit);
 		for (int i = 0; i < _cloak.Count; i++)
 		{
 			float want = cloakTarget
@@ -451,8 +511,9 @@ public partial class Character : Node3D
 		// the cape, preserving the model's one warm accent while it moves.
 		for (int i = 0; i < _scarfTail.Count; i++)
 		{
-			float landWant = 0.10f + cadence * 0.95f + (grounded ? 0f : 0.75f)
-				+ Mathf.Sin(_phase * 0.9f + i * 1.4f) * cadence * 0.16f;
+			float landWant = Mathf.Lerp(0.10f + cadence * 0.95f + (grounded ? 0f : 0.75f)
+				+ Mathf.Sin(_phase * 0.9f + i * 1.4f) * cadence * 0.16f,
+				0.28f, sit);
 			float waterWant = 1.24f + swimMotion * 0.25f
 				+ Mathf.Sin(_swimPhase * 0.92f + i * 1.35f) * 0.16f;
 			float want = Mathf.Lerp(landWant, waterWant, swim);

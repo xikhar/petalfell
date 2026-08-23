@@ -68,8 +68,8 @@ public partial class QuickLoadoutHud : CanvasLayer
 			DrawSocket(bottom, occupied: false);
 			DrawSocket(left, leftItem != null);
 			DrawSocket(right, rightItem != null);
-			DrawItem(left, leftItem);
-			DrawItem(right, rightItem);
+			DrawItem(left, leftItem, ItemHand.Left);
+			DrawItem(right, rightItem, ItemHand.Right);
 		}
 
 		private void DrawSocket(Vector2 centre, bool occupied)
@@ -80,33 +80,17 @@ public partial class QuickLoadoutHud : CanvasLayer
 			DrawArc(centre, Radius, 0f, Mathf.Tau, 64, edge, 1.65f, antialiased: true);
 		}
 
-		private void DrawItem(Vector2 centre, ItemDefinition item)
+		private void DrawItem(Vector2 centre, ItemDefinition item, ItemHand hand)
 		{
-			if (item == ItemCatalog.Stick) DrawStick(centre);
-		}
+			if (item == null) return;
+			ItemIconRenderer.Draw(this, item, centre);
 
-		private void DrawStick(Vector2 centre)
-		{
-			// A tiny vector version of the blocky world stick. Drawing it here keeps
-			// the HUD resolution-independent and avoids a one-item texture atlas.
-			var axis = new Vector2(0.68f, -0.73f);
-			var a = centre - axis * 17f;
-			var b = centre + axis * 17f;
-			var outline = new Color(0.29f, 0.22f, 0.27f, 0.86f);
-			var wood = new Color(0.62f, 0.40f, 0.27f, 0.98f);
-			var highlight = new Color(0.76f, 0.53f, 0.35f, 0.82f);
-
-			DrawLine(a, b, outline, 12f, antialiased: true);
-			DrawLine(a, b, wood, 8f, antialiased: true);
-			DrawLine(a + new Vector2(1f, -1f), b + new Vector2(1f, -1f),
-				highlight, 2f, antialiased: true);
-			DrawCircle(a, 4f, wood, filled: true, width: -1f, antialiased: true);
-			DrawCircle(b, 4f, wood, filled: true, width: -1f, antialiased: true);
-
-			var branchRoot = centre + axis * 5f;
-			var branchEnd = branchRoot + new Vector2(8f, 2f);
-			DrawLine(branchRoot, branchEnd, outline, 7f, antialiased: true);
-			DrawLine(branchRoot, branchEnd, wood, 4f, antialiased: true);
+			int count = _inventory?.Count(item.Id) ?? 0;
+			if (count <= 1) return;
+			var font = ThemeDB.FallbackFont;
+			var origin = centre + new Vector2(-Radius + 5f, Radius - 6f);
+			DrawString(font, origin, count.ToString(), HorizontalAlignment.Right,
+				Radius * 2f - 10f, 13, new Color(1f, 1f, 1f, 0.90f));
 		}
 	}
 }

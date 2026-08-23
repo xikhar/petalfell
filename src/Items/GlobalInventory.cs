@@ -43,12 +43,19 @@ public partial class GlobalInventory : Node
 
 	public override void _Ready()
 	{
-		// Chapter-one bootstrap item. Later this comes from a new-game loadout or
+		// Chapter-one bootstrap inventory. Later this comes from a new-game loadout or
 		// save data; the inventory code itself remains unchanged.
 		if (Count(ItemCatalog.Stick.Id) == 0)
 		{
 			TryAdd(ItemCatalog.Stick.Id, 1);
 			AssignLoadout(0, ItemCatalog.Stick.Id);
+		}
+		if (Count(ItemCatalog.Wood.Id) == 0)
+			TryAdd(ItemCatalog.Wood.Id, 30);
+		if (Count(ItemCatalog.Torch.Id) == 0)
+		{
+			TryAdd(ItemCatalog.Torch.Id, 1);
+			AssignLoadout(1, ItemCatalog.Torch.Id);
 		}
 	}
 
@@ -120,6 +127,7 @@ public partial class GlobalInventory : Node
 			remaining -= remove;
 			if (slot.Quantity == 0) slot.ItemId = null;
 		}
+		ReconcileHands(prefer: null);
 		Changed?.Invoke();
 		return true;
 	}
@@ -130,6 +138,45 @@ public partial class GlobalInventory : Node
 		var item = ItemCatalog.Get(itemId);
 		if (item == null || !item.Equipable) return false;
 		_loadout[index] = itemId;
+		ItemHand? preferred = _leftLoadout == index ? ItemHand.Left
+			: _rightLoadout == index ? ItemHand.Right : null;
+		ReconcileHands(preferred);
+		Changed?.Invoke();
+		return true;
+	}
+
+	/// <summary>
+	/// Equip an item selected from the full inventory. Existing quick-slot
+	/// assignments are reused; otherwise the first free slot is claimed. If all
+	/// four are occupied, the selected hand's old slot is replaced so inventory
+	/// management never requires a separate drag operation just to hold an item.
+	/// </summary>
+	public bool EquipItem(string itemId, ItemHand hand)
+	{
+		var item = ItemCatalog.Get(itemId);
+		if (item == null || !item.Equipable || Count(itemId) <= 0) return false;
+
+		int quick = -1;
+		for (int i = 0; i < LoadoutCapacity; i++)
+			if (_loadout[i] == itemId) { quick = i; break; }
+		if (quick < 0)
+			for (int i = 0; i < LoadoutCapacity; i++)
+				if (_loadout[i] == null) { quick = i; break; }
+		if (quick < 0)
+		{
+			quick = hand == ItemHand.Left ? _leftLoadout : _rightLoadout;
+			if (quick < 0) quick = 0;
+		}
+
+		_loadout[quick] = itemId;
+		return SelectForHand(quick, hand);
+	}
+
+	public bool ClearHand(ItemHand hand)
+	{
+		ref int selected = ref (hand == ItemHand.Left ? ref _leftLoadout : ref _rightLoadout);
+		if (selected < 0) return false;
+		selected = -1;
 		Changed?.Invoke();
 		return true;
 	}
@@ -192,5 +239,15 @@ public partial class GlobalInventory : Node
 		int selected = hand == ItemHand.Left ? _leftLoadout : _rightLoadout;
 		var item = LoadoutItem(selected);
 		return item != null && Count(item.Id) > 0 ? item : null;
+	}
+
+	private void ReconcileHands(ItemHand? prefer)
+	{
+		if (_leftLoadout < 0 || _rightLoadout < 0) return;
+		string left = LoadoutItemId(_leftLoadout);
+		string right = LoadoutItemId(_rightLoadout);
+		if (left == null || left != right || Count(left) >= 2) return;
+		if (prefer == ItemHand.Right) _leftLoadout = -1;
+		else _rightLoadout = -1;
 	}
 }

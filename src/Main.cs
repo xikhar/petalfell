@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using Petalfell.Core;
+using Petalfell.Gameplay;
 using Petalfell.Items;
 using Petalfell.Player;
 using Petalfell.Render;
+using Petalfell.Skills;
 using Petalfell.UI;
 using Petalfell.World;
 
@@ -38,6 +40,11 @@ public partial class Main : Node3D
 	private GlobalInventory _inventory;
 	private WorldItemSystem _worldItems;
 	private ItemGameplay _itemGameplay;
+	private CampfireSystem _campfires;
+	private SkillSystem _skills;
+	private InteractionLayer _interactions;
+	private InventoryView _inventoryView;
+	private SkillSelectorView _skillSelector;
 	private AmbientDrift _ambientDrift;
 	private UI.WorldMap _worldMap;
 	private Fauna _fauna;
@@ -137,9 +144,32 @@ public partial class Main : Node3D
 		AddChild(_itemGameplay);
 		_itemGameplay.Setup(_inventory, _worldItems, Player, _character, _dog);
 
+		_campfires = new CampfireSystem { Name = "Campfires" };
+		_campfires.Setup(Terrain, _inkLight, _inkDark);
+		AddChild(_campfires);
+
+		_interactions = new InteractionLayer { Name = "Interactions" };
+		_interactions.Setup(Player);
+		AddChild(_interactions);
+		_interactions.Register(_itemGameplay);
+
+		_skills = new SkillSystem { Name = "Skills" };
+		_skills.Setup(_inventory, _campfires, Player, _dog, _nav);
+		_skills.NoticeRequested += _interactions.ShowNotice;
+		AddChild(_skills);
+		_interactions.Register(_skills);
+
 		var quickLoadout = new QuickLoadoutHud { Name = "QuickLoadout" };
 		quickLoadout.Setup(_inventory);
 		AddChild(quickLoadout);
+
+		_inventoryView = new InventoryView { Name = "Inventory" };
+		_inventoryView.Setup(_inventory);
+		AddChild(_inventoryView);
+
+		_skillSelector = new SkillSelectorView { Name = "SkillSelector" };
+		_skillSelector.Setup(_skills);
+		AddChild(_skillSelector);
 
 		_pulse = new ClickPulse { Name = "ClickPulse" };
 		AddChild(_pulse);
@@ -613,22 +643,48 @@ public partial class Main : Node3D
 		// physics tick and persistence makes adjacent positions look like a ghost.
 		var p = Player.GetGlobalTransformInterpolated().Origin;
 		_movementPuffs?.Advance(p, Player.Velocity, Player.IsOnFloor(), Player.Swimming);
-		_ambientDrift?.Advance(p, delta);
+		_ambientDrift?.Advance(p, delta, _day?.NightAmount ?? 0f);
 		_fauna?.Advance(_focusOverride ?? p, delta);
 		_worldMap?.SetPlayer(p);
+		SyncGameplayInput();
 		if (_capturing) return;
 
 		_streamer.UpdateAround(p);
 		Rig.Follow(p, Player.Velocity, delta);
 		_character.Animate(Player.Velocity, Player.Facing,
-			Player.IsOnFloor(), Player.Swimming, delta);
+			Player.IsOnFloor(), Player.Swimming, Player.Sitting, delta);
 	}
 
 	public override void _UnhandledInput(InputEvent e)
 	{
+		// T owns the skills surface even if another reading surface is currently
+		// open. Only one modal may own movement and mouse input at a time.
+		if (_skillSelector?.HandleInput(e) == true)
+		{
+			if (_skillSelector.IsOpen)
+			{
+				_inventoryView?.Close();
+				if (_worldMap?.IsOpen == true) _worldMap.Toggle();
+			}
+			SyncGameplayInput();
+			GetViewport().SetInputAsHandled();
+			return;
+		}
+		if (_inventoryView?.HandleInput(e) == true)
+		{
+			// Map and inventory are both full-screen reading surfaces. Opening one
+			// closes the other rather than leaving two input owners stacked.
+			if (_inventoryView.IsOpen && _worldMap?.IsOpen == true) _worldMap.Toggle();
+			SyncGameplayInput();
+			GetViewport().SetInputAsHandled();
+			return;
+		}
 		if (e is InputEventKey mk && mk.Pressed && !mk.Echo && mk.PhysicalKeycode == Key.M)
 		{
 			_worldMap?.Toggle();
+			_inventoryView?.Close();
+			_skillSelector?.Close();
+			SyncGameplayInput();
 			GetViewport().SetInputAsHandled();
 			return;
 		}
@@ -637,6 +693,11 @@ public partial class Main : Node3D
 		// cannot be seen to walk to.
 		if (_worldMap != null && _worldMap.IsOpen) return;
 
+		if (_interactions?.HandleInput(e) == true)
+		{
+			GetViewport().SetInputAsHandled();
+			return;
+		}
 		if (_itemGameplay?.HandleInput(e) == true)
 		{
 			GetViewport().SetInputAsHandled();
@@ -656,6 +717,15 @@ public partial class Main : Node3D
 			if (k.Keycode == Key.Q) Rig.Rotate45(-1);
 			if (k.Keycode == Key.E) Rig.Rotate45(1);
 		}
+	}
+
+	private void SyncGameplayInput()
+	{
+		if (Player == null) return;
+		bool blocked = (_inventoryView?.IsOpen ?? false) ||
+			(_skillSelector?.IsOpen ?? false) || (_worldMap?.IsOpen ?? false);
+		Player.InputEnabled = !blocked;
+		_interactions?.SetSuppressed(blocked);
 	}
 
 	/// <summary>
@@ -824,5 +894,7 @@ public partial class Main : Node3D
 		Bind("interact", Key.R);
 		Bind("dog_fetch", Key.U);
 		Bind("world_map", Key.M);
+		Bind("inventory", Key.Tab);
+		Bind("skill_selector", Key.T);
 	}
 }

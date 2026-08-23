@@ -38,7 +38,14 @@ public partial class Controller : CharacterBody3D
 	public const float Buoyancy = 26f;
 	public const float WaterDrag = 4.2f;
 
+	/// <summary>
+	/// Gates new manual and route-following intent without disabling the physics
+	/// body. Gravity, floor snapping, buoyancy, and collision resolution continue
+	/// to run while input is disabled.
+	/// </summary>
+	public bool InputEnabled { get; set; } = true;
 	public bool Swimming { get; private set; }
+	public bool Sitting { get; private set; }
 	public Vector3 Facing = Vector3.Forward;
 
 	private float _coyote;
@@ -46,6 +53,7 @@ public partial class Controller : CharacterBody3D
 	private bool _autoJumping;
 	private Vector3 _autoJumpFlat;
 	private float _autoJumpAge;
+	private Vector3 _sitFacing = Vector3.Forward;
 	/// <summary>An automatic hop cannot physically last longer than this.</summary>
 	private const float AutoJumpMax = 0.9f;
 	private Terrain _terrain;
@@ -77,10 +85,27 @@ public partial class Controller : CharacterBody3D
 	{
 		float dt = (float)delta;
 
-		Vector3 wish = ReadInput();
 		UpdateSwimming();
+		// A seated pose is a grounded interaction. If the ground becomes water,
+		// release it before the normal swim step so buoyancy is never suppressed.
+		if (Sitting && Swimming) EndSit();
+		Vector3 wish = ReadInput();
 
 		var vel = Velocity;
+		if (Sitting)
+		{
+			// Keep collision/floor physics alive while removing every source of
+			// horizontal travel. BeginSit already clears route and jump state.
+			vel.X = 0f;
+			vel.Z = 0f;
+			GroundStep(ref vel, Vector3.Zero, dt);
+			vel.X = 0f;
+			vel.Z = 0f;
+			Velocity = vel;
+			MoveAndSlide();
+			Facing = _sitFacing;
+			return;
+		}
 
 		if (Swimming) SwimStep(ref vel, wish, dt);
 		else GroundStep(ref vel, wish, dt);
@@ -103,6 +128,12 @@ public partial class Controller : CharacterBody3D
 
 	private Vector3 ReadInput()
 	{
+		if (!InputEnabled || Sitting)
+		{
+			_buffer = 0f;
+			return Vector3.Zero;
+		}
+
 		var wish = Vector3.Zero;
 		float f = Input.GetActionStrength("move_forward") - Input.GetActionStrength("move_back");
 		float r = Input.GetActionStrength("move_right") - Input.GetActionStrength("move_left");
@@ -153,8 +184,50 @@ public partial class Controller : CharacterBody3D
 
 	public void SetRoute(System.Collections.Generic.List<Vector3> route)
 	{
+		if (Sitting)
+		{
+			Route = null;
+			_routeIndex = 0;
+			return;
+		}
 		Route = route;
 		_routeIndex = 0;
+	}
+
+	/// <summary>
+	/// Place the controller on an authored seat and hold it facing the interaction.
+	/// The caller is expected to approach the point through navigation first; the
+	/// final assignment removes tiny path-arrival offsets without freezing physics.
+	/// </summary>
+	public void BeginSit(Vector3 position, Vector3 faceToward)
+	{
+		if (Swimming) return;
+
+		Sitting = true;
+		Route = null;
+		_routeIndex = 0;
+		_autoJumping = false;
+		_autoJumpFlat = Vector3.Zero;
+		_autoJumpAge = 0f;
+		_buffer = 0f;
+		_coyote = 0f;
+
+		GlobalPosition = position;
+		ResetPhysicsInterpolation();
+		Velocity = new Vector3(0f, Mathf.Min(Velocity.Y, 0f), 0f);
+
+		var toward = new Vector3(faceToward.X - position.X, 0f,
+			faceToward.Z - position.Z);
+		if (toward.LengthSquared() > 0.0001f) _sitFacing = toward.Normalized();
+		else if (Facing.LengthSquared() > 0.0001f) _sitFacing = Facing.Normalized();
+		Facing = _sitFacing;
+	}
+
+	/// <summary>Release the grounded interaction without changing the input gate.</summary>
+	public void EndSit()
+	{
+		Sitting = false;
+		_buffer = 0f;
 	}
 
 	private void UpdateSwimming()

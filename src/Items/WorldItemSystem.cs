@@ -54,6 +54,33 @@ public partial class WorldItemSystem : Node3D
 		return true;
 	}
 
+	public WorldItem Nearest(Vector3 position, float radius = 3.0f)
+	{
+		Prune();
+		WorldItem nearest = null;
+		float best = radius * radius;
+		foreach (var item in _items)
+		{
+			if (!item.CanPickUp) continue;
+			float distance = item.GlobalPosition.DistanceSquaredTo(position);
+			if (distance >= best) continue;
+			best = distance;
+			nearest = item;
+		}
+		return nearest;
+	}
+
+	public bool TryPickUp(WorldItem item, GlobalInventory inventory)
+	{
+		Prune();
+		if (item == null || !item.CanPickUp || !_items.Contains(item) ||
+			!inventory.TryAdd(item.Item.Id, 1))
+			return false;
+		_items.Remove(item);
+		item.QueueFree();
+		return true;
+	}
+
 	public WorldItem LatestFetchable(string itemId)
 	{
 		Prune();
@@ -73,4 +100,3 @@ public partial class WorldItemSystem : Node3D
 				_items.RemoveAt(i);
 	}
 }
-

@@ -31,6 +31,7 @@ public enum Species : byte { Deer, Rabbit, Goat, Bird, Butterfly, Fish }
 public partial class Fauna : Node3D
 {
 	private const int Population = 16;
+	private const int BirdPopulation = 3;
 	private const float SpawnNear = 26f;
 	private const float SpawnFar = 74f;
 	private const float Cull = 96f;
@@ -97,6 +98,7 @@ public partial class Fauna : Node3D
 
 			var species = Choose(biome, water, _terrain.Roads != null && _terrain.Roads.Clear[i] != 0);
 			if (species == null) continue;
+			if (species == Species.Bird && LiveBirdCount() >= BirdPopulation) continue;
 
 			// Land animals will not stand on a road, a stair or a cliff lip.
 			if (!water)
@@ -121,6 +123,14 @@ public partial class Fauna : Node3D
 			_live.Add(critter);
 			return;
 		}
+	}
+
+	private int LiveBirdCount()
+	{
+		int count = 0;
+		foreach (var critter in _live)
+			if (IsInstanceValid(critter) && critter.Kind == Species.Bird) count++;
+		return count;
 	}
 
 	private Species? Choose(Biome biome, bool water, bool nearRoad)
@@ -166,6 +176,7 @@ public partial class Critter : Node3D
 	}
 
 	private Species _kind;
+	public Species Kind => _kind;
 	private Terrain _terrain;
 	private ShaderMaterial _inkLight, _inkDark;
 	private Rng _rng;
@@ -226,7 +237,7 @@ public partial class Critter : Node3D
 			case Species.Deer: Quadruped(new Tone(0xc59a86), new Tone(0xf1e2d6), 3.0f, 2.6f, 5.4f, 3.1f, 0.9f); break;
 			case Species.Goat: Quadruped(new Tone(0xe8e2ea), new Tone(0xb9aec0), 2.7f, 2.4f, 4.4f, 2.4f, 0.8f); break;
 			case Species.Rabbit: Quadruped(new Tone(0xe3d5cf), new Tone(0xf4ece6), 1.9f, 1.7f, 2.7f, 1.1f, 0.6f); break;
-			case Species.Bird: Flyer(new Tone(0xdfe6f2), new Tone(0xb9c2d8), 0.95f); break;
+			case Species.Bird: Flyer(new Tone(0xdfe6f2), new Tone(0xb9c2d8), 0.55f); break;
 			case Species.Butterfly: Flyer(new Tone(0xf8ccda), new Tone(0xdccef1), 0.34f); break;
 			case Species.Fish: Swimmer(new Tone(0xa9c2d8)); break;
 		}

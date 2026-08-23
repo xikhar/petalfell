@@ -1,4 +1,6 @@
 using Godot;
+using System.Collections.Generic;
+using Petalfell.Gameplay;
 using Petalfell.Player;
 
 namespace Petalfell.Items;
@@ -7,7 +9,7 @@ namespace Petalfell.Items;
 /// Connects inventory state to the current traveller, world items, and dog.
 /// Item definitions own capabilities; this node only routes player intent.
 /// </summary>
-public partial class ItemGameplay : Node
+public partial class ItemGameplay : Node, IInteractionProvider
 {
 	private GlobalInventory _inventory;
 	private WorldItemSystem _worldItems;
@@ -66,11 +68,6 @@ public partial class ItemGameplay : Node
 				return true;
 			}
 
-			if (inputEvent.IsActionPressed("interact"))
-			{
-				_worldItems.TryPickUpNearest(_player.GlobalPosition, _inventory);
-				return true;
-			}
 			if (inputEvent.IsActionPressed("dog_fetch"))
 			{
 				var stick = _worldItems.LatestFetchable(ItemCatalog.Stick.Id);
@@ -90,6 +87,25 @@ public partial class ItemGameplay : Node
 				return ReleaseThrow(ItemHand.Right, ref _rightCharge);
 		}
 		return false;
+	}
+
+	public void GatherInteractions(Vector3 playerPosition, List<ContextAction> actions)
+	{
+		var nearest = _worldItems.Nearest(playerPosition);
+		if (nearest == null) return;
+		float distance = playerPosition.DistanceTo(nearest.GlobalPosition);
+		actions.Add(new ContextAction("interact", "R", $"Pick up {nearest.Item.Name}",
+			priority: 60, distance,
+			() => _worldItems.TryPickUp(nearest, _inventory)
+				? InteractionResult.Done()
+				: InteractionResult.Failed("Inventory full")));
+
+		if (nearest.Item == ItemCatalog.Stick)
+			actions.Add(new ContextAction("dog_fetch", "U", "Ask dog to fetch",
+				priority: 25, distance,
+				() => _dog.Fetch(nearest)
+					? InteractionResult.Done()
+					: InteractionResult.Failed("The dog cannot reach it")));
 	}
 
 	private bool BeginCharge(ItemHand hand, ref float clock)

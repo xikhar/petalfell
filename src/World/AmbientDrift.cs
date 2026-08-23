@@ -27,6 +27,8 @@ public partial class AmbientDrift : Node3D
 		public Vector3 Direction, Gravity;
 		public float Spread;
 		public Color[] Colors;
+		public Vector3 EmissionExtents = new(26f, 9.5f, 26f);
+		public bool Firefly;
 		/// <summary>
 		/// Motes rather than flecks: a square drawn additively and above the
 		/// glow threshold, so the environment's bloom picks it up as a soft
@@ -61,6 +63,20 @@ public partial class AmbientDrift : Node3D
 		Width = 0.085f, Length = 0.085f, SpeedMin = 0.05f, SpeedMax = 0.20f,
 		Direction = new Vector3(0.2f, -1f, 0.1f), Gravity = new Vector3(0, -0.035f, 0),
 		Spread = 40f, Colors = Palette.MoteColors, Glow = true,
+	};
+
+	/// <summary>
+	/// A handful across the whole visible field, not a second particle shower.
+	/// They live near the grass, drift almost weightlessly, and their authored
+	/// colour is bright enough to bloom without adding point lights.
+	/// </summary>
+	private static LayerSpec Fireflies() => new()
+	{
+		Name = "Fireflies", Amount = 8, Lifetime = 12.5f,
+		Width = 0.045f, Length = 0.045f, SpeedMin = 0.035f, SpeedMax = 0.13f,
+		Direction = new Vector3(0.20f, 0.08f, 0.13f), Gravity = Vector3.Zero,
+		Spread = 180f, Colors = Palette.FireflyColors, Glow = true,
+		EmissionExtents = new Vector3(18f, 1.7f, 18f), Firefly = true,
 	};
 
 	private static readonly Dictionary<Biome, Profile> Profiles = new()
@@ -144,6 +160,9 @@ public partial class AmbientDrift : Node3D
 	};
 
 	private readonly List<GpuParticles3D> _emitters = new(2);
+	private GpuParticles3D _motes;
+	private GpuParticles3D _fireflies;
+	private float _fireflyFade;
 	private Terrain _terrain;
 	private Profile _profile;
 	private Biome? _biome;
@@ -170,7 +189,7 @@ public partial class AmbientDrift : Node3D
 		Probe(at, force: true);
 	}
 
-	public void Advance(Vector3 playerPosition, double delta)
+	public void Advance(Vector3 playerPosition, double delta, float nightAmount)
 	{
 		GlobalPosition = playerPosition + Vector3.Up * HeightAbovePlayer;
 
@@ -182,6 +201,7 @@ public partial class AmbientDrift : Node3D
 		}
 
 		if (_emitters.Count == 0 || !_surfaceAllowed) SetActive(false);
+		UpdateFireflies(nightAmount, (float)delta);
 	}
 
 	private void Probe(Vector3 position, bool force)
@@ -249,6 +269,13 @@ public partial class AmbientDrift : Node3D
 			emitter.QueueFree();
 		}
 		_emitters.Clear();
+		_motes = null;
+		if (_fireflies != null)
+		{
+			RemoveChild(_fireflies);
+			_fireflies.QueueFree();
+			_fireflies = null;
+		}
 		_profile = profile;
 		_surfaceAllowed = false;
 
@@ -261,9 +288,16 @@ public partial class AmbientDrift : Node3D
 		}
 		// Motes belong to the air, not to any one province, so they are appended
 		// here rather than repeated in every profile table.
-		var motes = BuildEmitter(Motes());
-		AddChild(motes);
-		_emitters.Add(motes);
+		_motes = BuildEmitter(Motes());
+		AddChild(_motes);
+		_emitters.Add(_motes);
+
+		// AmbientDrift itself rides above the player so falling leaves can cross the
+		// whole camera column. Fireflies instead hover just above the local ground.
+		_fireflies = BuildEmitter(Fireflies());
+		_fireflies.Position = Vector3.Down * (HeightAbovePlayer - 1.8f);
+		_fireflies.Transparency = 1f;
+		AddChild(_fireflies);
 		// Probe activates the rebuilt emitters once it has confirmed that their
 		// surface family is present around the player.
 	}
@@ -276,7 +310,7 @@ public partial class AmbientDrift : Node3D
 			// Spawn from a thin band above the view. Global-space particles then fall
 			// through it while the band follows the player, matching the old readable
 			// motion without returning to large rectangular confetti.
-			EmissionBoxExtents = new Vector3(26f, 9.5f, 26f),
+			EmissionBoxExtents = spec.EmissionExtents,
 			Direction = spec.Direction.Normalized(),
 			Spread = spec.Spread,
 			Gravity = spec.Gravity,
@@ -289,7 +323,7 @@ public partial class AmbientDrift : Node3D
 			DampingMin = 0.025f,
 			DampingMax = 0.10f,
 			ColorInitialRamp = PaletteTexture(spec.Colors),
-			ColorRamp = LifetimeFade(),
+			ColorRamp = spec.Firefly ? FireflyFlicker() : LifetimeFade(),
 		};
 
 		return new GpuParticles3D
@@ -308,7 +342,9 @@ public partial class AmbientDrift : Node3D
 			Emitting = false,
 			AmountRatio = 1f,
 			ProcessMaterial = process,
-				DrawPass1 = spec.Glow ? MoteMesh(spec.Width) : FleckMesh(spec.Width, spec.Length),
+			DrawPass1 = spec.Glow
+				? spec.Firefly ? DotMesh(spec.Width) : MoteMesh(spec.Width)
+				: FleckMesh(spec.Width, spec.Length),
 			VisibilityAabb = new Aabb(new Vector3(-34f, -28f, -34f), new Vector3(68f, 36f, 68f)),
 			CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
 		};
@@ -345,6 +381,54 @@ public partial class AmbientDrift : Node3D
 		arrays[(int)Mesh.ArrayType.Vertex] = vertices;
 		arrays[(int)Mesh.ArrayType.Normal] = new[] { Vector3.Back, Vector3.Back, Vector3.Back, Vector3.Back };
 		arrays[(int)Mesh.ArrayType.Index] = new[] { 0, 1, 2, 0, 2, 3 };
+
+		var mesh = new ArrayMesh();
+		mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+		mesh.SurfaceSetMaterial(0, material);
+		return mesh;
+	}
+
+	/// <summary>A real round billboard, so a firefly stays a dot even in bloom.</summary>
+	private static ArrayMesh DotMesh(float size)
+	{
+		const int segments = 10;
+		float radius = size * 0.5f;
+		var vertices = new Vector3[segments + 1];
+		var normals = new Vector3[segments + 1];
+		var indices = new int[segments * 3];
+		vertices[0] = Vector3.Zero;
+		for (int i = 0; i <= segments; i++)
+		{
+			if (i > 0)
+			{
+				float angle = (i - 1) * Mathf.Tau / segments;
+				vertices[i] = new Vector3(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius, 0f);
+			}
+			normals[i] = Vector3.Back;
+		}
+		for (int i = 0; i < segments; i++)
+		{
+			indices[i * 3] = 0;
+			indices[i * 3 + 1] = i + 1;
+			indices[i * 3 + 2] = (i + 1) % segments + 1;
+		}
+
+		var material = new StandardMaterial3D
+		{
+			ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+			AlbedoColor = Colors.White,
+			BillboardMode = BaseMaterial3D.BillboardModeEnum.Particles,
+			VertexColorUseAsAlbedo = true,
+			Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+			BlendMode = BaseMaterial3D.BlendModeEnum.Add,
+			CullMode = BaseMaterial3D.CullModeEnum.Disabled,
+			DisableReceiveShadows = true,
+		};
+		var arrays = new Godot.Collections.Array();
+		arrays.Resize((int)Mesh.ArrayType.Max);
+		arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+		arrays[(int)Mesh.ArrayType.Normal] = normals;
+		arrays[(int)Mesh.ArrayType.Index] = indices;
 
 		var mesh = new ArrayMesh();
 		mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
@@ -409,6 +493,59 @@ public partial class AmbientDrift : Node3D
 			},
 		};
 		return new GradientTexture1D { Gradient = gradient, Width = 32 };
+	}
+
+	private static GradientTexture1D FireflyFlicker()
+	{
+		// Uneven light pulses over each lifetime. Birth times are randomized by the
+		// emitter, so the points never blink in unison.
+		var gradient = new Gradient
+		{
+			Offsets = new[] { 0f, 0.08f, 0.23f, 0.37f, 0.56f, 0.70f, 0.88f, 1f },
+			Colors = new[]
+			{
+				new Color(1f, 1f, 1f, 0f), new Color(1f, 1f, 1f, 0.92f),
+				new Color(1f, 1f, 1f, 0.34f), new Color(1f, 1f, 1f, 1f),
+				new Color(1f, 1f, 1f, 0.24f), new Color(1f, 1f, 1f, 0.86f),
+				new Color(1f, 1f, 1f, 0.48f), new Color(1f, 1f, 1f, 0f),
+			},
+		};
+		return new GradientTexture1D { Gradient = gradient, Width = 64 };
+	}
+
+	private void UpdateFireflies(float nightAmount, float delta)
+	{
+		if (_fireflies == null) return;
+
+		// Fireflies wait until the scene reads as night, then ease in rather than
+		// appearing as a synchronized switch at sunset.
+		float target = Mathf.Clamp((nightAmount - 0.45f) / 0.35f, 0f, 1f);
+		target = target * target * (3f - 2f * target);
+		if (!_surfaceAllowed) target = 0f;
+		if (_motes != null)
+		{
+			// Daylight dust and night fireflies trade places; retaining both would
+			// turn eight deliberate points into a field of nearly forty lights.
+			_motes.AmountRatio = 1f - target;
+			_motes.Transparency = target;
+		}
+
+		_fireflyFade = Mathf.Lerp(_fireflyFade, target,
+			1f - Mathf.Exp(-2.4f * Mathf.Max(delta, 0f)));
+		bool shouldEmit = target > 0.01f;
+		if (shouldEmit && !_fireflies.Emitting)
+		{
+			_fireflies.Emitting = true;
+			_fireflies.Restart(keepSeed: false);
+		}
+		else if (!shouldEmit)
+		{
+			_fireflies.Emitting = false;
+		}
+
+		_fireflies.AmountRatio = target;
+		_fireflies.Transparency = 1f - _fireflyFade;
+		_fireflies.Visible = _fireflyFade > 0.005f;
 	}
 
 	private void SetActive(bool active, bool restart = false)

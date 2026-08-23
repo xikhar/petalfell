@@ -232,6 +232,15 @@ public static class Palette
 		new(1.35f, 1.28f, 1.20f), new(1.30f, 1.14f, 1.26f),
 		new(1.18f, 1.16f, 1.38f), new(1.38f, 1.22f, 1.14f),
 	};
+	/// <summary>
+	/// Fireflies are deliberately HDR: their geometry stays pin-small while the
+	/// environment glow supplies the soft halo around it.
+	/// </summary>
+	public static readonly Color[] FireflyColors =
+	{
+		new(2.10f, 1.92f, 0.62f), new(1.72f, 2.02f, 0.66f),
+		new(2.24f, 1.62f, 0.48f),
+	};
 
 	public static readonly Color[] FootPuffColors =
 	{

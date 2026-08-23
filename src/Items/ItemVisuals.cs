@@ -1,5 +1,6 @@
 using Godot;
 using Petalfell.Core;
+using Petalfell.Render;
 
 namespace Petalfell.Items;
 
@@ -12,6 +13,8 @@ public static class ItemVisuals
 		var root = new Node3D { Name = item?.Name ?? "Item" };
 		if (item == ItemCatalog.Stick)
 			BuildStick(root, item.Color, item.LightOutline, inkLight, inkDark);
+		else if (item == ItemCatalog.Torch)
+			BuildTorch(root, item, inkLight, inkDark);
 		return root;
 	}
 
@@ -28,6 +31,27 @@ public static class ItemVisuals
 			inkLight, inkDark, outlined: false);
 		AddBox(root, new Vector3(0.19f, 0.18f, 0.19f), new Vector3(-0.035f, -0.37f, 0f),
 			Vector3.Zero, color.Darkened(0.06f), inkLight, inkDark, outlined: false);
+	}
+
+	private static void BuildTorch(Node3D root, ItemDefinition item,
+		ShaderMaterial inkLight, ShaderMaterial inkDark)
+	{
+		// A single outlined handle keeps the held silhouette clean. The pale binding
+		// and glowing voxel flame are colour details, not additional ink ladders.
+		AddBox(root, new Vector3(0.19f, 1.24f, 0.19f), new Vector3(0f, 0.03f, 0f),
+			Vector3.Zero, item.Color, inkLight, inkDark,
+			outlined: true, lightOutline: false);
+		AddBox(root, new Vector3(0.34f, 0.24f, 0.34f), new Vector3(0f, 0.56f, 0f),
+			Vector3.Zero, new Color(0.72f, 0.61f, 0.48f).SrgbToLinear(), inkLight, inkDark,
+			outlined: false);
+
+		var fire = new FireGlow
+		{
+			Name = "TorchFlame",
+			Position = new Vector3(0f, 0.79f, 0f),
+		};
+		root.AddChild(fire);
+		fire.Setup(item.Light, visualScale: 0.72f);
 	}
 
 	private static void AddBox(Node3D parent, Vector3 size, Vector3 position,

@@ -80,6 +80,10 @@ public partial class Dog : Node3D
 	private ShaderMaterial _inkLight, _inkDark;
 	private WorldItem _fetchTarget;
 	private bool _carryingFetch;
+	private bool _campfireSitRequested;
+	private bool _campfireSeated;
+	private Vector3 _campfirePosition;
+	private Vector3 _campfireSeat;
 
 	public void Setup(Navigation nav, Node3D player, ShaderMaterial inkLight, ShaderMaterial inkDark, int seed)
 	{
@@ -128,6 +132,7 @@ public partial class Dog : Node3D
 		if (item == null || !GodotObject.IsInstanceValid(item) || !item.CanPickUp ||
 			item.Item != ItemCatalog.Stick)
 			return false;
+		EndCampfireSit();
 		_fetchTarget = item;
 		_carryingFetch = false;
 		_sitting = false;
@@ -135,6 +140,66 @@ public partial class Dog : Node3D
 		_route = null;
 		_think = 0f;
 		return true;
+	}
+
+	/// <summary>
+	/// Ask the dog to settle across the fire from the player. The normal route and
+	/// ledge-jump machinery owns the approach; only arrival turns into a persistent
+	/// sit, so the command never teleports the dog across terrain.
+	/// </summary>
+	public void BeginCampfireSit(Vector3 firePosition, Vector3 playerPosition)
+	{
+		// Fetch and camp sitting are mutually exclusive commands. A carried object
+		// is put down safely instead of being stranded under the dog's mouth node.
+		if (_fetchTarget != null && GodotObject.IsInstanceValid(_fetchTarget) &&
+			!_fetchTarget.IsQueuedForDeletion() && _carryingFetch)
+		{
+			var drop = GlobalPosition;
+			if (_nav != null) drop.Y = GroundAt(drop.X, drop.Z);
+			_fetchTarget.Drop(drop);
+		}
+		_fetchTarget = null;
+		_carryingFetch = false;
+
+		_campfirePosition = firePosition;
+		var playerSide = new Vector3(playerPosition.X - firePosition.X, 0f,
+			playerPosition.Z - firePosition.Z);
+		if (playerSide.LengthSquared() < 0.01f)
+			playerSide = new Vector3(GlobalPosition.X - firePosition.X, 0f,
+				GlobalPosition.Z - firePosition.Z);
+		if (playerSide.LengthSquared() < 0.01f) playerSide = Vector3.Back;
+
+		// A little over two blocks leaves the flame readable between both figures
+		// while remaining comfortably outside the player's personal-space clamp.
+		var opposite = -playerSide.Normalized();
+		_campfireSeat = firePosition + opposite * 2.15f;
+		_campfireSeat.Y = _nav != null
+			? GroundAt(_campfireSeat.X, _campfireSeat.Z)
+			: GlobalPosition.Y;
+
+		_campfireSitRequested = true;
+		_campfireSeated = false;
+		_sitting = false;
+		_sit = 0f;
+		_goal = _campfireSeat;
+		_route = null;
+		_routeIndex = 0;
+		_think = 0f;
+		if (_nav != null) PlanRoute(GlobalPosition, _campfireSeat);
+	}
+
+	/// <summary>Release a campfire command and return control to ordinary dog AI.</summary>
+	public void EndCampfireSit()
+	{
+		_campfireSitRequested = false;
+		_campfireSeated = false;
+		_sitting = false;
+		_sit = 0f;
+		_route = null;
+		_routeIndex = 0;
+		_goal = GlobalPosition;
+		_vel = Vector3.Zero;
+		_think = 0f;
 	}
 
 	private Node3D Pivot(Node3D parent, Vector3 at)
@@ -202,17 +267,33 @@ public partial class Dog : Node3D
 			return;
 		}
 
-		bool fetching = UpdateFetchCommand(me, you, out Vector3 fetchDestination);
-		if (_route != null) AdvanceRouteTarget(me);
-		else if (fetching)
+		bool campfireCommand = _campfireSitRequested;
+		bool fetching = false;
+		Vector3 fetchDestination = me;
+		if (campfireCommand)
 		{
-			_goal = fetchDestination;
-			_sitting = false;
+			if (_route != null) AdvanceRouteTarget(me);
+			UpdateCampfireCommand(me);
+			if (_campfireSeated)
+			{
+				Animate(dt);
+				return;
+			}
 		}
 		else
 		{
-			_think -= dt;
-			if (_think <= 0f) Decide(you, away);
+			fetching = UpdateFetchCommand(me, you, out fetchDestination);
+			if (_route != null) AdvanceRouteTarget(me);
+			else if (fetching)
+			{
+				_goal = fetchDestination;
+				_sitting = false;
+			}
+			else
+			{
+				_think -= dt;
+				if (_think <= 0f) Decide(you, away);
+			}
 		}
 
 		Vector3 wish = Vector3.Zero;
@@ -223,7 +304,8 @@ public partial class Dog : Node3D
 		}
 
 		// Outside the leash the dog commits and comes to you; inside, it ambles.
-		float pace = fetching ? 0.88f : (away > Leash ? 1f : 0.42f);
+		float pace = campfireCommand ? 0.68f
+			: (fetching ? 0.88f : (away > Leash ? 1f : 0.42f));
 		_vel = _vel.Lerp(wish * Speed * pace, 1f - Mathf.Exp(-9f * dt));
 
 		var next = me + _vel * dt;
@@ -252,7 +334,8 @@ public partial class Dog : Node3D
 			// ordinary height lerp to pull the dog through it. Stop on this side and
 			// ask the shared navigation graph for a legal route around.
 			_vel = Vector3.Zero;
-			Vector3 routeTarget = fetching ? fetchDestination : (away > Leash ? you : _goal);
+			Vector3 routeTarget = campfireCommand ? _campfireSeat
+				: (fetching ? fetchDestination : (away > Leash ? you : _goal));
 			PlanRoute(me, routeTarget);
 			GlobalPosition = new Vector3(me.X, hereGround, me.Z);
 			Animate(dt);
@@ -263,6 +346,31 @@ public partial class Dog : Node3D
 		GlobalPosition = next;
 
 		Animate(dt);
+	}
+
+	private void UpdateCampfireCommand(Vector3 me)
+	{
+		if (!_campfireSitRequested) return;
+		_sitting = false;
+
+		var remaining = new Vector2(_campfireSeat.X - me.X, _campfireSeat.Z - me.Z);
+		if (remaining.LengthSquared() <= 0.48f)
+		{
+			// The route gets the dog here; this small final settle makes the authored
+			// composition stable and keeps its gaze centred on the flame.
+			GlobalPosition = _campfireSeat;
+			_vel = Vector3.Zero;
+			_goal = _campfireSeat;
+			_route = null;
+			_routeIndex = 0;
+			_campfireSeated = true;
+			_sitting = true;
+			return;
+		}
+
+		// A completed navigation route may end just short of the authored seat.
+		// Cover that final, level gap directly instead of falling back to wander AI.
+		if (_route == null) _goal = _campfireSeat;
 	}
 
 	private bool UpdateFetchCommand(Vector3 me, Vector3 you, out Vector3 destination)
@@ -475,7 +583,18 @@ public partial class Dog : Node3D
 		float cadence = Mathf.Clamp(speed / Speed, 0f, 1f);
 		_phase += dt * (6f + cadence * 14f) * (cadence > 0.03f ? 1f : 0.15f);
 
-		if (speed > 0.6f)
+		if (_campfireSeated)
+		{
+			var toward = new Vector3(_campfirePosition.X - GlobalPosition.X, 0f,
+				_campfirePosition.Z - GlobalPosition.Z);
+			if (toward.LengthSquared() > 0.0001f)
+			{
+				float yaw = Mathf.Atan2(toward.X, toward.Z);
+				Rotation = new Vector3(0,
+					Mathf.LerpAngle(Rotation.Y, yaw, 1f - Mathf.Exp(-9f * dt)), 0);
+			}
+		}
+		else if (speed > 0.6f)
 		{
 			float yaw = Mathf.Atan2(_vel.X, _vel.Z);
 			Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, yaw, 1f - Mathf.Exp(-11f * dt)), 0);
