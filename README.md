@@ -48,6 +48,21 @@ happens to be standing on a shelf".
 C# is the primary language (measured 21–27x faster than GDScript on the mesher
 and generator loops — see `ARCHITECTURE.md` §6.1).
 
+For a playable Linux x86_64 release build:
+
+```bash
+./tools/build-linux.sh
+./tools/run-linux.sh
+```
+
+The exported game is written to `build/linux/Petalfell.x86_64`. On NixOS the
+build script automatically links the matching Mono export templates from the
+Nix store into Godot's per-user template directory, and the run script exposes
+the package's isolated graphics and audio libraries to the portable executable.
+The `build/` directory is ignored by Git.
+
+For a quick development compile without exporting the game:
+
 ```bash
 dotnet build
 ```
