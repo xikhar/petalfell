@@ -40,12 +40,35 @@ public partial class DayCycle : Node
 	public float NightAmount { get; private set; }
 	/// <summary>Player-facing multiplier over the authored day/night glow.</summary>
 	public float BloomAmount { get; private set; } = 1f;
+	/// <summary>
+	/// Multiplier over the authored night exposure. Zero leaves the night lighting
+	/// un-dimmed, one is the original exposure curve, and values above one deepen
+	/// it without changing the authored colours.
+	/// </summary>
+	public float NightDarkness { get; private set; } = 1.45f;
+	/// <summary>Clear-sky shadow filtering, before weather adds its small softening.</summary>
+	public float ShadowSoftness { get; private set; } = 3.4f;
+	/// <summary>Smoothed, deterministic weather coverage. Clouds are lighting-only.</summary>
+	public float CloudCover { get; private set; }
+	/// <summary>World-space directions from the world toward each celestial body.</summary>
+	public Vector3 SunDirection { get; private set; } = Palette.SunDir;
+	public Vector3 MoonDirection { get; private set; } = -Palette.SunDir;
 
 	private Godot.Environment _env;
 	private DirectionalLight3D _key;
 	private DirectionalLight3D _fill;
 	private ShaderMaterial _sky;
 	private ShaderMaterial _water;
+	private readonly RandomNumberGenerator _weatherRng = new();
+	private float _cloudStartCover;
+	private float _cloudTargetCover;
+	private float _cloudSegmentTime;
+	private float _cloudSegmentDuration;
+	private float _cloudPatternAmplitude;
+	private float _cloudPatternCyclesA;
+	private float _cloudPatternCyclesB;
+	private float _cloudPatternPhaseA;
+	private float _cloudPatternPhaseB;
 
 	/// <summary>
 	/// Register the globals before anything that reads them is compiled.
@@ -75,15 +98,21 @@ public partial class DayCycle : Node
 	}
 
 	public void Setup(Godot.Environment env, DirectionalLight3D key, DirectionalLight3D fill,
-		ShaderMaterial sky, ShaderMaterial water)
+		ShaderMaterial sky, ShaderMaterial water, int weatherSeed = 0)
 	{
 		_env = env;
 		_key = key;
 		_fill = fill;
 		_sky = sky;
 		_water = water;
+		// Weather is reproducible for a map seed, but independent from the terrain
+		// generator's random stream so changing clouds never changes the world.
+		_weatherRng.Seed = ((ulong)(uint)weatherSeed << 32) ^ 0x9e3779b97f4a7c15UL;
+		_cloudStartCover = _weatherRng.RandfRange(0.08f, 0.48f);
+		ConfigureNextCloudSegment();
 		ProcessPriority = -50;   // before anything reads the light this frame
 		_applied = -1f;
+		_appliedCloud = -1;
 		Apply();
 	}
 
@@ -100,16 +129,71 @@ public partial class DayCycle : Node
 	private const float Quantum = 1f / 2048f;
 
 	private float _applied = -1f;
+	private int _appliedCloud = -1;
 
 	public override void _Process(double delta)
 	{
-		if (!Paused && DayLength > 0.01f)
-			TimeOfDay = Mathf.PosMod(TimeOfDay + (float)delta / DayLength, 1f);
+		if (!Paused)
+		{
+			if (DayLength > 0.01f)
+				TimeOfDay = Mathf.PosMod(TimeOfDay + (float)delta / DayLength, 1f);
+			AdvanceClouds((float)delta);
+		}
 
 		float step = Mathf.Floor(TimeOfDay / Quantum);
-		if (Mathf.IsEqualApprox(step, _applied)) return;
+		int cloudStep = Mathf.FloorToInt(ComputeCloudCover() * 48f);
+		if (Mathf.IsEqualApprox(step, _applied) && cloudStep == _appliedCloud) return;
 		_applied = step;
+		_appliedCloud = cloudStep;
 		Apply();
+	}
+
+	/// <summary>
+	/// Weather is a chain of random smooth segments. Each has a new target,
+	/// duration and pair of overlapping undulations, with the pattern tapered to
+	/// zero at both ends so one segment joins the next without a lighting pop.
+	/// This avoids tying cloud events to a repeating point in the day cycle.
+	/// </summary>
+	private float ComputeCloudCover()
+	{
+		if (_cloudSegmentDuration <= 0.001f) return _cloudStartCover;
+		float x = Mathf.Clamp(_cloudSegmentTime / _cloudSegmentDuration, 0f, 1f);
+		float smooth = x * x * (3f - 2f * x);
+		float envelope = Mathf.Sin(x * Mathf.Pi);
+		float pattern = Mathf.Sin(x * Mathf.Tau * _cloudPatternCyclesA + _cloudPatternPhaseA) * 0.68f
+			+ Mathf.Sin(x * Mathf.Tau * _cloudPatternCyclesB + _cloudPatternPhaseB) * 0.32f;
+		float cover = Mathf.Lerp(_cloudStartCover, _cloudTargetCover, smooth)
+			+ pattern * _cloudPatternAmplitude * envelope;
+		return Mathf.Clamp(cover, 0.02f, 0.90f);
+	}
+
+	private void AdvanceClouds(float delta)
+	{
+		_cloudSegmentTime += delta;
+		if (_cloudSegmentTime < _cloudSegmentDuration) return;
+
+		float carry = _cloudSegmentTime - _cloudSegmentDuration;
+		_cloudStartCover = _cloudTargetCover;
+		ConfigureNextCloudSegment();
+		_cloudSegmentTime = Mathf.Min(carry, _cloudSegmentDuration);
+	}
+
+	private void ConfigureNextCloudSegment()
+	{
+		_cloudTargetCover = _weatherRng.RandfRange(0.04f, 0.84f);
+		_cloudSegmentDuration = _weatherRng.RandfRange(55f, 155f);
+		_cloudSegmentTime = 0f;
+		_cloudPatternAmplitude = _weatherRng.RandfRange(0.025f, 0.13f);
+		_cloudPatternCyclesA = _weatherRng.RandfRange(0.65f, 2.25f);
+		_cloudPatternCyclesB = _weatherRng.RandfRange(1.6f, 4.4f);
+		_cloudPatternPhaseA = _weatherRng.RandfRange(0f, Mathf.Tau);
+		_cloudPatternPhaseB = _weatherRng.RandfRange(0f, Mathf.Tau);
+	}
+
+	private static float HorizonVisibility(float height)
+	{
+		float x = Mathf.Clamp((height + 0.045f) / 0.12f, 0f, 1f);
+		return x * x * (3f - 2f * x);
 	}
 
 	/// <summary>Blend the keyframe table at the current time, wrapping midnight.</summary>
@@ -147,27 +231,54 @@ public partial class DayCycle : Node
 		float ang = (TimeOfDay - 0.25f) * Mathf.Tau;
 		Vector3 high = Palette.SunDir;
 		Vector3 east = high.Cross(Vector3.Up).Normalized();
-		Vector3 sun = (east * Mathf.Cos(ang) + high * Mathf.Sin(ang)).Normalized();
+		SunDirection = (east * Mathf.Cos(ang) + high * Mathf.Sin(ang)).Normalized();
+		MoonDirection = -SunDirection;
+		float sunVisibility = HorizonVisibility(SunDirection.Y);
+		float moonVisibility = HorizonVisibility(MoonDirection.Y);
 
 		// One key light: the sun by day, the moon after it goes down.
-		bool daylight = sun.Y > 0f;
-		Vector3 keyDir = daylight ? sun : -sun;
+		bool daylight = SunDirection.Y > 0f;
+		Vector3 keyDir = daylight ? SunDirection : MoonDirection;
 
 		float night = Lerp(from.Night, to.Night);
 		NightAmount = night;
+		CloudCover = ComputeCloudCover();
 		var sunColour = Blend(from.Sun, to.Sun);
+		var moonColour = Palette.MoonColor;
 		float energy = Lerp(from.SunEnergy, to.SunEnergy);
 		// The palette already changes hue and authored energy through dusk. This
 		// second, continuous exposure curve is what makes night actually deepen
 		// instead of stopping at a differently coloured version of daytime.
-		float keyExposure = Mathf.Lerp(1f, 0.64f, night);
-		float ambientExposure = Mathf.Lerp(1f, 0.58f, night);
+		float darkness = night * NightDarkness;
+		float keyExposure = Mathf.Pow(0.64f, darkness);
+		float ambientExposure = Mathf.Pow(0.58f, darkness);
+		// A cloud is mostly forward-scattering in daylight, so the sky fill remains
+		// readable while the direct sun falls away. At night there is no bright sky
+		// behind it: the same cover blocks the moon and deepens the ambient instead.
+		float directCloud = daylight
+			? Mathf.Lerp(1f, 0.60f, CloudCover)
+			: Mathf.Lerp(1f, 0.28f, CloudCover);
+		float ambientCloud = daylight
+			? Mathf.Lerp(1f, 1.08f, CloudCover)
+			: Mathf.Lerp(1f, 0.50f, CloudCover);
+		float cloudSoftness = Mathf.Clamp((CloudCover - 0.08f) / 0.84f, 0f, 1f);
+		cloudSoftness *= cloudSoftness * (3f - 2f * cloudSoftness);
 
 		if (_key != null)
 		{
 			_key.LightColor = sunColour;
-			_key.LightEnergy = energy * keyExposure;
-			_key.ShadowOpacity = Lerp(from.ShadowOpacity, to.ShadowOpacity);
+			_key.LightEnergy = energy * keyExposure * directCloud;
+			_key.ShadowOpacity = Lerp(from.ShadowOpacity, to.ShadowOpacity)
+				* Mathf.Lerp(1f, 0.76f, cloudSoftness);
+			// Clear skies retain the existing crisp storybook shadows. Scattered
+			// overcast light expands the effective source and lowers the shadow's
+			// contrast instead of merely making the whole scene darker.
+			_key.ShadowBlur = Mathf.Clamp(
+				ShadowSoftness * Mathf.Lerp(1f, 1.16f, cloudSoftness), 0.5f, 6f);
+			// PCSS angular-distance shadows caused noisy stippling and huge unstable
+			// penumbras across cascade boundaries. Regular filtered shadows stay clean;
+			// cloud softness comes from a restrained blur and lower opacity instead.
+			_key.LightAngularDistance = 0f;
 			// A light exactly on the horizon casts shadows the length of the world
 			// and the cascade cannot hold them, so the key is never allowed all
 			// the way down. It goes dim instead, which is what sunset looks like.
@@ -177,16 +288,20 @@ public partial class DayCycle : Node
 		}
 
 		if (_fill != null)
-			_fill.LightEnergy = Mathf.Lerp(0.10f, 0.05f, night);
+			_fill.LightEnergy = Mathf.Lerp(0.10f, 0.05f, night)
+				* (daylight ? Mathf.Lerp(1f, 1.22f, CloudCover) : Mathf.Lerp(1f, 0.55f, CloudCover));
 
 		if (_env != null)
 		{
 			_env.AmbientLightColor = Blend(from.Ambient, to.Ambient);
-			_env.AmbientLightEnergy = Lerp(from.AmbientEnergy, to.AmbientEnergy) * ambientExposure;
-			_env.AmbientLightSkyContribution = Lerp(from.SkyMix, to.SkyMix);
+			_env.AmbientLightEnergy = Lerp(from.AmbientEnergy, to.AmbientEnergy)
+				* ambientExposure * ambientCloud;
+			_env.AmbientLightSkyContribution = Lerp(from.SkyMix, to.SkyMix)
+				* Mathf.Lerp(1f, 0.72f, CloudCover);
 			var fog = Blend(from.Fog, to.Fog);
 			_env.FogLightColor = fog;
-			_env.FogLightEnergy = Mathf.Lerp(1f, 0.68f, night);
+			_env.FogLightEnergy = Mathf.Pow(0.68f, darkness)
+				* (daylight ? Mathf.Lerp(1f, 0.92f, CloudCover) : Mathf.Lerp(1f, 0.56f, CloudCover));
 			// Lanterns and lit windows have to clear the glow threshold at night
 			// and must not at noon, or every pale surface in a pale world blooms.
 			_env.GlowHdrThreshold = Lerp(from.GlowThreshold, to.GlowThreshold);
@@ -199,10 +314,12 @@ public partial class DayCycle : Node
 			_sky.SetShaderParameter("horizon", Blend(from.Horizon, to.Horizon));
 			_sky.SetShaderParameter("ground", Blend(from.Ground, to.Ground));
 			_sky.SetShaderParameter("sun_tint", sunColour);
-			_sky.SetShaderParameter("sun_dir", sun);
+			_sky.SetShaderParameter("sun_dir", SunDirection);
 			_sky.SetShaderParameter("night", night);
 			// The moon is opposite the sun and only drawn once it is up.
-			_sky.SetShaderParameter("moon_dir", -sun);
+			_sky.SetShaderParameter("moon_dir", MoonDirection);
+			_sky.SetShaderParameter("moon_tint", moonColour);
+			_sky.SetShaderParameter("cloud_cover", CloudCover);
 		}
 
 		if (_water != null)
@@ -211,7 +328,12 @@ public partial class DayCycle : Node
 			_water.SetShaderParameter("sky_low", Blend(from.Horizon, to.Horizon));
 			_water.SetShaderParameter("sky_high", Blend(from.Zenith, to.Zenith));
 			_water.SetShaderParameter("sun_colour", sunColour);
-			_water.SetShaderParameter("sun_dir", keyDir);
+			_water.SetShaderParameter("moon_colour", moonColour);
+			_water.SetShaderParameter("sun_dir", SunDirection);
+			_water.SetShaderParameter("moon_dir", MoonDirection);
+			_water.SetShaderParameter("sun_visibility", sunVisibility);
+			_water.SetShaderParameter("moon_visibility", moonVisibility);
+			_water.SetShaderParameter("cloud_cover", CloudCover);
 		}
 
 		RenderingServer.GlobalShaderParameterSet(SunDirParam, keyDir);
@@ -225,6 +347,29 @@ public partial class DayCycle : Node
 	{
 		BloomAmount = Mathf.Clamp(amount, 0f, 2.5f);
 		ApplyBloom();
+	}
+
+	/// <summary>Applies immediately even while the developer clock is frozen.</summary>
+	public void SetNightDarkness(float amount)
+	{
+		NightDarkness = Mathf.Clamp(amount, 0f, 2.5f);
+		Apply();
+	}
+
+	/// <summary>Clear-sky baseline. Cloud softness is applied independently on top.</summary>
+	public void SetShadowSoftness(float amount)
+	{
+		ShadowSoftness = Mathf.Clamp(amount, 0.5f, 6f);
+		Apply();
+	}
+
+	/// <summary>Immediately rolls a new weather pattern for the developer overlay.</summary>
+	public void RandomizeClouds()
+	{
+		_cloudStartCover = _weatherRng.RandfRange(0.04f, 0.84f);
+		ConfigureNextCloudSegment();
+		_appliedCloud = -1;
+		Apply();
 	}
 
 	private void ApplyBloom()

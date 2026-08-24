@@ -38,6 +38,7 @@ public static class Palette
 	public static readonly Color SunTint = C(0xfff0f2);
 
 	public static readonly Color SunColor = C(0xfff0ee);
+	public static readonly Color MoonColor = C(0xc3d0ff);
 	public const float SunIntensity = 2.2f;
 	/// <summary>Sun low-ish and behind-left so cliffs throw long readable shadows.</summary>
 	public static readonly Vector3 SunDir = new Vector3(-0.55f, 0.78f, -0.32f).Normalized();

@@ -194,7 +194,7 @@ public partial class Main : Node3D
 		// in _Ready, so there is no second chance to add them later.
 		_day = new DayCycle { Name = "DayCycle" };
 		AddChild(_day);
-		_day.Setup(Atmosphere.LastEnvironment, sun, fill, Atmosphere.LastSky, _waterMat);
+		_day.Setup(Atmosphere.LastEnvironment, sun, fill, Atmosphere.LastSky, _waterMat, Seed);
 
 		_developerMenu = new Tools.DeveloperMenu { Name = "DeveloperSettings" };
 		_developerMenu.Setup(_inkLight, _inkDark, Rig, _day);

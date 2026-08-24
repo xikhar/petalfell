@@ -33,6 +33,7 @@ public partial class DeveloperMenu : CanvasLayer
 	private Control _root;
 	private SliderRow _minZoom;
 	private SliderRow _maxZoom;
+	private Button _cloudButton;
 
 	public void Setup(ShaderMaterial inkLight, ShaderMaterial inkDark, CameraRig camera,
 		DayCycle day = null)
@@ -124,6 +125,24 @@ public partial class DeveloperMenu : CanvasLayer
 
 			AddSlider(content, "Bloom amount", 0.0, 2.5, 0.05, _day.BloomAmount,
 				v => $"{v:0.00}x", v => _day.SetBloomAmount((float)v));
+
+			AddSlider(content, "Night darkness", 0.0, 2.5, 0.05, _day.NightDarkness,
+				v => $"{v:0.00}x", v => _day.SetNightDarkness((float)v));
+
+			AddSlider(content, "Shadow softness", 0.5, 6.0, 0.05, _day.ShadowSoftness,
+				v => $"{v:0.00}", v => _day.SetShadowSoftness((float)v));
+
+			_cloudButton = new Button
+			{
+				Text = CloudButtonText(),
+				TooltipText = "Generate a new cloud intensity and timing pattern",
+			};
+			_cloudButton.Pressed += () =>
+			{
+				_day.RandomizeClouds();
+				_cloudButton.Text = CloudButtonText();
+			};
+			content.AddChild(_cloudButton);
 		}
 
 		_maxZoom = AddSlider(content, "Maximum zoom", 24.0, 240.0, 1.0,
@@ -137,9 +156,14 @@ public partial class DeveloperMenu : CanvasLayer
 		// Follow the clock while it is running, so the slider is a readout as well
 		// as a control. Without a signal, or the change handler would fire every
 		// frame and pause the very cycle it is reporting on.
-		if (_day != null && _timeRow != null && _root.Visible && !_day.Paused)
+		if (_day == null || !_root.Visible) return;
+		if (_timeRow != null && !_day.Paused)
 			_timeRow.SetWithoutSignal(_day.TimeOfDay);
+		if (_cloudButton != null)
+			_cloudButton.Text = CloudButtonText();
 	}
+
+	private string CloudButtonText() => $"Randomize clouds  ({_day.CloudCover * 100f:0}%)";
 
 	public override void _Input(InputEvent inputEvent)
 	{

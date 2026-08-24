@@ -190,6 +190,9 @@ public static class Atmosphere
 			ShadowBias = 0.035f,
 			ShadowNormalBias = 1.4f,
 			ShadowBlur = 3.4f,
+			// PCSS creates grain and enormous penumbras at the long isometric camera
+			// distance. DayCycle softens overcast shadows with filtered blur instead.
+			LightAngularDistance = 0f,
 			DirectionalShadowMode = DirectionalLight3D.ShadowMode.Parallel4Splits,
 			DirectionalShadowMaxDistance = 260f,
 			DirectionalShadowSplit1 = 0.06f,

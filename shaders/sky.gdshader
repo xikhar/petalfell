@@ -15,6 +15,9 @@ uniform vec3 moon_dir = vec3(0.55, -0.78, 0.32);
 /// 0 at noon, 1 in the small hours. Drives the stars and the moon.
 uniform float night : hint_range(0.0, 1.0) = 0.0;
 uniform vec3 moon_tint : source_color = vec3(0.88, 0.90, 1.0);
+// Clouds are intentionally not drawn. Their coverage still attenuates the two
+// celestial highlights so the non-visual weather and the light rig agree.
+uniform float cloud_cover : hint_range(0.0, 1.0) = 0.0;
 
 float h21(vec2 p) {
 	p = fract(p * vec2(443.897, 441.423));
@@ -57,12 +60,16 @@ void sky() {
 	// be about and tells the player which way the light is coming from.
 	float m = max(dot(dir, normalize(moon_dir)), 0.0);
 	float disc = smoothstep(0.9975, 0.9990, m);
-	col += moon_tint * night * (disc * 1.6 + pow(m, 220.0) * 0.5 + pow(m, 12.0) * 0.05);
+	float moon_transmission = mix(1.0, 0.28, cloud_cover);
+	col += moon_tint * night * moon_transmission
+	     * (disc * 1.6 + pow(m, 220.0) * 0.5 + pow(m, 12.0) * 0.05);
 
 	// Forward scatter around the sun. Wide and low-amplitude: it should read as
 	// air, never as a light source in frame.
 	float s = max(dot(dir, normalize(sun_dir)), 0.0);
-	col += sun_tint * sun_glow * (pow(s, 8.0) * 0.10 + pow(s, 2.0) * 0.045);
+	float sun_transmission = mix(1.0, 0.60, cloud_cover);
+	col += sun_tint * sun_glow * sun_transmission
+	     * (pow(s, 8.0) * 0.10 + pow(s, 2.0) * 0.045);
 
 	COLOR = col;
 }

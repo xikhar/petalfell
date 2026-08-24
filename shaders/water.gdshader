@@ -49,7 +49,12 @@ uniform vec3 sheen : source_color = vec3(0.910, 0.886, 0.961);
 uniform vec3 sky_low : source_color = vec3(0.86, 0.84, 0.96);
 uniform vec3 sky_high : source_color = vec3(0.72, 0.70, 0.91);
 uniform vec3 sun_colour : source_color = vec3(1.0, 0.96, 0.94);
+uniform vec3 moon_colour : source_color = vec3(0.76, 0.82, 1.0);
 uniform vec3 sun_dir = vec3(-0.55, 0.78, -0.32);
+uniform vec3 moon_dir = vec3(0.55, -0.78, 0.32);
+uniform float sun_visibility : hint_range(0.0, 1.0) = 1.0;
+uniform float moon_visibility : hint_range(0.0, 1.0) = 0.0;
+uniform float cloud_cover : hint_range(0.0, 1.0) = 0.0;
 global uniform float pf_night;
 // World height of the surface plane. Needed to reconstruct the fragment's
 // position analytically — see the note in fragment().
@@ -93,6 +98,7 @@ uniform float sparkle = 0.55;
 // it. At 0.20 the whole lake came back a pale lilac wash with the depth gradient
 // buried underneath.
 uniform float sun_sheen = 0.05;
+uniform float moon_sheen = 0.038;
 uniform float shore_foam : hint_range(0.0, 1.0) = 0.09;
 
 // The mirrored render of the world. See PlanarReflection.cs — a point on the
@@ -392,9 +398,15 @@ void fragment() {
 	// ripples. The wide lobe is the light on the lake; the tight one is the light
 	// on the individual wavelets, and only the second is allowed to move quickly.
 	vec3 sun_view = normalize(mat3(VIEW_MATRIX) * normalize(sun_dir));
-	vec3 half_vec = normalize(sun_view - incident);
-	float spec = pow(clamp(dot(calm_normal, half_vec), 0.0, 1.0), 14.0);
-	col += sun_colour * spec * sun_sheen;
+	vec3 moon_view = normalize(mat3(VIEW_MATRIX) * normalize(moon_dir));
+	vec3 sun_half = normalize(sun_view - incident);
+	vec3 moon_half = normalize(moon_view - incident);
+	float sun_spec = pow(clamp(dot(calm_normal, sun_half), 0.0, 1.0), 14.0);
+	float moon_spec = pow(clamp(dot(calm_normal, moon_half), 0.0, 1.0), 18.0);
+	float sun_transmission = mix(1.0, 0.60, cloud_cover);
+	float moon_transmission = mix(1.0, 0.28, cloud_cover);
+	col += sun_colour * sun_spec * sun_sheen * sun_visibility * sun_transmission;
+	col += moon_colour * moon_spec * moon_sheen * moon_visibility * moon_transmission;
 
 	// NO tight specular lobe off the ripple normal.
 	//
@@ -449,6 +461,7 @@ void fragment() {
 	// Glints survive the night and gain a little: moonlight on water is mostly
 	// specular, so it is the one thing that should NOT go dim after dusk.
 	col += smoothstep(0.82, 0.98, glint) * sparkle * (1.0 + pf_night * 0.5)
+	     * mix(1.0, 0.42, cloud_cover)
 	     * vec3(1.05, 0.98, 1.02);
 
 	// Averaging two colour stops always loses chroma toward the middle; this puts
