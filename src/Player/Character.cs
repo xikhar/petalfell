@@ -31,6 +31,8 @@ public partial class Character : Node3D
 {
 	/// <summary>World units per character voxel.</summary>
 	private const float S = 0.30f;
+	private static readonly Vector3 FishingRodCarryPosition =
+		new(0f, 0.02f, 0.10f);
 	/// <summary>Centre of mass used to pitch the swimmer without swinging them around their feet.</summary>
 	private const float SwimPivotHeight = 5.3f * S;
 
@@ -67,6 +69,8 @@ public partial class Character : Node3D
 	private Node3D _legL, _legR, _armL, _armR, _head;
 	private Node3D _handL, _handR;
 	private Node3D _heldL, _heldR;
+	private Node3D[] _rodJointsL = Array.Empty<Node3D>();
+	private Node3D[] _rodJointsR = Array.Empty<Node3D>();
 	private string _heldLId, _heldRId;
 	private readonly List<Node3D> _cloak = new();
 	private readonly List<float> _cloakLag = new();
@@ -85,6 +89,12 @@ public partial class Character : Node3D
 	private float _throwChargeR;
 	private float _torchPoseL;
 	private float _torchPoseR;
+	private ItemHand _fishingHand;
+	private bool _fishingPoseActive;
+	private float _fishingCast;
+	private float _fishingTug;
+	private float _fishingCatch;
+	private float _fishingBlend;
 
 	private ShaderMaterial _inkLight, _inkDark;
 
@@ -254,6 +264,8 @@ public partial class Character : Node3D
 
 		if (visual != null && GodotObject.IsInstanceValid(visual)) visual.QueueFree();
 		visual = null;
+		if (hand == ItemHand.Left) _rodJointsL = Array.Empty<Node3D>();
+		else _rodJointsR = Array.Empty<Node3D>();
 		currentId = item?.Id;
 		if (item == null) return;
 
@@ -261,12 +273,26 @@ public partial class Character : Node3D
 		anchor.AddChild(visual);
 		visual.Position = item == ItemCatalog.Torch
 			? new Vector3(0f, 0.20f, 0.06f)
-			: new Vector3(0f, -0.06f, 0.10f);
+			: item == ItemCatalog.FishingRod
+				? FishingRodCarryPosition
+				: new Vector3(0f, -0.06f, 0.10f);
 		// The torch is counter-rotated at the wrist by Animate so its own model
 		// should begin upright. Sticks keep the relaxed little hand cant.
 		visual.Rotation = item == ItemCatalog.Torch
 			? Vector3.Zero
-			: new Vector3(0.08f, 0f, hand == ItemHand.Left ? -0.13f : 0.13f);
+			: item == ItemCatalog.FishingRod
+				? new Vector3(-0.84f, 0f, hand == ItemHand.Left ? -0.08f : 0.08f)
+				: new Vector3(0.08f, 0f, hand == ItemHand.Left ? -0.13f : 0.13f);
+
+		if (item == ItemCatalog.FishingRod)
+		{
+			var joints = new Node3D[3];
+			for (int i = 0; i < joints.Length; i++)
+				joints[i] = visual.FindChild($"RodJoint{i}", recursive: true,
+					owned: false) as Node3D;
+			if (hand == ItemHand.Left) _rodJointsL = joints;
+			else _rodJointsR = joints;
+		}
 	}
 
 	public Vector3 HandWorldPosition(ItemHand hand)
@@ -275,10 +301,31 @@ public partial class Character : Node3D
 		return anchor?.GlobalPosition ?? GlobalPosition + Vector3.Up * 1.5f;
 	}
 
+	public Vector3 FishingRodTipWorldPosition(ItemHand hand)
+	{
+		var visual = hand == ItemHand.Left ? _heldL : _heldR;
+		var tip = visual?.FindChild("RodTip", recursive: true, owned: false) as Node3D;
+		return tip?.GlobalPosition ?? HandWorldPosition(hand);
+	}
+
 	public void SetThrowCharge(ItemHand hand, float amount)
 	{
 		if (hand == ItemHand.Left) _throwChargeL = Mathf.Clamp(amount, 0f, 1f);
 		else _throwChargeR = Mathf.Clamp(amount, 0f, 1f);
+	}
+
+	/// <summary>
+	/// Fishing owns a late procedural pose while active. Normal locomotion keeps
+	/// running underneath it, which gives entry and exit a clean blend instead of
+	/// snapping between two independently authored animations.
+	/// </summary>
+	public void SetFishingPose(ItemHand hand, bool active, float cast, float tug, float caught)
+	{
+		_fishingHand = hand;
+		_fishingPoseActive = active;
+		_fishingCast = Mathf.Clamp(cast, 0f, 1f);
+		_fishingTug = Mathf.Clamp(tug, 0f, 1f);
+		_fishingCatch = Mathf.Clamp(caught, 0f, 1f);
 	}
 
 	/// <summary>
@@ -326,6 +373,19 @@ public partial class Character : Node3D
 			1f - Mathf.Exp(-sitResponse * dt));
 		if (!seated && _sitBlend < 0.001f) _sitBlend = 0f;
 		float sit = _sitBlend;
+		_fishingBlend = Mathf.Lerp(_fishingBlend, _fishingPoseActive ? 1f : 0f,
+			1f - Mathf.Exp(-(_fishingPoseActive ? 11f : 15f) * dt));
+		if (!_fishingPoseActive && _fishingBlend < 0.001f) _fishingBlend = 0f;
+		float fishing = _fishingBlend;
+		ItemHand rodHand = _fishingHand;
+		// Carrying the rod is one-handed. Only an active fishing sequence borrows
+		// the opposite hand; its equipped visual returns after the recovery blend.
+		bool supportHandOccupied = _fishingPoseActive || fishing > 0.05f;
+		if (_heldL != null && GodotObject.IsInstanceValid(_heldL))
+			_heldL.Visible = !(supportHandOccupied && rodHand == ItemHand.Right);
+		if (_heldR != null && GodotObject.IsInstanceValid(_heldR))
+			_heldR.Visible = !(supportHandOccupied && rodHand == ItemHand.Left);
+		float rodUse = fishing;
 
 		var look = new Vector3(facing.X, 0, facing.Z);
 		if (look.LengthSquared() > 0.0001f)
@@ -432,15 +492,66 @@ public partial class Character : Node3D
 		_armL.Rotation = _armL.Rotation.Lerp(new Vector3(0.72f, -0.10f, -0.38f), chargeL);
 		_armR.Rotation = _armR.Rotation.Lerp(new Vector3(0.72f, 0.10f, 0.38f), chargeR);
 
+		// Fishing begins entirely in front of the torso. First both hands lift, then
+		// they narrow only enough to reach two separated grips, and finally extend
+		// into the cast. Keeping every pitch on the character's negative-forward
+		// side prevents either sleeve from crossing through the torso on the way out.
+		float cast = _fishingCast;
+		float lift = Ease01(Mathf.Clamp(cast / 0.18f, 0f, 1f));
+		float gather = Ease01(Mathf.Clamp((cast - 0.18f) / 0.18f, 0f, 1f));
+		float release = Ease01(Mathf.Clamp((cast - 0.36f) / 0.64f, 0f, 1f));
+		float primaryPitch = Mathf.Lerp(-0.26f, -0.66f, lift);
+		primaryPitch = Mathf.Lerp(primaryPitch, -0.80f, gather);
+		primaryPitch = Mathf.Lerp(primaryPitch, -1.04f, release);
+		primaryPitch = Mathf.Lerp(primaryPitch, -1.18f, _fishingTug);
+		// A successful pull carries the rod hand above shoulder height. The support
+		// hand follows almost as high instead of remaining near the waist, keeping
+		// the rod visibly controlled by both hands through the whole lift.
+		primaryPitch = Mathf.Lerp(primaryPitch, -1.43f, _fishingCatch);
+		float side = rodHand == ItemHand.Left ? -1f : 1f;
+		var primaryPose = new Vector3(primaryPitch, side * 0.035f,
+			Mathf.Lerp(-side * 0.30f, -side * 0.24f, _fishingCatch));
+		float supportPitch = Mathf.Lerp(-0.22f, -0.54f, lift);
+		supportPitch = Mathf.Lerp(supportPitch, -0.68f, gather);
+		supportPitch = Mathf.Lerp(supportPitch, -0.90f, release);
+		supportPitch = Mathf.Lerp(supportPitch, -1.06f, _fishingTug);
+		supportPitch = Mathf.Lerp(supportPitch, -1.28f, _fishingCatch);
+		var supportPose = new Vector3(
+			supportPitch, -side * 0.025f, side * 0.28f);
+		if (rodHand == ItemHand.Left)
+		{
+			_armL.Rotation = _armL.Rotation.Lerp(primaryPose, rodUse);
+			_armR.Rotation = _armR.Rotation.Lerp(supportPose, rodUse);
+		}
+		else
+		{
+			_armR.Rotation = _armR.Rotation.Lerp(primaryPose, rodUse);
+			_armL.Rotation = _armL.Rotation.Lerp(supportPose, rodUse);
+		}
+		var fishLegL = new Vector3(-0.12f - _fishingCatch * 0.12f, 0f, -0.13f);
+		var fishLegR = new Vector3(0.08f + _fishingCatch * 0.05f, 0f, 0.13f);
+		_legL.Rotation = _legL.Rotation.Lerp(fishLegL, fishing);
+		_legR.Rotation = _legR.Rotation.Lerp(fishLegR, fishing);
+
+		// Keep tension in the articulated shaft while the fish is lifted. Reversing
+		// the bend here made the raised rod briefly look rigid and disconnected from
+		// the line.
+		float rodBend = fishing *
+			(0.035f + _fishingTug * 0.24f + _fishingCatch * 0.16f);
+		AnimateRod(_rodJointsL, rodHand == ItemHand.Left ? rodBend : 0f, dt);
+		AnimateRod(_rodJointsR, rodHand == ItemHand.Right ? rodBend : 0f, dt);
+
 		// A lit torch is carried high and forward, not left at the locomotion
 		// arm's side. The wrist applies the inverse limb rotation so the flame stays
 		// vertical while the hand position still follows the raised shoulder arc.
 		// Both transitions are eased because equipment can change mid-stride.
+		bool leftIsFishingSupport = supportHandOccupied && rodHand == ItemHand.Right;
+		bool rightIsFishingSupport = supportHandOccupied && rodHand == ItemHand.Left;
 		_torchPoseL = Mathf.Lerp(_torchPoseL,
-			_heldLId == ItemCatalog.Torch.Id ? 1f : 0f,
+			_heldLId == ItemCatalog.Torch.Id && !leftIsFishingSupport ? 1f : 0f,
 			1f - Mathf.Exp(-13f * dt));
 		_torchPoseR = Mathf.Lerp(_torchPoseR,
-			_heldRId == ItemCatalog.Torch.Id ? 1f : 0f,
+			_heldRId == ItemCatalog.Torch.Id && !rightIsFishingSupport ? 1f : 0f,
 			1f - Mathf.Exp(-13f * dt));
 		if (_torchPoseL < 0.001f) _torchPoseL = 0f;
 		if (_torchPoseR < 0.001f) _torchPoseR = 0f;
@@ -453,6 +564,12 @@ public partial class Character : Node3D
 			_armL.Quaternion.Inverse(), _torchPoseL);
 		_handR.Quaternion = Quaternion.Identity.Slerp(
 			_armR.Quaternion.Inverse(), _torchPoseR);
+
+		// The rod remains owned by the selected hand, but while both arms are in
+		// the fishing pose its visible root sits in the open space between them.
+		// Using the same blend as the arms returns it smoothly to its ordinary
+		// one-handed carry point after a reel or catch without reparenting anything.
+		PositionFishingRodBetweenHands(rodHand, fishing);
 
 		// Breathing idle plus a two-per-stride bob.
 		float idle = Mathf.Sin(_phase * 0.35f + 1.3f) * 0.012f;
@@ -475,6 +592,10 @@ public partial class Character : Node3D
 		var landBodyRotation = new Vector3(airPitch, 0f, airRoll);
 		var activeBodyRotation = landBodyRotation.Lerp(new Vector3(swimPitch, 0f, 0f), swim);
 		_swimPivot.Rotation = activeBodyRotation.Lerp(new Vector3(0.09f, 0f, 0f), sit);
+		_swimPivot.Rotation = _swimPivot.Rotation.Lerp(
+			new Vector3(-0.035f - _fishingCatch * 0.11f, 0f,
+				(_fishingHand == ItemHand.Left ? -1f : 1f) * _fishingTug * 0.025f),
+			fishing);
 		_body.Position = new Vector3(0f, -SwimPivotHeight, 0f);
 
 		// Keep the voxel proportions rigid in the air. Jump height and limb posing
@@ -492,6 +613,8 @@ public partial class Character : Node3D
 			Mathf.Sin(_swimPhase * 0.5f) * 0.055f, 0f);
 		_head.Rotation = activeLandHead.Lerp(swimHead, swim)
 			.Lerp(new Vector3(-0.055f, 0f, 0f), sit);
+		_head.Rotation = _head.Rotation.Lerp(
+			new Vector3(0.025f + _fishingCatch * 0.10f, 0f, 0f), fishing);
 
 		// Keep the cape on its ordinary trailing animation in water. Swimming is
 		// treated as supported rather than airborne, so it does not receive the
@@ -526,6 +649,34 @@ public partial class Character : Node3D
 					Mathf.Sin(_swimPhase * 1.15f + i * 1.7f) * 0.18f - 0.10f,
 					swim));
 		}
+	}
+
+	private static void AnimateRod(Node3D[] joints, float bend, float dt)
+	{
+		if (joints == null) return;
+		for (int i = 0; i < joints.Length; i++)
+		{
+			var joint = joints[i];
+			if (joint == null || !GodotObject.IsInstanceValid(joint)) continue;
+			float target = -bend * (0.55f + i * 0.38f);
+			joint.Rotation = new Vector3(
+				Mathf.LerpAngle(joint.Rotation.X, target, 1f - Mathf.Exp(-18f * dt)), 0f, 0f);
+		}
+	}
+
+	private void PositionFishingRodBetweenHands(ItemHand rodHand, float amount)
+	{
+		string heldId = rodHand == ItemHand.Left ? _heldLId : _heldRId;
+		if (heldId != ItemCatalog.FishingRod.Id) return;
+		var rod = rodHand == ItemHand.Left ? _heldL : _heldR;
+		var carryingHand = rodHand == ItemHand.Left ? _handL : _handR;
+		if (rod == null || carryingHand == null || _handL == null || _handR == null ||
+			!GodotObject.IsInstanceValid(rod)) return;
+
+		Vector3 carryPosition = carryingHand.ToGlobal(FishingRodCarryPosition);
+		Vector3 centrePosition = (_handL.GlobalPosition + _handR.GlobalPosition) * 0.5f;
+		rod.GlobalPosition = carryPosition.Lerp(centrePosition,
+			Ease01(Mathf.Clamp(amount, 0f, 1f)));
 	}
 
 	private static float Ease01(float value)

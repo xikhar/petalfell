@@ -57,6 +57,11 @@ public partial class GlobalInventory : Node
 			TryAdd(ItemCatalog.Torch.Id, 1);
 			AssignLoadout(1, ItemCatalog.Torch.Id);
 		}
+		if (Count(ItemCatalog.FishingRod.Id) == 0)
+		{
+			TryAdd(ItemCatalog.FishingRod.Id, 1);
+			AssignLoadout(2, ItemCatalog.FishingRod.Id);
+		}
 	}
 
 	public override void _ExitTree()
@@ -195,6 +200,13 @@ public partial class GlobalInventory : Node
 			Changed?.Invoke();
 			return true;
 		}
+
+		// A two-handed item is still selected through the hand that owns its action
+		// key, but the other hand must remain free to support it. Equipping anything
+		// else in that support hand releases the two-handed selection first.
+		var otherItem = other >= 0 ? LoadoutItem(other) : null;
+		if (item.RequiresBothHands) other = -1;
+		else if (otherItem?.RequiresBothHands == true) other = -1;
 
 		// One physical copy cannot appear in both hands. Two copies may.
 		if (other >= 0 && LoadoutItemId(other) == item.Id && Count(item.Id) < 2)

@@ -40,11 +40,13 @@ public partial class Main : Node3D
 	private GlobalInventory _inventory;
 	private WorldItemSystem _worldItems;
 	private ItemGameplay _itemGameplay;
+	private FishingSystem _fishing;
 	private CampfireSystem _campfires;
 	private SkillSystem _skills;
 	private InteractionLayer _interactions;
 	private InventoryView _inventoryView;
 	private SkillSelectorView _skillSelector;
+	private FishingCatchHud _fishingCatchHud;
 	private AmbientDrift _ambientDrift;
 	private UI.WorldMap _worldMap;
 	private Fauna _fauna;
@@ -144,6 +146,10 @@ public partial class Main : Node3D
 		AddChild(_itemGameplay);
 		_itemGameplay.Setup(_inventory, _worldItems, Player, _character, _dog);
 
+		_fishing = new FishingSystem { Name = "Fishing" };
+		_fishing.Setup(_inventory, Player, _character, Terrain, _inkLight, _inkDark, Seed);
+		AddChild(_fishing);
+
 		_campfires = new CampfireSystem { Name = "Campfires" };
 		_campfires.Setup(Terrain, _inkLight, _inkDark);
 		AddChild(_campfires);
@@ -152,6 +158,8 @@ public partial class Main : Node3D
 		_interactions.Setup(Player);
 		AddChild(_interactions);
 		_interactions.Register(_itemGameplay);
+		_interactions.Register(_fishing);
+		_fishing.NoticeRequested += _interactions.ShowNotice;
 
 		_skills = new SkillSystem { Name = "Skills" };
 		_skills.Setup(_inventory, _campfires, Player, _dog, _nav);
@@ -162,6 +170,10 @@ public partial class Main : Node3D
 		var quickLoadout = new QuickLoadoutHud { Name = "QuickLoadout" };
 		quickLoadout.Setup(_inventory);
 		AddChild(quickLoadout);
+
+		_fishingCatchHud = new FishingCatchHud { Name = "FishingCatch" };
+		AddChild(_fishingCatchHud);
+		_fishing.FishCaught += _fishingCatchHud.ShowCatch;
 
 		_inventoryView = new InventoryView { Name = "Inventory" };
 		_inventoryView.Setup(_inventory);
@@ -642,6 +654,7 @@ public partial class Main : Node3D
 		_movementPuffs?.Advance(p, Player.Velocity, Player.IsOnFloor(), Player.Swimming);
 		_ambientDrift?.Advance(p, delta, _day?.NightAmount ?? 0f);
 		_fauna?.Advance(_focusOverride ?? p, delta);
+		_fishing?.Advance(delta);
 		_worldMap?.SetPlayer(p);
 		SyncGameplayInput();
 		if (_capturing) return;
@@ -660,6 +673,7 @@ public partial class Main : Node3D
 		{
 			if (_skillSelector.IsOpen)
 			{
+				_fishing?.Cancel(immediate: true);
 				_inventoryView?.Close();
 				if (_worldMap?.IsOpen == true) _worldMap.Toggle();
 			}
@@ -671,7 +685,11 @@ public partial class Main : Node3D
 		{
 			// Map and inventory are both full-screen reading surfaces. Opening one
 			// closes the other rather than leaving two input owners stacked.
-			if (_inventoryView.IsOpen && _worldMap?.IsOpen == true) _worldMap.Toggle();
+			if (_inventoryView.IsOpen)
+			{
+				_fishing?.Cancel(immediate: true);
+				if (_worldMap?.IsOpen == true) _worldMap.Toggle();
+			}
 			SyncGameplayInput();
 			GetViewport().SetInputAsHandled();
 			return;
@@ -679,6 +697,7 @@ public partial class Main : Node3D
 		if (e is InputEventKey mk && mk.Pressed && !mk.Echo && mk.PhysicalKeycode == Key.M)
 		{
 			_worldMap?.Toggle();
+			if (_worldMap?.IsOpen == true) _fishing?.Cancel(immediate: true);
 			_inventoryView?.Close();
 			_skillSelector?.Close();
 			SyncGameplayInput();
@@ -689,6 +708,29 @@ public partial class Main : Node3D
 		// rig, and a click pans rather than sending the traveller somewhere they
 		// cannot be seen to walk to.
 		if (_worldMap != null && _worldMap.IsOpen) return;
+
+		if (_fishing?.HandleInput(e) == true)
+		{
+			SyncGameplayInput();
+			GetViewport().SetInputAsHandled();
+			return;
+		}
+		if (_fishing?.IsActive == true)
+		{
+			// Fishing locks travel and equipment, but the camera remains available.
+			if (e is InputEventMouseButton fishingMouse && fishingMouse.Pressed)
+			{
+				if (fishingMouse.ButtonIndex == MouseButton.WheelUp) Rig.Zoom(-6f);
+				else if (fishingMouse.ButtonIndex == MouseButton.WheelDown) Rig.Zoom(6f);
+			}
+			else if (e is InputEventKey fishingKey && fishingKey.Pressed && !fishingKey.Echo)
+			{
+				if (fishingKey.Keycode == Key.Q) Rig.Rotate45(-1);
+				else if (fishingKey.Keycode == Key.E) Rig.Rotate45(1);
+			}
+			GetViewport().SetInputAsHandled();
+			return;
+		}
 
 		if (_interactions?.HandleInput(e) == true)
 		{
@@ -719,10 +761,10 @@ public partial class Main : Node3D
 	private void SyncGameplayInput()
 	{
 		if (Player == null) return;
-		bool blocked = (_inventoryView?.IsOpen ?? false) ||
+		bool modalBlocked = (_inventoryView?.IsOpen ?? false) ||
 			(_skillSelector?.IsOpen ?? false) || (_worldMap?.IsOpen ?? false);
-		Player.InputEnabled = !blocked;
-		_interactions?.SetSuppressed(blocked);
+		Player.InputEnabled = !modalBlocked && !(_fishing?.IsActive ?? false);
+		_interactions?.SetSuppressed(modalBlocked);
 	}
 
 	/// <summary>

@@ -15,6 +15,11 @@ public static class ItemVisuals
 			BuildStick(root, item.Color, item.LightOutline, inkLight, inkDark);
 		else if (item == ItemCatalog.Torch)
 			BuildTorch(root, item, inkLight, inkDark);
+		else if (item == ItemCatalog.FishingRod)
+			BuildFishingRod(root, item, inkLight, inkDark);
+		else if (item == ItemCatalog.SilverMinnow || item == ItemCatalog.Rosefin ||
+			item == ItemCatalog.MoonCarp)
+			BuildFish(root, item, inkLight, inkDark);
 		return root;
 	}
 
@@ -52,6 +57,72 @@ public static class ItemVisuals
 		};
 		root.AddChild(fire);
 		fire.Setup(item.Light, visualScale: 0.72f);
+	}
+
+	private static void BuildFishingRod(Node3D root, ItemDefinition item,
+		ShaderMaterial inkLight, ShaderMaterial inkDark)
+	{
+		// The handle stays rigid while three short shaft joints carry a restrained
+		// bend during casting and bites. The joints are named so Character can pose
+		// the equipped instance without knowing how its boxes were constructed.
+		AddBox(root, new Vector3(0.18f, 1.60f, 0.18f), new Vector3(0f, -0.14f, 0f),
+			Vector3.Zero, item.Color.Darkened(0.08f), inkLight, inkDark,
+			outlined: true, lightOutline: false);
+		Node3D parent = root;
+		for (int i = 0; i < 3; i++)
+		{
+			var joint = new Node3D
+			{
+				Name = $"RodJoint{i}",
+				Position = new Vector3(0f, i == 0 ? -0.93f : -0.76f, 0f),
+			};
+			parent.AddChild(joint);
+			float thickness = 0.125f - i * 0.022f;
+			AddBox(joint, new Vector3(thickness, 0.78f, thickness),
+				new Vector3(0f, -0.39f, 0f), Vector3.Zero,
+				item.Color.Lightened(0.05f + i * 0.035f), inkLight, inkDark,
+				outlined: i == 0, lightOutline: false);
+			parent = joint;
+		}
+
+		var tip = new Marker3D
+		{
+			Name = "RodTip",
+			Position = new Vector3(0f, -0.80f, 0f),
+		};
+		parent.AddChild(tip);
+
+		// A compact reel beneath the grip, kept unoutlined so it reads as one detail
+		// instead of a dark knot at normal camera distance.
+		AddBox(root, new Vector3(0.34f, 0.28f, 0.20f), new Vector3(0.18f, -0.34f, 0f),
+			new Vector3(0f, 0f, 0.18f), new Color(0.72f, 0.68f, 0.62f).SrgbToLinear(),
+			inkLight, inkDark, outlined: false);
+	}
+
+	private static void BuildFish(Node3D root, ItemDefinition item,
+		ShaderMaterial inkLight, ShaderMaterial inkDark)
+	{
+		AddBox(root, new Vector3(0.46f, 0.34f, 0.92f), Vector3.Zero,
+			Vector3.Zero, item.Color, inkLight, inkDark,
+			outlined: true, lightOutline: item.LightOutline);
+		AddBox(root, new Vector3(0.12f, 0.48f, 0.42f), new Vector3(0f, 0f, -0.58f),
+			new Vector3(0f, 0f, Mathf.Pi * 0.25f), item.Color.Darkened(0.08f),
+			inkLight, inkDark, outlined: false);
+		AddBox(root, new Vector3(0.16f, 0.10f, 0.28f), new Vector3(0f, 0.23f, 0.05f),
+			new Vector3(0.24f, 0f, 0f), item.Color.Lightened(0.08f),
+			inkLight, inkDark, outlined: false);
+	}
+
+	public static Node3D BuildFishingBobber(ShaderMaterial inkLight, ShaderMaterial inkDark)
+	{
+		var root = new Node3D { Name = "FishingBobber" };
+		AddBox(root, new Vector3(0.18f, 0.25f, 0.18f), new Vector3(0f, -0.08f, 0f),
+			Vector3.Zero, new Color(0.94f, 0.91f, 0.82f).SrgbToLinear(), inkLight, inkDark,
+			outlined: true, lightOutline: true);
+		AddBox(root, new Vector3(0.20f, 0.18f, 0.20f), new Vector3(0f, 0.13f, 0f),
+			Vector3.Zero, new Color(0.88f, 0.35f, 0.38f).SrgbToLinear(), inkLight, inkDark,
+			outlined: false);
+		return root;
 	}
 
 	private static void AddBox(Node3D parent, Vector3 size, Vector3 position,

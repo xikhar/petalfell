@@ -43,6 +43,24 @@ public sealed class HeldLightProfile
 }
 
 /// <summary>
+/// Fishing behaviour owned by the rod definition. Future rods can change cast
+/// reach, patience and bite forgiveness without branching the fishing system on
+/// item IDs.
+/// </summary>
+public sealed class FishingProfile
+{
+	public float MinimumCastDistance { get; init; } = 2.4f;
+	public float MaximumCastDistance { get; init; } = 9.5f;
+	public float ChargeSeconds { get; init; } = 1.25f;
+	public float CastSeconds { get; init; } = 0.72f;
+	public float MinimumBiteWait { get; init; } = 2.8f;
+	public float MaximumBiteWait { get; init; } = 7.2f;
+	public float BiteWindow { get; init; } = 1.0f;
+	public float ReelSeconds { get; init; } = 0.62f;
+	public float CatchSeconds { get; init; } = 1.15f;
+}
+
+/// <summary>
 /// Immutable, globally shared item data. Runtime inventory state stores only
 /// the stable ID and quantity, keeping future saves independent of scene nodes.
 /// </summary>
@@ -55,13 +73,14 @@ public sealed class ItemDefinition
 	public bool RequiresBothHands { get; }
 	public ThrowProfile Throw { get; }
 	public HeldLightProfile Light { get; }
+	public FishingProfile Fishing { get; }
 	public Color Color { get; }
 	public bool LightOutline { get; }
 
 	public ItemDefinition(string id, string name, uint color, int maxStack = 1,
 		bool equipable = false, bool requiresBothHands = false,
 		ThrowProfile throwProfile = null, HeldLightProfile lightProfile = null,
-		bool? lightOutline = null)
+		FishingProfile fishingProfile = null, bool? lightOutline = null)
 	{
 		Id = id;
 		Name = name;
@@ -75,6 +94,7 @@ public sealed class ItemDefinition
 		RequiresBothHands = requiresBothHands;
 		Throw = throwProfile;
 		Light = lightProfile;
+		Fishing = fishingProfile;
 	}
 }
 
@@ -108,12 +128,34 @@ public static class ItemCatalog
 		// contributes diffuse illumination. World/sun shadows remain unaffected.
 		lightProfile: new HeldLightProfile { CastShadows = false });
 
+	public static readonly ItemDefinition FishingRod = new(
+		"fishing_rod",
+		"Fishing Rod",
+		0x8b644a,
+		maxStack: 1,
+		equipable: true,
+		fishingProfile: new FishingProfile(),
+		lightOutline: false);
+
+	public static readonly ItemDefinition SilverMinnow = new(
+		"silver_minnow", "Silver Minnow", 0xa9c7d8, maxStack: 30);
+
+	public static readonly ItemDefinition Rosefin = new(
+		"rosefin", "Rosefin", 0xdca6b8, maxStack: 20);
+
+	public static readonly ItemDefinition MoonCarp = new(
+		"moon_carp", "Moon Carp", 0xaaa8d8, maxStack: 12);
+
 	private static readonly Dictionary<string, ItemDefinition> Definitions =
 		new(StringComparer.Ordinal)
 		{
 			[Stick.Id] = Stick,
 			[Wood.Id] = Wood,
 			[Torch.Id] = Torch,
+			[FishingRod.Id] = FishingRod,
+			[SilverMinnow.Id] = SilverMinnow,
+			[Rosefin.Id] = Rosefin,
+			[MoonCarp.Id] = MoonCarp,
 		};
 
 	public static ItemDefinition Get(string id) =>

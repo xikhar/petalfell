@@ -29,6 +29,14 @@ public static class ItemIconRenderer
 			case "torch":
 				DrawTorch(canvas, centre, scale, opacity);
 				break;
+			case "fishing_rod":
+				DrawFishingRod(canvas, centre, scale, opacity);
+				break;
+			case "silver_minnow":
+			case "rosefin":
+			case "moon_carp":
+				DrawFish(canvas, item, centre, scale, opacity);
+				break;
 			default:
 				DrawGeneric(canvas, item, centre, scale, opacity);
 				break;
@@ -100,6 +108,64 @@ public static class ItemIconRenderer
 			flame, filled: true, width: -1f, antialiased: true);
 		canvas.DrawLine(fire + Vector2.Down * (2f * scale), fire + Vector2.Up * (11f * scale),
 			flame, 5f * scale, antialiased: true);
+	}
+
+	private static void DrawFishingRod(CanvasItem canvas, Vector2 centre,
+		float scale, float opacity)
+	{
+		var edge = WithAlpha(new Color(0.27f, 0.23f, 0.28f, 0.88f), opacity);
+		var wood = WithAlpha(new Color(0.56f, 0.40f, 0.29f, 0.96f), opacity);
+		var line = WithAlpha(new Color(0.88f, 0.89f, 0.92f, 0.72f), opacity);
+		var reel = WithAlpha(new Color(0.72f, 0.68f, 0.62f, 0.95f), opacity);
+		var a = centre + new Vector2(-15f, 19f) * scale;
+		var b = centre + new Vector2(11f, -20f) * scale;
+		var mid = centre + new Vector2(4f, -2f) * scale;
+		canvas.DrawLine(a, mid, edge, 7f * scale, antialiased: true);
+		canvas.DrawLine(mid, b, edge, 5f * scale, antialiased: true);
+		canvas.DrawLine(a, mid, wood, 4f * scale, antialiased: true);
+		canvas.DrawLine(mid, b, wood.Lightened(0.12f), 2.4f * scale, antialiased: true);
+		canvas.DrawCircle(a + new Vector2(7f, -6f) * scale, 5f * scale,
+			reel, filled: true, width: -1f, antialiased: true);
+		canvas.DrawLine(b, b + new Vector2(2f, 13f) * scale,
+			line, 1.2f * scale, antialiased: true);
+	}
+
+	private static void DrawFish(CanvasItem canvas, ItemDefinition item, Vector2 centre,
+		float scale, float opacity)
+	{
+		var edge = WithAlpha(new Color(0.28f, 0.25f, 0.32f, 0.82f), opacity);
+		var body = WithAlpha(item.Color.Lightened(0.12f), opacity);
+		var fin = WithAlpha(item.Color.Darkened(0.08f), opacity);
+		Vector2[] silhouette =
+		{
+			centre + new Vector2(-17f, 0f) * scale,
+			centre + new Vector2(-9f, -10f) * scale,
+			centre + new Vector2(8f, -9f) * scale,
+			centre + new Vector2(17f, 0f) * scale,
+			centre + new Vector2(8f, 9f) * scale,
+			centre + new Vector2(-9f, 10f) * scale,
+		};
+		canvas.DrawColoredPolygon(silhouette, edge);
+		Vector2[] inner =
+		{
+			centre + new Vector2(-12f, 0f) * scale,
+			centre + new Vector2(-6f, -7f) * scale,
+			centre + new Vector2(8f, -6f) * scale,
+			centre + new Vector2(13f, 0f) * scale,
+			centre + new Vector2(8f, 6f) * scale,
+			centre + new Vector2(-6f, 7f) * scale,
+		};
+		canvas.DrawColoredPolygon(inner, body);
+		Vector2[] tail =
+		{
+			centre + new Vector2(-11f, 0f) * scale,
+			centre + new Vector2(-22f, -10f) * scale,
+			centre + new Vector2(-21f, 10f) * scale,
+		};
+		canvas.DrawColoredPolygon(tail, fin);
+		canvas.DrawCircle(centre + new Vector2(8f, -2f) * scale, 1.8f * scale,
+			WithAlpha(new Color(0.22f, 0.20f, 0.27f), opacity),
+			filled: true, width: -1f, antialiased: true);
 	}
 
 	private static void DrawGeneric(CanvasItem canvas, ItemDefinition item, Vector2 centre,

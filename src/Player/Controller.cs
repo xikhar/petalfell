@@ -195,6 +195,26 @@ public partial class Controller : CharacterBody3D
 	}
 
 	/// <summary>
+	/// Cancel every source of horizontal travel before a stationary interaction
+	/// takes ownership. Clearing only Route is not sufficient: a ledge hop keeps
+	/// its own locked crossing vector until landing and could otherwise carry the
+	/// traveller through a fishing cast or another rooted action.
+	/// </summary>
+	public void StopTravel()
+	{
+		Route = null;
+		_routeIndex = 0;
+		_autoJumping = false;
+		_autoJumpFlat = Vector3.Zero;
+		_autoJumpAge = 0f;
+		_buffer = 0f;
+		var velocity = Velocity;
+		velocity.X = 0f;
+		velocity.Z = 0f;
+		Velocity = velocity;
+	}
+
+	/// <summary>
 	/// Place the controller on an authored seat and hold it facing the interaction.
 	/// The caller is expected to approach the point through navigation first; the
 	/// final assignment removes tiny path-arrival offsets without freezing physics.
