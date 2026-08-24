@@ -244,7 +244,7 @@ public static class Palette
 
 	public static readonly Color[] FootPuffColors =
 	{
-		Srgb(0xd8d0c9), Srgb(0xc9c0ca), Srgb(0xb8b8ae), Srgb(0xd7c9cf),
+		Srgb(0x918e94), Srgb(0xa39da5), Srgb(0x7f8389), Srgb(0x98919b),
 	};
 
 	/* ================= block library ================= */

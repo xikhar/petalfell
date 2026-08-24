@@ -419,11 +419,8 @@ public partial class Main : Node3D
 				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 			}
 			Tools.Capture.Place(Rig, shot, focus);
-			// Airborne drift does NOT appear in captures. GPU particles are
-			// simulated by a compute pass that the offscreen capture path never
-			// runs, so a review screenshot always shows still air no matter how
-			// long it settles — verified against the live game, where the motes
-			// and petals are present. Judge the drift by playing, not by these.
+			// Ambient pieces are a world-space pool now, so these settle frames also
+			// advance leaves, petals and the time-dependent firefly fade.
 			for (int i = 0; i < 24; i++)
 			{
 				Tools.Capture.Place(Rig, shot, focus);

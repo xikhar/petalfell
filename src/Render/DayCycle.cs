@@ -38,6 +38,8 @@ public partial class DayCycle : Node
 	public bool Paused;
 	/// <summary>Authored darkness blend: 0 in daylight, 1 at full night.</summary>
 	public float NightAmount { get; private set; }
+	/// <summary>Player-facing multiplier over the authored day/night glow.</summary>
+	public float BloomAmount { get; private set; } = 1f;
 
 	private Godot.Environment _env;
 	private DirectionalLight3D _key;
@@ -155,11 +157,16 @@ public partial class DayCycle : Node
 		NightAmount = night;
 		var sunColour = Blend(from.Sun, to.Sun);
 		float energy = Lerp(from.SunEnergy, to.SunEnergy);
+		// The palette already changes hue and authored energy through dusk. This
+		// second, continuous exposure curve is what makes night actually deepen
+		// instead of stopping at a differently coloured version of daytime.
+		float keyExposure = Mathf.Lerp(1f, 0.64f, night);
+		float ambientExposure = Mathf.Lerp(1f, 0.58f, night);
 
 		if (_key != null)
 		{
 			_key.LightColor = sunColour;
-			_key.LightEnergy = energy;
+			_key.LightEnergy = energy * keyExposure;
 			_key.ShadowOpacity = Lerp(from.ShadowOpacity, to.ShadowOpacity);
 			// A light exactly on the horizon casts shadows the length of the world
 			// and the cascade cannot hold them, so the key is never allowed all
@@ -175,14 +182,15 @@ public partial class DayCycle : Node
 		if (_env != null)
 		{
 			_env.AmbientLightColor = Blend(from.Ambient, to.Ambient);
-			_env.AmbientLightEnergy = Lerp(from.AmbientEnergy, to.AmbientEnergy);
+			_env.AmbientLightEnergy = Lerp(from.AmbientEnergy, to.AmbientEnergy) * ambientExposure;
 			_env.AmbientLightSkyContribution = Lerp(from.SkyMix, to.SkyMix);
 			var fog = Blend(from.Fog, to.Fog);
 			_env.FogLightColor = fog;
+			_env.FogLightEnergy = Mathf.Lerp(1f, 0.68f, night);
 			// Lanterns and lit windows have to clear the glow threshold at night
 			// and must not at noon, or every pale surface in a pale world blooms.
 			_env.GlowHdrThreshold = Lerp(from.GlowThreshold, to.GlowThreshold);
-			_env.GlowIntensity = Mathf.Lerp(0.55f, 0.85f, night);
+			ApplyBloom();
 		}
 
 		if (_sky != null)
@@ -210,6 +218,19 @@ public partial class DayCycle : Node
 		RenderingServer.GlobalShaderParameterSet(NightParam, night);
 		RenderingServer.GlobalShaderParameterSet(SunColourParam,
 			new Vector3(sunColour.R, sunColour.G, sunColour.B));
+	}
+
+	/// <summary>Applies immediately even while the developer clock is frozen.</summary>
+	public void SetBloomAmount(float amount)
+	{
+		BloomAmount = Mathf.Clamp(amount, 0f, 2.5f);
+		ApplyBloom();
+	}
+
+	private void ApplyBloom()
+	{
+		if (_env == null) return;
+		_env.GlowIntensity = Mathf.Lerp(0.78f, 1.08f, NightAmount) * BloomAmount;
 	}
 
 	/// <summary>Clock reading, for the developer overlay.</summary>

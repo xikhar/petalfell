@@ -121,6 +121,9 @@ public partial class DeveloperMenu : CanvasLayer
 
 			AddSlider(content, "Day length", 30.0, 3600.0, 10.0, _day.DayLength,
 				v => $"{v / 60.0:F1} min", v => _day.DayLength = (float)v);
+
+			AddSlider(content, "Bloom amount", 0.0, 2.5, 0.05, _day.BloomAmount,
+				v => $"{v:0.00}x", v => _day.SetBloomAmount((float)v));
 		}
 
 		_maxZoom = AddSlider(content, "Maximum zoom", 24.0, 240.0, 1.0,

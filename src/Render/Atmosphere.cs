@@ -121,20 +121,33 @@ public static class Atmosphere
 		// catch the top of the pastel range, not only true emitters — the palette
 		// never reaches 1.0, so a threshold above it produces no bloom at all.
 		env.GlowEnabled = true;
-		env.GlowIntensity = 0.55f;
-		env.GlowStrength = 1.05f;
-		env.GlowBloom = 0.18f;
+		env.GlowNormalized = true;
+		env.GlowIntensity = 0.78f;
+		env.GlowStrength = 1.28f;
+		// Thresholded emitters supply the bloom. A global bloom term lifts ordinary
+		// dark pixels too, which turns a clean night scene into fogged glass.
+		env.GlowBloom = 0f;
 		// Only genuinely bright things bloom. At 0.82 every pale surface in a
 		// world made of pale surfaces was blooming, which is a very efficient way
 		// to turn a picture into milk.
 		env.GlowHdrThreshold = 1.05f;
-		env.GlowHdrScale = 2.4f;
-		env.GlowBlendMode = Godot.Environment.GlowBlendModeEnum.Softlight;
-		// Wide, soft halo rather than a tight one: the upper mip levels are what
-		// give the reference its bloom-lit air instead of a rim on each edge.
-		env.SetGlowLevel(4, 1.0f);
-		env.SetGlowLevel(5, 0.8f);
-		env.SetGlowLevel(6, 0.5f);
+		env.GlowHdrScale = 1.05f;
+		// Softlight has no influence on the dark pixels around an emitter, so fire
+		// cores remained bright but flat. Screen preserves the source colour while
+		// allowing its blurred neighbours to form a visible halo.
+		env.GlowBlendMode = Godot.Environment.GlowBlendModeEnum.Screen;
+		// Near levels keep a tiny source readable; upper levels supply the broad,
+		// low-energy falloff around fire, luminous stones and fireflies.
+		// Tight mips are restrained: at high developer values they were painting
+		// the source's neighbouring geometry with a milky patch. The wide levels
+		// retain the atmospheric halo without bleaching objects beside the light.
+		env.SetGlowLevel(0, 0.04f);
+		env.SetGlowLevel(1, 0.15f);
+		env.SetGlowLevel(2, 0.38f);
+		env.SetGlowLevel(3, 1.00f);
+		env.SetGlowLevel(4, 0.82f);
+		env.SetGlowLevel(5, 0.50f);
+		env.SetGlowLevel(6, 0.25f);
 
 		env.TonemapMode = Godot.Environment.ToneMapper.Aces;
 		env.TonemapExposure = 1.0f;
