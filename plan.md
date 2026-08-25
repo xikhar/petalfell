@@ -75,6 +75,13 @@ so numerous that meeting one stops being an event.
 - **Rain World** — the ecology, and the sense that the world was not built for
   you. Taken more heavily than the others, and detailed in §22b.
 
+The list above is about **tone and world-building**. There is a separate,
+narrower list of **scenery and composition** references — Shadow of the
+Colossus, Elden Ring and Skyrim — covering how landscape and architecture are
+arranged so a large empty world reads, and it lives in
+[docs/RUINS.md](docs/RUINS.md) §8. The two lists overlap by name and take
+entirely different things; keep them distinct rather than merging them.
+
 What is deliberately NOT taken from Rain World is its framing of the player as
 small prey inside a food chain. Petalfell has a human traveller, a dog, and a
 near-isometric camera; the player is a walker through a place, not an animal in

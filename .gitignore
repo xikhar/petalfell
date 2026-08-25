@@ -23,8 +23,9 @@
 /captures/
 /renders/
 
-# reference images
-/world-new
+# Reference images are TRACKED on purpose. docs/RUINS.md and AGENTS.md both
+# tell future sessions to look at world-new/ rather than trust a summary of it,
+# so the images have to survive a fresh clone or that instruction is a lie.
 
 
 # Editor and operating-system files
