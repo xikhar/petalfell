@@ -194,7 +194,13 @@ public static class Landmarks
 
 			// Good ground somebody worked alone, and not the oldest country —
 			// a farm that has entirely vanished is a monument, not a farmstead.
-			LandmarkForm.Farmstead => age < 0.78f && Flatness(6) > 78 && NearWater(26),
+			//
+			// The flatness bar came down from 78 because the builder changed under
+			// it. That gate existed to protect a pass that could only set boxes on
+			// level ground; the footing now reads the slope and answers it, so
+			// insisting on level ground throws away every site where it would have
+			// anything interesting to say. Sloped sites are the good ones now.
+			LandmarkForm.Farmstead => age < 0.78f && Flatness(6) > 52 && NearWater(26),
 
 			// Beside a route, on anything walkable.
 			LandmarkForm.Cairn => terrain.Roads != null && NearRoad(terrain, x, z, 5),
@@ -234,6 +240,20 @@ public static class Landmarks
 				case LandmarkForm.Farmstead: Farmstead(terrain, rng, m); break;
 				case LandmarkForm.Cairn: Cairn(terrain, rng, m); break;
 			}
+
+			// The farmstead runs its own pass — it is the only form that knows its
+			// footprint, and its yard is much wider than its building.
+			if (m.Form == LandmarkForm.Farmstead) continue;
+
+			(int r, int h) = m.Form switch
+			{
+				LandmarkForm.Watchtower => (4, 21),
+				LandmarkForm.StandingStones => (11, 8),
+				LandmarkForm.Shrine => (3, 5),
+				_ => (2, 5),
+			};
+			Reclaim.Overgrow(terrain, m.X - r, m.Z - r, r * 2 + 1, r * 2 + 1,
+				m.Level - 1, m.Level + h, m.Age, m.Seed);
 		}
 	}
 
@@ -372,54 +392,261 @@ public static class Landmarks
 	}
 
 	/// <summary>
-	/// One house on its own, with a fence and a well. The loneliest object in the
-	/// world model and the one that most directly says a person lived here.
+	/// A hall standing in its own yard — the loneliest object in the world model
+	/// and the one that most directly says a person lived here.
+	///
+	/// This is the form that carries plan.md §11a, and it is built as a SEQUENCE
+	/// rather than as an object: a gate in a boundary wall, a worn path across a
+	/// yard, a doorway, one room, a step, another room. Every one of those is
+	/// somewhere the player physically goes, which is the whole difference
+	/// between a ruin and a model of a ruin. A single box on a pad, however well
+	/// weathered, is still something you walk around.
+	///
+	/// The ground decides the plan, not the other way round. The footing picks
+	/// the floor and may split it across two terraces; the hall then goes in the
+	/// corner FURTHEST from the gate, so arriving always means crossing the yard.
 	/// </summary>
 	private static void Farmstead(Terrain terrain, Rng rng, Landmark m)
 	{
-		int w = rng.RangeInt(5, 7), d = rng.RangeInt(5, 6);
-		int x0 = m.X - w / 2, z0 = m.Z - d / 2;
-		int S = terrain.Size;
+		// The footing fits the HALL, and nothing else.
+		//
+		// The first build fitted it to the whole yard, which levelled a thirteen
+		// by eleven rectangle and produced exactly the stone podium this entire
+		// section exists to abolish — the pancake, rebuilt in masonry. Only a
+		// FLOOR needs to be level. A yard is a yard: it follows the land, its
+		// wall steps down with the ground the way a dry-stone wall does, and the
+		// path across it climbs. That contrast, between one deliberately level
+		// thing and everything around it staying crooked, is what makes the level
+		// thing read as built.
+		int hw = rng.RangeInt(7, 9), hd = rng.RangeInt(6, 7);
+		int hx = m.X - hw / 2, hz = m.Z - hd / 2;
 
-		for (int dz = -1; dz <= d; dz++)
-		for (int dx = -1; dx <= w; dx++)
-			if (!Clear(terrain, x0 + dx, z0 + dz, out _)) return;
+		var f = Footing.Fit(terrain, hx, hz, hw, hd, m.Age);
+		if (f == null) return;
 
-		int floor = m.Level;
 		float decay = Rng.Clamp(0.25f + m.Age * 0.75f, 0f, 1f);
-		byte roof = rng.Chance(0.5f) ? Palette.ROOF_SLATE : Palette.ROOF_TILE;
-		int wallH = 4;
+		Footing.Apply(terrain, f, rng, Palette.STONE);
 
+		int wallH = rng.RangeInt(5, 6);
+		byte roof = rng.Chance(0.5f) ? Palette.ROOF_SLATE : Palette.ROOF_TILE;
+
+		// The footing already chose which way somebody walks in, and cut the ramp
+		// for it. The door goes there; the yard opens that way.
+		int doorX = f.DoorX, doorZ = f.DoorZ;
+
+		// The yard reaches out on the approach side, so arriving means crossing
+		// it rather than stepping straight through the gate into the wall.
+		int run = rng.RangeInt(6, 9);
+		Span(hx, hw, f.DoorDx, run, out int yx, out int yw);
+		Span(hz, hd, f.DoorDz, run, out int yz, out int yd);
+
+		int gateX = f.DoorDx > 0 ? yx + yw - 1 : f.DoorDx < 0 ? yx : doorX;
+		int gateZ = f.DoorDz > 0 ? yz + yd - 1 : f.DoorDz < 0 ? yz : doorZ;
+
+		Boundary(terrain, yx, yz, yw, yd, gateX, gateZ, decay);
+		YardPath(terrain, gateX, gateZ, doorX, doorZ);
+		Hall(terrain, rng, f, hx, hz, hw, hd, wallH, decay, roof, doorX, doorZ);
+
+		// The chimney outlives the house, as it does everywhere else.
+		int cx = hx + (f.DoorDx > 0 ? 1 : hw - 2);
+		int cz = hz + (f.DoorDz > 0 ? 1 : hd - 2);
+		int cf = f.NearestFloor(cx, cz);
+		for (int k = 0; k <= wallH + 2 - (int)(decay * 2f); k++)
+			Put(terrain, cx, cf + k, cz, Palette.STONE_WARM);
+
+		// A trough in the yard. One object of obvious daily use is worth more
+		// than any amount of broken wall for saying somebody LIVED here.
+		int tx = gateX - f.DoorDx * 3, tz = gateZ - f.DoorDz * 3;
+		if (tx < hx - 1 || tx > hx + hw || tz < hz - 1 || tz > hz + hd)
+			for (int k = -1; k <= 1; k++)
+			{
+				int px = f.DoorDz != 0 ? tx + k : tx;
+				int pz = f.DoorDz != 0 ? tz : tz + k;
+				if (Clear(terrain, px, pz, out int ty))
+					Put(terrain, px, ty, pz, k == 0 ? Palette.RUBBLE : Palette.STONE_PALE);
+			}
+
+		// And then the land takes it back. The volume is the yard, not the hall:
+		// growth spilling off the building onto the ground beside it is the whole
+		// point of plan.md §11a.5.
+		int lo = int.MaxValue;
+		foreach (int g in f.Ground) if (g < lo) lo = g;
+		Reclaim.Overgrow(terrain, yx, yz, yw, yd, lo - 1, f.FloorHi + wallH + 3,
+			m.Age, m.Seed);
+	}
+
+	/// <summary>
+	/// One axis of the yard: a margin all round, and the rest of the run thrown
+	/// out on whichever side the approach comes from.
+	/// </summary>
+	private static void Span(int origin, int size, int dir, int run,
+		out int start, out int length)
+	{
+		const int Margin = 2;
+		length = size + Margin * 2 + (dir == 0 ? 0 : run);
+		start = origin - Margin - (dir < 0 ? run : 0);
+	}
+
+	/// <summary>
+	/// The yard wall — low, breached, following the ground, and the thing that
+	/// turns a building into a PLACE by giving it an inside and an outside.
+	/// </summary>
+	private static void Boundary(Terrain terrain, int x0, int z0, int w, int d,
+		int gateX, int gateZ, float decay)
+	{
 		for (int dz = 0; dz < d; dz++)
 		for (int dx = 0; dx < w; dx++)
 		{
+			if (dx != 0 && dz != 0 && dx != w - 1 && dz != d - 1) continue;
 			int x = x0 + dx, z = z0 + dz;
-			terrain.Grid.Set(x, floor - 1, z, decay > 0.6f ? Palette.MOSS : Palette.PAVING);
-			bool edge = dx == 0 || dz == 0 || dx == w - 1 || dz == d - 1;
-			if (!edge) continue;
-			bool corner = (dx == 0 || dx == w - 1) && (dz == 0 || dz == d - 1);
 
+			// The gateway, three wide, so it reads as an opening rather than as
+			// one more gap the wall has lost.
+			if (Math.Abs(x - gateX) + Math.Abs(z - gateZ) <= 1) continue;
+			// No levelling: the wall takes the ground as it finds it.
+			if (!Clear(terrain, x, z, out int y)) continue;
+
+			// Sections, never block by block.
+			//
+			// The rule was already written down and the first build broke it
+			// anyway: at 0.62 radians per block the wave turned over every five
+			// blocks, which at this scale IS block by block, and the wall came
+			// out as confetti. A wall fails in LENGTHS. The slow term sets the
+			// length; the fast one only roughens its ends.
 			int side = dz == 0 ? 0 : dz == d - 1 ? 1 : dx == 0 ? 2 : 3;
 			float along = side < 2 ? dx : dz;
-			float wave = 0.5f + 0.5f * MathF.Sin(along * 0.85f + side * 1.7f);
-			int standing = (int)MathF.Round(wallH * (1f - decay * (0.4f + wave * 0.85f)));
-			if (corner) standing = Math.Max(standing, (int)(wallH * (1f - decay * 0.5f)));
+			float wave = 0.5f + 0.35f * MathF.Sin(along * 0.24f + side * 2.1f)
+			                  + 0.15f * MathF.Sin(along * 0.77f + side * 1.1f);
+			int standing = (int)MathF.Round(3f * (1f - decay * (0.20f + wave * 0.85f)));
+			for (int k = 0; k < standing; k++)
+				Put(terrain, x, y + k, z, k == 0 ? Palette.STONE : Palette.STONE_PALE);
+		}
+	}
 
-			for (int k = 0; k < Math.Max(0, standing); k++)
-				Put(terrain, x, floor + k, z, corner || k == 0 ? Palette.BEAM : Palette.PLASTER);
+	/// <summary>The line the feet wore between the gate and the door.</summary>
+	private static void YardPath(Terrain terrain, int fromX, int fromZ, int toX, int toZ)
+	{
+		int x = fromX, z = fromZ;
+		for (int step = 0; step < 48 && (x != toX || z != toZ); step++)
+		{
+			if (x != toX) x += Math.Sign(toX - x);
+			else z += Math.Sign(toZ - z);
+			if (!Clear(terrain, x, z, out int y)) continue;
+			terrain.Grid.Set(x, y - 1, z, Palette.PATH);
+		}
+	}
+
+	/// <summary>
+	/// The hall itself: two rooms where the ground gave enough width for two, a
+	/// doorway that is always open, and windows that are holes.
+	/// </summary>
+	private static void Hall(Terrain terrain, Rng rng, Footing f, int hx, int hz,
+		int hw, int hd, int wallH, float decay, byte roof, int doorX, int doorZ)
+	{
+		// A divider across the longer axis, so the second space is a room rather
+		// than a corridor. It gets a gap, because a sealed room is a texture.
+		bool divideX = hw >= hd;
+		int divide = divideX ? hx + hw / 2 : hz + hd / 2;
+		bool twoRooms = (divideX ? hw : hd) >= 7;
+		int gap = divideX ? hz + hd / 2 : hx + hw / 2;
+
+		// How much wall survived, kept so the roof can ask what is left to rest
+		// on. Without it the roof pass puts slabs over open air.
+		var standingAt = new int[hw * hd];
+
+		for (int dz = 0; dz < hd; dz++)
+		for (int dx = 0; dx < hw; dx++)
+		{
+			int x = hx + dx, z = hz + dz;
+			int floor = f.NearestFloor(x, z);
+			terrain.Grid.Set(x, floor - 1, z, Palette.PAVING);
+
+			bool perimeter = dx == 0 || dz == 0 || dx == hw - 1 || dz == hd - 1;
+			bool inner = twoRooms && (divideX ? x == divide : z == divide) && !perimeter;
+			if (!perimeter && !inner) continue;
+			// The inner doorway.
+			if (inner && (divideX ? z : x) == gap) continue;
+
+			bool corner = (dx == 0 || dx == hw - 1) && (dz == 0 || dz == hd - 1);
+
+			int side = dz == 0 ? 0 : dz == hd - 1 ? 1 : dx == 0 ? 2 : 3;
+			float along = side < 2 ? dx : dz;
+			// Slow section, fast roughening — see Boundary for why the fast term
+			// cannot be the one carrying the shape.
+			float wave = 0.5f + 0.35f * MathF.Sin(along * 0.30f + side * 1.7f)
+			                  + 0.15f * MathF.Sin(along * 0.95f + side * 2.6f);
+			int standing = (int)MathF.Round(wallH * (1f - decay * (0.15f + wave * 0.70f)));
+			// Corners are the last thing to go, everywhere in this project. A ruin
+			// whose corners fell reads as demolished rather than abandoned.
+			if (corner) standing = Math.Max(standing, (int)(wallH * (1f - decay * 0.35f)));
+			if (inner) standing = Math.Min(standing, wallH - 1);
+			standing = Math.Max(0, standing);
+			standingAt[dz * hw + dx] = standing;
+
+			for (int k = 0; k < standing; k++)
+			{
+				// The doorway, always two clear. Whatever the decay did to this
+				// section, the way in survives it — plan.md §11a.1.
+				if (perimeter && k < 2 && x == doorX && z == doorZ) continue;
+				// Windows are holes at head height, on the long walls only.
+				if (perimeter && !corner && k == 2 && along % 3 == 1 && side >= 2) continue;
+
+				// A timber FRAME, not a timber stripe — and one that rots.
+				//
+				// Beam on the whole bottom course put a band of the most saturated
+				// colour in the world around every hall at ankle height. Posts at
+				// the corners and every fourth bay is what half-timbering actually
+				// is, and it leaves the plaster panels reading as panels.
+				//
+				// On an old site the posts are simply GONE. plan.md §11a.4 puts
+				// timber first in the order of things to fail, and a ruin whose
+				// frame outlasted its masonry has the succession backwards.
+				bool post = corner || (int)along % 4 == 0;
+				byte block = inner ? Palette.PLANK
+					: post ? (decay < 0.5f ? Palette.BEAM : Palette.STONE)
+					: Palette.PLASTER;
+				Put(terrain, x, floor + k, z, block);
+			}
 		}
 
-		// Roof, if there is enough of the house left to carry one.
-		if (decay < 0.55f)
-			for (int dz = -1; dz <= d; dz++)
-			for (int dx = -1; dx <= w; dx++)
-				if (!rng.Chance(decay * 1.2f))
-					Put(terrain, x0 + dx, floor + wallH, z0 + dz, roof);
+		// Roof.
+		//
+		// Only over ground the walls can still carry. The first version tested
+		// decay alone and then dropped blocks on a per-cell coin flip, which put
+		// pale slabs floating in mid air over rooms whose walls had gone — the
+		// single most conspicuous artefact in the first capture. A roof is held
+		// UP by something; if the something is not there, neither is the roof.
+		//
+		// What it covers stays clear of thicket, which is what makes the unroofed
+		// room read as further gone than the roofed one.
+		if (decay >= 0.62f) return;
+		// A ridge, so the roof is a ROOF. One flat course at wall height is a lid,
+		// and a lid is the single thing most likely to make a generated building
+		// read as a box with a box on it. Two courses is all this project has ever
+		// needed — the cottage pass reached the same answer twice.
+		int ridge = divideX ? hz + hd / 2 : hx + hw / 2;
 
-		// The chimney outlives the house, as it does everywhere else.
-		Put(terrain, x0 + 1, floor, z0 + 1, Palette.STONE_WARM);
-		for (int k = 1; k <= wallH + 1 - (int)(decay * 2f); k++)
-			Put(terrain, x0 + 1, floor + k, z0 + 1, Palette.STONE_WARM);
+		for (int dz = -1; dz <= hd; dz++)
+		for (int dx = -1; dx <= hw; dx++)
+		{
+			int cx = Rng.ClampI(dx, 0, hw - 1), cz = Rng.ClampI(dz, 0, hd - 1);
+			int bearing = 0;
+			if (standingAt[cz * hw + 0] >= wallH - 1) bearing++;
+			if (standingAt[cz * hw + hw - 1] >= wallH - 1) bearing++;
+			if (standingAt[0 * hw + cx] >= wallH - 1) bearing++;
+			if (standingAt[(hd - 1) * hw + cx] >= wallH - 1) bearing++;
+			if (bearing < 2) continue;
+
+			// Roofs fail in PATCHES, not per block — a hole in a roof is a hole,
+			// not a sieve.
+			float hole = 0.5f + 0.5f * MathF.Sin(dx * 0.55f + dz * 0.9f + hx * 0.13f);
+			if (hole < decay * 1.15f) continue;
+
+			int x = hx + dx, z = hz + dz;
+			bool eave = dx < 0 || dz < 0 || dx >= hw || dz >= hd;
+			int lift = !eave && Math.Abs((divideX ? z : x) - ridge) <= 1 ? 1 : 0;
+			Put(terrain, x, f.NearestFloor(x, z) + wallH + lift, z, roof);
+		}
 	}
 
 	/// <summary>Three stones on a route. Cheap, numerous, and how you know you are on one.</summary>

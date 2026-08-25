@@ -57,6 +57,28 @@ snapshot, not a design target or implementation guide.
   river crossings.
 - Natural decoration respects the reserved space around authored roads,
   remnants, landmarks, spawns, and generated structures.
+- **Footings** (`src/World/Footing.cs`, `plan.md` §11a.1). Structures are no longer
+  set on levelled pads. Each one reads the heightfield under its footprint and
+  picks the floor that moves the least earth, with fill priced above cut so a
+  building sits into its hill rather than on a podium; it cuts the uphill side,
+  raises a masonry plinth on the downhill side, banks a soil talus against the
+  outside, and cuts an approach ramp so the interior is always reachable. Where
+  the footprint straddles a terrace edge the plan SPLITS into two floors joined
+  by a step, and the split position is searched rather than assumed so the break
+  lands on the terrace edge. On the current chapter map: 39 footings fitted, 12
+  of them split, 564 blocks cut against 321 filled.
+- **Reclamation** (`src/World/Reclaim.cs`, `plan.md` §11a.3–5). A field over damp,
+  shelter, aspect and age, evaluated per block face after a structure is built.
+  Two outputs: blocks walk down a material chain (`PLASTER → RUBBLE → MOSS_STONE`),
+  and sub-voxel growth instances — moss cushions, hanging vines, ferns, thickets,
+  saplings and wall-foot rubble — are bucketed per chunk and emitted by
+  `GroundDetail` into the same mesh, material and wind shader as the meadow. Runs
+  on every landmark and every settlement building that is not a lived-in holdout.
+  Currently ~21,000 growth instances and ~20,600 weathered blocks per world.
+- The `Farmstead` landmark is the worked example of both (`plan.md` §11a): a gate
+  in a boundary wall that follows the land, a worn path across a yard, a doorway
+  that decay may not close, one or two rooms, and a ridged roof that exists only
+  over walls still standing to carry it.
 
 ### Streaming state
 

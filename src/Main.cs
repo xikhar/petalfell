@@ -74,6 +74,8 @@ public partial class Main : Node3D
 		var tProps = Time.GetTicksMsec();
 		// After the bridges: a house may not stand where a crossing lands, and
 		// Fits() tests that by looking for columns already built above ground.
+		Reclaim.Reset(WorldSize, Seed);
+		Footing.ResetCounters();
 		Settlements.Build(Terrain, Terrain.Sites, Seed);
 		Landmarks.Build(Terrain, Terrain.Marks);
 		var tTown = Time.GetTicksMsec();
@@ -85,7 +87,10 @@ public partial class Main : Node3D
 		         $"bridges {Props.Bridges.Count} ({Props.RoadDecks} for roads, {Terrain.Roads.Crossings.Count} crossings)  " +
 		         $"roads {Terrain.Roads.Segments.Count} (+{Terrain.Roads.Unreachable} unreachable)  " +
 		         $"settlements {Terrain.Sites.Count}  " +
-		         $"buildings {Settlements.LastBuildingCount}  landmarks {Terrain.Marks.Count}");
+		         $"buildings {Settlements.LastBuildingCount}  landmarks {Terrain.Marks.Count}  " +
+		         $"reclaim {Reclaim.LastSprigCount} sprigs / {Reclaim.LastWeatheredCount} weathered");
+		GD.Print($"[footing] fitted {Footing.TotalFitted}  refused {Footing.TotalRefused}  " +
+		         $"split {Footing.TotalSplit}  cut {Footing.TotalCut}  fill {Footing.TotalFill}");
 		{
 			var st = new int[4];
 			foreach (var site in Terrain.Sites) st[(int)site.State]++;

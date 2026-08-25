@@ -223,6 +223,55 @@ that now; we are keeping the mesher's inputs narrow enough that it stays possibl
 
 ---
 
+## 3a. Footing and reclamation — how structures join the terrain
+
+`plan.md` §11a is the design contract. This is how it is wired.
+
+Two passes, deliberately separate, because they answer different questions and
+run at different times.
+
+**`world/Footing.cs` — the ground contract.** Consumed by every structure
+builder before it lays a block. `Footing.Fit()` samples the terrain heightfield
+under a footprint and returns the decision: floor level, whether the plan splits
+across two terraces, how much earth has banked against it. `Apply()` then
+executes that decision against the voxel grid — cutting AIR out of the uphill
+side, raising a masonry plinth on the downhill side, banking talus outside the
+walls, and cutting an approach ramp so the interior is always reachable.
+
+Three things it must keep in step, or downstream passes silently misbehave:
+
+- `Grid` edits, which are the blocks themselves. A cut writes AIR explicitly;
+  the sparse overlay stores it (see §3's note) precisely so a pad carved into a
+  slope survives the derivation.
+- `Grid.Heights`, which the mesher, the vegetation apron and `Landmarks.Clear`
+  all read. A cut LOWERS it, which no other pass in the project does.
+- `Terrain.Level`, the 2D heightfield that ground detail, fauna and navigation
+  read. It follows the cut and fill so grass, tufts and animals behave on the
+  new ground rather than on the ground that used to be there.
+
+**`world/Reclaim.cs` — the reclamation field.** Runs AFTER a structure is built,
+over its bounding volume. Evaluates damp / shelter / aspect / age per block face
+(§11a.3) and does two things with the result: swaps the block's material along
+the decay chain, and emits **sprigs** — sub-voxel growth instances — into a
+per-chunk bucket.
+
+Sprigs are not blocks. They are rendered by the existing ground-detail layer:
+`GroundDetail.Build()` appends every sprig in the chunk to the same `Field` it
+builds tufts and pebbles into, so vines and thickets arrive on the same mesh,
+the same material and the same wind shader as the meadow, with no new plumbing
+in the streamer. The cost is one dictionary lookup per chunk build.
+
+The bucket is written once, during world construction in `Main._Ready()`, and is
+read-only for the rest of the session — which is what makes it safe for the
+mesher's worker threads to read without a lock.
+
+**Material chain.** `PLASTER → RUBBLE → MOSS_STONE` and `STONE → MOSS_STONE`.
+Plaster spalls off first and exposes the rubble core; moss takes the core last.
+The chain is legible in-game, which is the point — the player can read how long
+a wall has stood by what it is made of.
+
+---
+
 ## 4. Collision — real bodies, per-chunk, from the mesh we already have
 
 **Decision: proper physics collision for everything, generated from the mesher output.**

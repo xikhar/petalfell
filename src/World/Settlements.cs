@@ -1061,6 +1061,13 @@ public static class Settlements
 		}
 
 		Garden(terrain, rng, site, x0, z0, w, d, doorSide);
+
+		// And then the land takes it back — plan.md §11a.3. A holdout that people
+		// still keep is exempt: somebody sweeps that roof.
+		if (!lived)
+			Reclaim.Overgrow(terrain, x0 - 1, z0 - 1, w + 2, d + 2,
+				floor - 1, wallTop + 3, decay,
+				unchecked((uint)Rng.StableHash($"{site.X}:{site.Z}:{x0}:{z0}")));
 	}
 
 	/// <summary>

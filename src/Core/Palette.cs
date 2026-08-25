@@ -283,6 +283,14 @@ public static class Palette
 	public const byte PLASTER = 26;
 	public const byte ROOF_SLATE = 27;
 	public const byte ROOF_TILE = 28;
+	// The two stages of a wall losing. plan.md §11a.3: reclamation is a
+	// succession, and the material chain is how the player reads its progress —
+	// PLASTER spalls off and exposes the rubble core, then moss takes the core.
+	// A ruin made entirely of one stone says nothing about how long it stood.
+	/// <summary>Broken masonry and spall. What a wall becomes before moss reaches it.</summary>
+	public const byte RUBBLE = 29;
+	/// <summary>Stone that has been damp and shaded long enough to go under.</summary>
+	public const byte MOSS_STONE = 9;
 	public const byte LEAF_PINK = 30;
 	public const byte LEAF_BLUSH = 31;
 	public const byte LEAF_LILAC = 32;
@@ -419,6 +427,17 @@ public static class Palette
 		// saturated terracotta that read as a different painting laid on top.
 		Def(ROOF_SLATE, 0x817ba0, 0x746e94, 0x635d82, pattern: PatternPlank);
 		Def(ROOF_TILE, 0xa9807c, 0x9c7570, 0x876460, pattern: PatternPlank);
+
+		// Rubble is greyer and a full step darker than STONE, and that gap is the
+		// entire job: a wall losing its plaster has to be visibly WORSE than the
+		// masonry beside it, or the decay chain is invisible and the ruin reads as
+		// one flat material with arbitrary holes in it.
+		Def(RUBBLE, 0xb3abbe, 0xa69eb3, 0x8f87a0, pattern: PatternRock);
+		// Moss over stone, not moss instead of it. The top face goes decisively
+		// green because that is where growth sits; the sides keep enough of the
+		// lilac substrate that the block still belongs to the wall it is part of.
+		Def(MOSS_STONE, 0xa9b58a, 0x9fae83, 0x8a9673, lightEdge: true,
+			pattern: PatternRock, fringe: 0x8ca35f);
 
 		Def(PLANK, 0xe7bbb0, 0xdfafa4, 0xcc9a90, pattern: PatternPlank);
 		Def(PLANK_PALE, 0xf0cfc6, 0xe8c2ba, 0xd5aca4, pattern: PatternPlank);

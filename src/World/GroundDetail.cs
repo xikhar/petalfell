@@ -147,6 +147,38 @@ public static class GroundDetail
 			Quad(new(x0, y0, z0), new(x1, y0, z0), new(x1, y1, z0), new(x0, y1, z0), Vector3.Forward, szc, szc, 0f, phase);
 		}
 
+		/// <summary>
+		/// A strand hanging DOWN a wall face — the vine primitive.
+		///
+		/// Everything about it is the tuft inverted. The moving end is the bottom,
+		/// so the corner order puts the hanging tip in the last pair, which is
+		/// where <see cref="Quad"/> applies sway. The plane holds the wall's
+		/// tangent and up, so the strand lies flat against the masonry rather than
+		/// standing off it.
+		///
+		/// The normal is mostly UP with a lean out of the wall. Straight out, and
+		/// a curtain of vine is lit as a vertical surface and goes to dark slivers
+		/// for the same reason blades do; straight up, and it stops reading as
+		/// attached to anything.
+		/// </summary>
+		public void Drape(float x, float y, float z, float fx, float fz,
+			float length, float width, Color attach, Color tip, float phase)
+		{
+			float tx = -fz, tz = fx;             // along the wall
+			float hw = width * 0.5f;
+			var n = new Vector3(fx * 0.45f, 0.89f, fz * 0.45f).Normalized();
+			float bottom = y - length;
+			// A vine hangs, so it drifts away from the wall as it falls.
+			float swing = 0.10f + length * 0.06f;
+
+			Quad(
+				new Vector3(x - tx * hw, y, z - tz * hw),
+				new Vector3(x + tx * hw, y, z + tz * hw),
+				new Vector3(x + tx * hw * 0.7f + fx * swing, bottom, z + tz * hw * 0.7f + fz * swing),
+				new Vector3(x - tx * hw * 0.7f + fx * swing, bottom, z - tz * hw * 0.7f + fz * swing),
+				n, attach, tip, 1f, phase);
+		}
+
 		/// <summary>A tiny leaf or petal lying flat on the ground, rotated in plan.</summary>
 		public void Fleck(float x, float y, float z, float length, float width, float rot, Color color)
 		{
@@ -199,6 +231,36 @@ public static class GroundDetail
 	private static readonly Color ReedBase = Srgb(0x9aa877);
 	private static readonly Color ReedTip = Srgb(0xc3cf9c);
 	private static readonly Color Lichen = Srgb(0xa8b782);
+
+	// Reclamation greens (plan.md §11a.4). Deliberately deeper and less pastel
+	// than the meadow's: growth taking a building back is the one green in this
+	// world allowed to look vigorous, and against pale masonry it has to carry
+	// enough weight to read as mass rather than as a stain.
+	// Deeper than the meadow, but only just.
+	//
+	// The first pass used a genuine forest green (0x6b855a) on the reasoning that
+	// growth taking a building back should look vigorous. Against pastel masonry
+	// it rendered as black tar streaked down the walls: everything else in this
+	// world sits between 0.6 and 0.9 linear and that green sits at 0.15. In a
+	// palette this high-key, "darker than the darkest thing present" is not
+	// contrast, it is a hole in the picture.
+	private static readonly Color VineAttach = Srgb(0x87a067);
+	private static readonly Color VineTip = Srgb(0xbccf96);
+	private static readonly Color[] ThicketBase =
+	{
+		Srgb(0x8aa26a), Srgb(0x93a973), Srgb(0x829a63),
+	};
+	private static readonly Color[] ThicketTip =
+	{
+		Srgb(0xbdcf9a), Srgb(0xc6d6a6), Srgb(0xb2c68d),
+	};
+	private static readonly Color MossCushionSide = Srgb(0x86a05f);
+	private static readonly Color MossCushionTop = Srgb(0x9db572);
+	private static readonly Color[] RubbleTones =
+	{
+		Srgb(0xb0a8bb), Srgb(0xa39aae), Srgb(0xbcb4c6),
+	};
+	private static readonly Color SaplingTrunk = Srgb(0x7d5a68);
 
 	/// <summary>
 	/// What floats on the water: fallen blossom and the occasional lily pad.
@@ -267,6 +329,122 @@ public static class GroundDetail
 		}
 
 		return f.Empty ? null : f.Build();
+	}
+
+	/// <summary>
+	/// Everything the land has put back on a ruin in this chunk.
+	///
+	/// The sprigs were decided once, during world construction, by
+	/// <see cref="Reclaim.Overgrow"/> — this only turns them into geometry. They
+	/// go into the SAME field as the meadow's tufts on purpose: one mesh, one
+	/// material, one wind shader, and not a line of new plumbing in the streamer.
+	/// </summary>
+	private static void Sprigs(Field f, int ci, int ck)
+	{
+		var list = Reclaim.In(ci, ck);
+		if (list == null) return;
+
+		foreach (var s in list)
+		{
+			// Tone is a per-instance draw, so neighbouring growth of the same kind
+			// never comes out the same colour. Without it a wall of vine reads as
+			// one flat green shape.
+			float t = s.Tone;
+
+			switch (s.Kind)
+			{
+				case Growth.Vine:
+				{
+					// Two or three strands off one attachment, at slightly
+					// different lengths. A single quad reads as a hanging rag.
+					// Narrow strands at unequal lengths. Wide ones read as a hanging
+					// rag whatever colour they are.
+					int strands = t > 0.45f ? 3 : 2;
+					for (int k = 0; k < strands; k++)
+					{
+						float off = (k - (strands - 1) * 0.5f) * 0.26f;
+						float len = s.Size * (0.58f + ((k * 37 + (int)(t * 91)) % 10) * 0.048f);
+						f.Drape(
+							s.X + -s.Fz * off, s.Y, s.Z + s.Fx * off,
+							s.Fx, s.Fz, len, 0.12f + t * 0.09f,
+							VineAttach, VineTip, s.Phase + k * 0.7f);
+					}
+					break;
+				}
+
+				case Growth.Fern:
+				{
+					// Fronds arch OUT of the wall they shelter under, which is the
+					// only thing distinguishing a fern from a tuft at this size.
+					var b = ThicketBase[(int)(t * 2.99f)];
+					var tip = ThicketTip[(int)(t * 2.99f)];
+					int n = 3 + (int)(t * 2f);
+					for (int k = 0; k < n; k++)
+					{
+						float spread = (k / MathF.Max(1f, n - 1f) - 0.5f) * 0.5f;
+						f.Tuft(
+							s.X + -s.Fz * spread, s.Y - 0.04f, s.Z + s.Fx * spread,
+							0.13f + t * 0.06f, s.Size * (0.7f + k % 3 * 0.15f),
+							b, tip, s.Phase + k * 0.9f,
+							s.Fx * (0.16f + t * 0.12f), s.Fz * (0.16f + t * 0.12f));
+					}
+					break;
+				}
+
+				case Growth.Thicket:
+				{
+					var b = ThicketBase[(int)(t * 2.99f)];
+					var tip = ThicketTip[(int)(t * 2.99f)];
+					// A woody heart with blades over it. The boxes are what stop a
+					// thicket reading as tall grass — scrub has mass.
+					f.Box(s.X, s.Y - 0.04f, s.Z, s.Size * 0.55f, s.Size * 0.34f, s.Size * 0.5f, b);
+					int n = 4 + (int)(t * 3f);
+					for (int k = 0; k < n; k++)
+					{
+						float a = (k / (float)n) * 6.283f + t * 3f;
+						float r = s.Size * (0.14f + (k % 3) * 0.10f);
+						f.Tuft(
+							s.X + MathF.Cos(a) * r, s.Y - 0.05f, s.Z + MathF.Sin(a) * r,
+							0.15f + t * 0.09f, s.Size * (0.55f + (k % 4) * 0.14f),
+							b, tip, s.Phase + k * 0.8f,
+							MathF.Cos(a) * 0.14f, MathF.Sin(a) * 0.14f);
+					}
+					break;
+				}
+
+				case Growth.Sapling:
+				{
+					f.Box(s.X, s.Y - 0.05f, s.Z, 0.13f, s.Size, 0.13f, SaplingTrunk, 0.35f, s.Phase);
+					var tip = ThicketTip[(int)(t * 2.99f)];
+					var b = ThicketBase[(int)(t * 2.99f)];
+					for (int k = 0; k < 4; k++)
+					{
+						float a = k * 1.571f + t;
+						f.Tuft(
+							s.X + MathF.Cos(a) * 0.12f, s.Y + s.Size * 0.55f, s.Z + MathF.Sin(a) * 0.12f,
+							0.22f, s.Size * 0.55f, b, tip, s.Phase + k,
+							MathF.Cos(a) * 0.20f, MathF.Sin(a) * 0.20f);
+					}
+					break;
+				}
+
+				case Growth.Moss:
+				{
+					f.Box(s.X, s.Y - 0.06f, s.Z, s.Size, 0.10f + t * 0.09f, s.Size * 0.9f, MossCushionTop);
+					if (t > 0.6f)
+						f.Tuft(s.X, s.Y + 0.02f, s.Z, 0.10f, 0.10f + t * 0.10f,
+							MossCushionSide, MossCushionTop, s.Phase, 0f, 0f, 0.5f);
+					break;
+				}
+
+				case Growth.Rubble:
+				{
+					f.Box(s.X, s.Y - 0.05f, s.Z, s.Size, s.Size * (0.34f + t * 0.3f), s.Size * 0.86f,
+						RubbleTones[(int)(t * 2.99f)]);
+					break;
+				}
+			}
+		}
 	}
 
 	public static ArrayMesh Build(Terrain terrain, int ci, int ck)
@@ -449,6 +627,11 @@ public static class GroundDetail
 					Lichen);
 			}
 		}
+
+		// Reclamation last, and outside the column walk: a vine hangs at an
+		// arbitrary height on a wall face, which the per-column pass above has no
+		// way to reach — it only ever looks at the top of each column.
+		Sprigs(f, ci, ck);
 
 		return f.Empty ? null : f.Build();
 	}

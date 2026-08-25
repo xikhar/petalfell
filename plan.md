@@ -484,6 +484,124 @@ event. If two inhabitants can be seen at once, there are too many.
 
 ---
 
+## 11a. How built things meet the ground
+
+Everything in §11 assumes the player believes the place was BUILT and then LEFT.
+Neither half of that is carried by the building's own geometry. Both are carried
+by the joint between the building and the land, and this section is the contract
+for that joint.
+
+Two failures produced the first build, and they are worth naming because they
+are the default outcome of any generator that does not explicitly forbid them.
+
+**The generator flattened the ground so the buildings would not have to deal with
+it.** Every site levelled a disc and set boxes on it. That is the exact inverse
+of what a real site does — a builder reads the slope and answers it, and the
+answer is the most characterful thing about the building. A flattened site
+throws away the only free source of variety the world has.
+
+**Nothing was ever allowed to intersect the terrain.** Structures were placed ON
+the surface, never in it, so no wall was ever half-buried, no floor was ever cut
+into a bank, and nothing had ever settled. A wall stub emerging from a hillside
+reads as centuries old. The identical stub resting on grass reads as placed this
+morning. The generator could only produce the second one.
+
+### 11a.1 The ground contract
+
+A structure does not get flat ground. It gets a **footing**: a decision about
+how this particular building answers this particular slope.
+
+- **Cut and fill, never level.** The floor sits at the height that minimises
+  earth moved, weighted so that FILLING is dearer than CUTTING — a building
+  should sit into its hill rather than on a podium. The uphill side is cut into;
+  the downhill side is carried on masonry.
+- **The plinth is architecture.** The retaining wall that makes up the fall on
+  the downhill side is not a repair to a placement error, it is the part of the
+  building the player sees first and remembers. It varies with the slope, so no
+  two instances are the same shape, at no authoring cost.
+- **Steep ground splits the plan.** Past a threshold, a structure does not get a
+  taller plinth — it breaks into two terraces at different levels with a step
+  between them. At that point the terrain has determined the floor plan, which
+  is the whole ambition of this section stated as a mechanism.
+- **Nothing is ever sealed.** Wherever the floor stands above the land outside
+  it, the footing owes the player a way up: a stair, a ramp, or a collapse that
+  functions as one. A ruin you cannot walk into is worse than no ruin.
+
+### 11a.2 Settling
+
+Time banks earth against a wall. The footing raises a **talus** — a taper of
+soil against the outside of the walls, deepest at the masonry and gone within
+three or four blocks, scaled by how long the site has been given up. It buries
+the lowest courses from outside without ever touching the interior floor, so the
+building gains age while staying walkable.
+
+This is the cheapest age signal in the project and it should be used everywhere,
+including on things that are not buildings.
+
+### 11a.3 Reclamation is a field, not a material swap
+
+Moss is not a block type that a ruin sometimes uses instead of stone. Moss is
+what grows where it is **damp, sheltered, low and undisturbed**, and it reads as
+growth only because it appears in those places and not others. The generator
+evaluates, per block face:
+
+- **Damp** — standing water nearby, the province's moisture, and height above
+  the building's base. The bottom of a wall is always damper than the top.
+- **Shelter** — how enclosed the block is by its neighbours, and whether
+  anything covers it. Crevices, inside corners and the underside of surviving
+  roofs hold growth; an exposed parapet does not.
+- **Aspect** — a face turned away from the sun keeps its moisture. This alone
+  makes one side of a ruin visibly greener than the other, which is the single
+  most convincing detail available.
+- **Age** — the site's own abandonment, which everything else is multiplied by.
+
+### 11a.4 What grows, and in what order
+
+Reclamation is a **succession**, and reading it should tell the player roughly
+how long the place has been empty.
+
+1. **Moss and lichen** — first, on damp shaded stone, in the crevices, at the
+   base. Never on the sunlit south face of a parapet.
+2. **Vines** — on standing wall faces, hanging DOWN from the broken top course
+   and from window heads. Vines need a wall to have survived, so a heavily
+   vined ruin is one whose walls stood long enough to be climbed.
+3. **Ferns and low scrub** — in the shelter of walls and in the corners of
+   floors, where litter collects.
+4. **Thickets** — out in the open floor once the roof is gone and the light gets
+   in. A roofed room stays clear; an unroofed one fills.
+5. **Saplings** — last, and only in the oldest sites, standing in what used to
+   be a room. A tree growing out of a building is the end state of the sequence
+   and should be rare enough to be an event.
+
+### 11a.5 The contact line
+
+The single strongest "this was stamped in" signal is the clean horizontal seam
+where a structure meets the ground. Three things erase it, and all three are
+required:
+
+- **Rubble** at the foot of every broken wall, in that wall's own material,
+  because a wall that lost its top courses put them on the floor.
+- **Growth along the seam** — the ground detail layer thickens against masonry
+  rather than stopping at it.
+- **Talus**, per §11a.2.
+
+### 11a.6 Resolution, and what this section does not fix
+
+Everything above is achievable at one-metre voxels and should be built there
+first, because it is cheap and because it is what actually determines whether a
+ruin reads. It does not fix silhouette: a wall is still an axis-aligned stack of
+metre cubes, and no amount of moss changes that.
+
+The fix for silhouette is §14.3's modular kits — structures leaving the voxel
+grid for meshes in their own transform, at sub-voxel resolution, with arbitrary
+yaw and lean. That work is justified only AFTER the footing and reclamation
+passes exist, because if the ground contract is still wrong then a beautifully
+authored ruin sits on a pancake exactly like a blocky one does. `InkBuilder`
+already proves the render side works — characters are non-voxel and take the
+same ink as the terrain they stand on — so the route is open when it is wanted.
+
+---
+
 ## 12. Roads and Travel Network
 
 Roads connect geography, remnants, and gameplay. They are both the player's main orientation aid and the single richest piece of environmental storytelling in the world — a route is the shape of a journey somebody used to make.
