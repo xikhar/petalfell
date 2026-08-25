@@ -23,6 +23,10 @@
 /captures/
 /renders/
 
+# reference images
+/world-new
+
+
 # Editor and operating-system files
 .DS_Store
 Thumbs.db
@@ -34,3 +38,4 @@ Thumbs.db
 *.tmp
 *.log
 mono_crash.*.json
+
