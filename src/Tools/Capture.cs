@@ -71,6 +71,21 @@ public static class Capture
 		// The same holdout around the clock. A day cycle can only be judged as a
 		// SEQUENCE — any single frame of it looks plausible, and what goes wrong
 		// is the transitions between them.
+		// The summit sanctum (subject 13 routes by shot name). Framed the way
+		// the author judges the references: from far and high first, so the
+		// whole hill and its shelves are in the picture, then closer passes
+		// down the axis. The stair front faces -z, so those shots orbit to
+		// yaw ~180-205.
+		// 580 put the whole site behind the distance fog and the overview came
+		// back as line art; 460 is the farthest the colour survives.
+		new("sanctum", 460f, 205f, 48f, 13),
+		new("sanctum_high", 560f, 45f, 65f, 13),
+		new("sanctum_axis", 280f, 185f, 30f, 13),
+		new("sanctum_apse", 130f, 180f, 24f, 13),
+		new("sanctum_stair", 260f, 190f, 34f, 13),
+		new("sanctum_emblem", 70f, 170f, 35f, 13),
+		new("sanctum_tower", 140f, 235f, 28f, 13),
+		new("sanctum_gate", 130f, 185f, 26f, 13),
 		new("t_dawn", 74f, 45f, 34f, 8, 0.27f),
 		new("t_morning", 74f, 45f, 34f, 8, 0.36f),
 		new("t_noon", 74f, 45f, 34f, 8, 0.50f),

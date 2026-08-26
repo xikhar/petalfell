@@ -233,9 +233,20 @@ public partial class WorldMap : CanvasLayer
 			foreach (var site in t.Sites)
 				Dot(site.X, site.Z, site.Kind == SettlementKind.Town ? 5
 					: site.Kind == SettlementKind.Village ? 4 : 3, StateColour(site.State));
+
+			// The review fixture, biggest of all and in the fixture green
+			// nothing else on the map uses.
+			if (Sanctum.Built) Dot(Sanctum.SiteX, Sanctum.SiteZ, 6, FixtureColour);
 		}
 		return img;
 	}
+
+	/// <summary>
+	/// The one colour reserved for development fixtures — a minty green that no
+	/// biome, road, state or landmark marker comes near, because the entire job
+	/// of these markers is to be found in seconds from anywhere.
+	/// </summary>
+	private static readonly Color FixtureColour = new(0.45f, 0.96f, 0.70f);
 
 	/// <summary>
 	/// Colour by STATE, not by size. On a map of an emptied continent the useful
@@ -361,11 +372,37 @@ public partial class WorldMap : CanvasLayer
 						: new Color(0.86f, 0.82f, 0.86f));
 			}
 
+			// The review fixture: a labelled diamond, so it cannot be mistaken
+			// for content or missed at any zoom. Shift-click it to be standing
+			// in it.
+			if (Sanctum.Built) Fixture(Sanctum.SiteX, Sanctum.SiteZ, "sanctum");
+
 			// The player, last and on top of everything.
 			var me = ToMap(Player.X, Player.Z);
 			DrawCircle(me, 7.5f, new Color(0.10f, 0.09f, 0.13f, 0.9f));
 			DrawCircle(me, 5.2f, new Color(0.42f, 0.72f, 0.78f));
 			DrawCircle(me, 2.2f, Colors.White);
+		}
+
+		private void Fixture(int x, int z, string label)
+		{
+			var p = ToMap(x, z);
+			Vector2[] Diamond(float r) => new[]
+			{
+				p + new Vector2(0, -r), p + new Vector2(r, 0),
+				p + new Vector2(0, r), p + new Vector2(-r, 0),
+			};
+			DrawColoredPolygon(Diamond(9f), new Color(0.16f, 0.13f, 0.18f));
+			DrawColoredPolygon(Diamond(6.5f), FixtureColour);
+
+			var font = ThemeDB.FallbackFont;
+			var at = p + new Vector2(12f, 5f);
+			// A dark copy one pixel under the label keeps it readable over
+			// snowfield and water alike.
+			DrawString(font, at + new Vector2(1, 1), label,
+				HorizontalAlignment.Left, -1, 14, new Color(0.10f, 0.09f, 0.13f));
+			DrawString(font, at, label,
+				HorizontalAlignment.Left, -1, 14, FixtureColour);
 		}
 	}
 }

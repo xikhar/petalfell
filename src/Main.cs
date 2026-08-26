@@ -78,6 +78,18 @@ public partial class Main : Node3D
 		Footing.ResetCounters();
 		Settlements.Build(Terrain, Terrain.Sites, Seed);
 		Landmarks.Build(Terrain, Terrain.Marks);
+		// The ONE reference-exact site of the current direction: the summit
+		// sanctum, terrain and monument built as a single thing. Built on every
+		// boot (a fixture that needs a flag cannot be found), seeded from the
+		// world like everything else, and marked loudly on the world map. The
+		// kit-yard and flat-precinct fixtures it replaces were judged "very
+		// basic" against the references and retired — the parts live on as the
+		// library this site is built from. Before vegetation, so trees crowd
+		// the shelves but stay out of the masonry.
+		Sanctum.Build(Terrain, Seed);
+		GD.Print(Sanctum.Built
+			? $"[sanctum] at {Sanctum.SiteX},{Sanctum.SiteZ}  blocks {RuinKit.LastBlockCount}"
+			: "[sanctum] no summit found — not built");
 		var tTown = Time.GetTicksMsec();
 		Vegetation.Populate(Terrain, Seed);
 		var t3 = Time.GetTicksMsec();
@@ -405,6 +417,7 @@ public partial class Main : Node3D
 				10 => FindLandmark(LandmarkForm.Watchtower),
 				11 => FindLandmark(LandmarkForm.StandingStones),
 				12 => FindLandmark(LandmarkForm.Farmstead),
+				13 => FindKitAnchor(shot.Name, spawn),
 				6 => Plan.Lakes.Count > 0
 					? new Vector3(Plan.Lakes[0].Cx, Terrain.Sea, Plan.Lakes[0].Cz)
 					: FindRiverFeature(),
@@ -513,6 +526,17 @@ public partial class Main : Node3D
 		Rig.Follow(landing, Vector3.Zero, 1.0);
 		if (_worldMap.IsOpen) _worldMap.Toggle();
 		GD.Print($"[teleport] {landing}");
+	}
+
+	/// <summary>
+	/// A review-fixture viewpoint, named by the shot that wants it. Falls back
+	/// to the spawn when no site was found and the fixture was not built.
+	/// </summary>
+	private Vector3 FindKitAnchor(string shotName, Vector3 fallback)
+	{
+		string key = shotName == "sanctum" ? "site"
+			: shotName.StartsWith("sanctum_") ? shotName[8..] : shotName;
+		return Sanctum.Anchor(Terrain, key) ?? fallback;
 	}
 
 	/// <summary>Somewhere to stand and look at one of the generated landmarks.</summary>

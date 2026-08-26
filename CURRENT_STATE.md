@@ -297,19 +297,36 @@ road network, and landmarks as a content layer — are **built**, and are descri
 in §2. What remains is the layer above them, and it is the current effort. See
 [AGENTS.md](AGENTS.md) and [docs/ROADMAP.md](docs/ROADMAP.md).
 
-- **Scale.** Ruins are built at single-building size. The reference images in
-  `world-new/` establish that the unit should be a precinct or a district, an
-  order of magnitude larger. Nothing that creates a distant silhouette —
-  columns, arches, pylons, grand stairs — exists at all.
-  ([docs/RUINS.md](docs/RUINS.md) §2)
-- **The part kit.** The twelve-part architectural vocabulary is unbuilt.
-  ([docs/RUINS.md](docs/RUINS.md) §3)
-- **Composition.** Sites are fitted and scattered, not composed. There is no
-  axis, level hierarchy, boundary or centre. ([docs/RUINS.md](docs/RUINS.md) §4)
-- **Precinct-scale terracing.** Footings handle one building. They need to
-  generalise to several polygons at several levels with revetment and stairs, so
-  that terrain and architecture become the same system.
-  ([docs/RUINS.md](docs/RUINS.md) §5)
+- **The Massif process exists and one reference-exact site is built with it,
+  as a review fixture, not as world content.** `src/World/Massif.cs` is the
+  general additive slab-stack earthworks system ([docs/RUINS.md](docs/RUINS.md)
+  §5a): flat-topped noise-warped slabs stacked on a natural summit, final
+  height max(slab plan, existing ground) so a site can never dig or moat,
+  masonry decks with frayed edges and parapet blocks, stairs notched through
+  the slab fronts, fill in the monument's own coursed pale masonry, the land
+  beyond the slabs untouched. The summit sanctum (`src/World/Sanctum.cs`) is
+  its working case: three tiers (base capping the peak, mid +8, crown +16)
+  with satellite slabs shed around the skirt, and the monument on the decks —
+  17-wide arched apse with meander glyphs and crystal light, the glowing
+  emblem inlaid flush at its foot, a two-flight axis stair down the tier
+  fronts, a west deck with five unequal columns and a torn round tower, an
+  east deck with two glyph pylons, side stairs off every tier, dressed slabs,
+  a fallen column and rubble. Bare stone, no moss. Placed on the most
+  prominent summit that leaves vertical headroom for the stack under the
+  world ceiling of 76.
+  Built from the parametric part library in `src/World/RuinKit.cs`, on every
+  boot, marked on the world map with a labelled minty-green diamond
+  (shift-click teleports there), reviewed through the `sanctum*` capture shots.
+  The earlier kit YARD and flat hand-composed PRECINCT were retired in the
+  2026-08 direction shift ([docs/ROADMAP.md](docs/ROADMAP.md) §3): the author
+  judged them "very basic" against the references — sites must be multi-layered
+  terrain with the landmarks integrated, one built to exact detail at a time.
+  What does NOT yet exist: sites placed as canonical world content, the
+  composition grammar to generate more of them, and terracing from arbitrary
+  authored polygons.
+- **Composition of generated sites.** Settlement sites are still fitted and
+  scattered, not composed; only the hand-built sanctum has an axis, level
+  hierarchy, boundary and centre. ([docs/RUINS.md](docs/RUINS.md) §4)
 - **The canonical authored map.** The map is still seeded with zones rather than
   authored with named places, and there is no way to say "this site, here,
   oriented this way". ([docs/MAP_PIPELINE.md](docs/MAP_PIPELINE.md))

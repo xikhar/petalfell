@@ -172,6 +172,43 @@ rests on, and it cannot be deferred even for the smallest first slice — a
 `reference-10` courtyard already needs a raised pad whose revetment is the same
 stone as its walls.
 
+### 5a. The Massif process — how every site's ground is built
+
+The standard technique, arrived at after three failed shapes for the first site
+(a small stamp, concentric terrace rings, an excavated mesa — each corrected by
+the author against the reference). It is implemented as `src/World/Massif.cs`
+and it is how ALL reference-scale sites get their ground from now on.
+
+The observation it encodes: in the references the monumental ground is **slabs
+of stone stacked on a natural high point** — flat tops, sheer warped faces
+gashed against each other, rising tier by tier, with the stairs notched through
+the slab fronts and the surrounding land completely untouched. There are no
+gradual slopes and there is no excavation.
+
+The four rules:
+
+1. **Additive, always.** Every column's final height is max(slab plan, existing
+   ground). A site cannot dig, moat, or flatten a skirt around itself; where a
+   slab meets rising ground it disappears into the hillside, which is how real
+   masonry meets a real slope. This is also what makes placement safe — the
+   land beyond the slabs is byte-for-byte what it always was.
+2. **Slabs, not slopes.** A slab is a noise-warped rounded rectangle with one
+   flat top, so height only ever changes at a slab boundary and every change of
+   level is a sheer face. The "gashed together" clefts fall out of the geometry
+   where two warped edges almost meet.
+3. **One material.** Slab fill is the monument's own coursed pale masonry, so
+   terrain and architecture are one thing (§5's central fact).
+4. **Stairs are notches.** Stamped through the slab fronts after the slabs,
+   replacing their heights along the strip — carved from the mass, never leaned
+   against it.
+
+A site is then: pick a summit with vertical headroom, cap it with a base tier a
+few courses proud of the peak, stack mid and crown tiers, shed small satellite
+slabs around the skirt, lay masonry decks where the monument stands, notch the
+stairs, and only then place parts from the kit. A causeway is a long thin slab;
+a cliff ledge is a slab against a mountainside; a district is many decks on few
+slabs — the same four calls should shape any site in `world-new/`.
+
 ---
 
 ## 6. Decay and reclamation
@@ -308,9 +345,19 @@ cultures is an open decision recorded in [WORLD.md](WORLD.md) §7.
 
 **Built and working:** footings at single-building scale, the reclamation field,
 the material decay chain, sub-voxel growth rendered through the ground-detail
-layer. See [CURRENT_STATE.md](../CURRENT_STATE.md).
+layer. The twelve-part kit (`src/World/RuinKit.cs`) at the §2 scale table, now
+parametric (column weights, heights and break states; stairs of any width and
+flight plan), including the meander glyph of §9 carved one block deep. The
+Massif process of §5a (`src/World/Massif.cs`) — the additive slab-stack
+earthworks every site is built with. One reference-exact site: the summit
+sanctum (`src/World/Sanctum.cs`), a slab plan stacked on a natural summit with
+the monument on its decks — the current standard for what "built" means; see
+[ROADMAP.md](ROADMAP.md) §3 for its full description and the direction shift
+that produced it. It is a review fixture, built on every boot and marked on the
+world map. Bare stone, no moss — the author dropped the mossy pass; reclamation
+returns later as its own layer.
 
-**Not built:** the entire part kit, the composition grammar, precinct- and
-district-scale terracing, domains, motifs.
+**Not built:** the composition grammar, terracing from arbitrary authored
+polygons, domains, sites placed as canonical world content.
 
-See [ROADMAP.md](ROADMAP.md) for order.
+See [ROADMAP.md](ROADMAP.md) for order and slice status.

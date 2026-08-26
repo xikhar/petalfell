@@ -94,6 +94,8 @@ public static class Vegetation
 			int i = z * S + x;
 			if (terrain.Land[i] == 0) continue;
 			if (terrain.Plan.Definition.ReservesNaturalDetail(x / (float)S, z / (float)S, 5f / S)) continue;
+			// The kit yard (a review fixture) keeps its sightlines clear.
+			if (RuinKit.Contains(x, z)) continue;
 			// How long ago this ground was given up. Everything below reads from
 			// it: on a road somebody still walks, growth is kept back; on one
 			// nobody has walked in generations, the wood closes over it.
