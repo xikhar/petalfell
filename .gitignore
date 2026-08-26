@@ -1,0 +1,42 @@
+# Godot-generated caches and imports
+/.godot/
+/.mono/
+*.import
+
+# C# / .NET build products
+/.vs/
+/.idea/
+**/[Bb]in/
+**/[Oo]bj/
+/packages/
+
+# Platform builds and exports
+/android/
+/build/
+/builds/
+/export/
+/exports/
+
+# Generated screenshots and render captures
+/shots/
+/screenshots/
+/captures/
+/renders/
+
+# Reference images are TRACKED on purpose. docs/RUINS.md and AGENTS.md both
+# tell future sessions to look at world-new/ rather than trust a summary of it,
+# so the images have to survive a fresh clone or that instruction is a lie.
+
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Temporary files, logs, and runtime crashes
+*.tmp
+*.log
+mono_crash.*.json
+
