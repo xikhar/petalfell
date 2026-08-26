@@ -1,15 +1,19 @@
 # Petalfell — Current Implementation State
 
-> **Direction change.** Petalfell is now set on a continent people have left —
-> see `plan.md` §2.1. Settlement generation described below still produces intact,
-> populated-looking places; converting those to holdouts, remnants and ruins is
-> pending work, not a description of the current build.
+> **Direction.** Petalfell is set on a continent people have left — see
+> `plan.md` §2.1. Settlements now generate as holdouts, remnants, ruins and
+> monuments rather than as intact populated places; that conversion is done.
+>
+> **The current effort is the layer above this file.** Ruins at reference scale
+> and a canonical authored map — see [AGENTS.md](AGENTS.md) and
+> [docs/ROADMAP.md](docs/ROADMAP.md). Everything below is the substrate that work
+> builds on.
 
-
-Last updated: 23 August 2026
+Last updated: 26 August 2026
 
 This document records what is present in the Godot project today. It is a factual
-snapshot, not a design target or implementation guide.
+snapshot, not a design target or implementation guide. Keep it that way: nothing
+aspirational belongs here, and anything listed must have been seen working.
 
 - [`plan.md`](plan.md) owns the product vision, game scope, and long-term goals.
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) owns the engineering decisions and intended
@@ -23,11 +27,10 @@ snapshot, not a design target or implementation guide.
 - Godot 4.7.1 Mono project using C# and the Forward+ renderer.
 - Jolt is selected as the 3D physics engine.
 - The game is assembled in code from `src/Main.cs`; `main.tscn` is the entry scene.
-- The current default map seed is `20260820` and the default world footprint is
-  768×768 columns with a voxel height of 76.
-- The project currently builds successfully with `dotnet build`. The remaining
-  analyzer output is four existing `CA2014` warnings in `ChunkMesher` concerning
-  `stackalloc` inside loops.
+- The default world footprint is **3456×3456 columns** with a voxel height of 76 —
+  roughly twenty times the area it began at. That growth was only possible because
+  voxel storage became derived rather than dense; see §2.
+- The project builds cleanly with `dotnet build`, with no warnings.
 
 ## 2. Map and world generation
 
@@ -57,6 +60,27 @@ snapshot, not a design target or implementation guide.
   river crossings.
 - Natural decoration respects the reserved space around authored roads,
   remnants, landmarks, spawns, and generated structures.
+- **Roads** as a network rather than a decoration: major, local and trail classes
+  built on a coarse lattice with a minimum spanning tree plus deliberate loops,
+  A* routed over a terrain cost field with wander noise and corner-cut smoothing
+  so routes are not dead straight, bridged where they cross a channel, and
+  reclaimed in proportion to how long the places they served have been empty. A
+  road disappearing into a wood is a statement that its far end no longer matters.
+- **Settlements** generate as remnants at four states — holdout, remnant, ruin,
+  monument — assigned by rank so the distribution is controlled rather than
+  emergent. A site is planned before roads (so routes can reach it) and built
+  after: square, gates, streets, ring street, market, lots, palisade, well,
+  signposts. Walls and roofs fail in coherent sections, never block by block.
+  Holdouts keep only the two to four buildings nearest the square in repair.
+- **Landmarks** are promoted to the primary content layer, since with no
+  villages they carry the whole orientation load. Five forms — watchtower,
+  standing stones, shrine, farmstead, cairn — each sited by what suits it
+  (high ground, old open ground, water or a view, workable land, beside a
+  route). Significant ones are planned before roads so trails can be run to
+  them; cairns after, because their purpose is to sit beside one.
+- **Fauna**: deer, rabbits, goats, birds, butterflies and fish, with hopping
+  between terraces, a flee radius with a cooldown so animals are not permanently
+  startled, and headings that match the project's facing convention.
 - **Footings** (`src/World/Footing.cs`, `plan.md` §11a.1). Structures are no longer
   set on levelled pads. Each one reads the heightfield under its footprint and
   picks the floor that moves the least earth, with fill priced above cut so a
@@ -92,6 +116,12 @@ snapshot, not a design target or implementation guide.
 - Chunks unload beyond the active radius plus a three-chunk buffer.
 - Chunk meshing currently runs on the main thread. This is incremental streaming,
   not background worker-thread generation yet.
+- The mesher resolves a chunk's whole neighbourhood into a flat local window once
+  rather than querying the grid per block. Deriving blocks instead of storing them
+  had put roughly two hundred thousand derivations in the inner loop per chunk and
+  pushed a chunk build to 15.3 ms against a 5 ms budget that is only checked
+  *between* chunks; the window took it to 9.0 ms. Still above budget, so streaming
+  a chunk while walking costs a frame — one hitch rather than three.
 
 ## 3. Rendering and art direction
 
@@ -102,11 +132,26 @@ snapshot, not a design target or implementation guide.
 - Flat voxel faces with directional face tinting and baked vertex ambient occlusion.
 - Perspective camera with a 21° field of view, 33.5° pitch, 45° orbit increments,
   smooth follow, movement lead, and a default distance of 75.
-- Sky shader, depth and height fog, ACES tonemapping, SSAO, selective glow, sun and
+- Sky shader, depth and height fog, ACES tonemapping, SSAO, selective glow, key and
   fill lights, and four-split directional shadows.
 - Fullscreen display-space grade with lift, gamma, gain, split tint, saturation,
   contrast, highlight control, subtle grain, and no chromatic aberration.
-- A world-sized stylized water plane with shoreline/depth colouring.
+- **A full day/night cycle.** One node owns the sun, moon, ambient, fog, glow
+  threshold, sky and the shader globals, driven by an interpolated keyframe table
+  of sky states with wraparound. A single key light swings through a sun arc built
+  around the palette's authored sun direction, becoming the moon on the opposite
+  side at night. The sky shader carries cell-hashed stars and a moon disc; lit
+  windows and other emissive materials brighten after dark; the ink edge colour
+  steps down at dusk and back up at dawn in discrete stages rather than fading
+  continuously. Applied on a quantised clock so the sky radiance is not re-baked
+  every frame.
+- Ambient colour is deliberately cool and only partly sky-derived, with the sky's
+  contribution varying across the day — at twilight the sky is a hot orange and
+  letting it dominate ambient turned the whole world neon.
+- **Water** is screen-space: depth-texture and screen-texture sampling with
+  per-channel absorption, Schlick fresnel, a planar reflection viewport, and a
+  wave-distortion filter over both the refracted bed and the reflection. Swimming
+  has its own animation with transitions in and out.
 
 ### Outline system
 
@@ -140,6 +185,9 @@ snapshot, not a design target or implementation guide.
   rather than the former large rectangular confetti.
 - The traveller emits small voxel puffs while walking and separate bursts on jump and
   landing. Walking puffs are intentionally short-lived, light, and close to the feet.
+- Campfires: placeable, lit, with their own fire shader, light contribution and
+  particle behaviour, sited away from water and unsuitable ground.
+- Fireflies at night, on their own shader.
 
 ## 4. Player, navigation, and camera
 
@@ -205,51 +253,86 @@ snapshot, not a design target or implementation guide.
 - A compact translucent four-socket cross sits in the lower-left. Its left and right
   circles show small vector icons for the currently held items; the top and bottom
   circles are quiet placeholders for future consumable slots.
+- **Fishing**, as a system with its own interaction flow and camera handling,
+  alongside the general interaction layer.
+- **Skills.** A skill definition and catalogue with a system that presents itself
+  through the same interaction layer as everything else. The first entry is
+  building a campfire. `T` opens a compact transient chooser over the learned
+  actions; skill state and execution stay in the system rather than the view.
 
 ## 7. Tools and interface currently present
 
 - A standalone developer overlay toggled with the tilde/backtick key.
-- Developer sliders currently control outline width and the minimum and maximum camera
-  zoom distances.
+- Developer sliders control outline width, the minimum and maximum camera zoom
+  distances, and the time of day (which pauses the cycle and scrubs it manually).
+- **A world map view on `M`.** Renders the whole continent from a byte buffer with
+  downsampling, drawing terrain, water, roads and site markers coloured by remnant
+  state. `Shift`-click teleports the player to a safe spot at that location,
+  priming chunks before the move.
 - A deterministic command-line capture rig writes named review screenshots and a
   top-down heightfield map.
 - Boot diagnostics report generation time, height distribution, terrace types,
-  surfaces, biomes, flora, noise range, and loaded chunk count.
-- There is currently no game-facing HUD, pause menu, settings menu, inventory UI, or
-  map UI in the active project.
+  surfaces, biomes, flora, noise range, loaded chunk count, remnant state
+  breakdown, footing statistics and reclamation counts. **These have repeatedly
+  exposed features that never ran** — read them.
+- **An inventory view on `Tab`** — deliberately small and translucent, owning no
+  item state: every equip and loadout change is delegated to the global
+  inventory, so save data never depends on the arrangement of controls. Item
+  icons are rendered rather than authored as art.
+- **A skill selector on `T`** and a fishing-catch acknowledgement that rises near
+  the lower centre and vanishes, so repeated fishing never becomes UI management.
+- Both modals take input ahead of ordinary game input and report whether they
+  consumed the event.
+- Key bindings: `WASD`/arrows move, `Space` jumps, `Q`/`E` rotate the camera in
+  45° steps, `1`–`4` set the right hand and `Shift`+`1`–`4` the left, `Z`/`X`
+  cycle hands, `F`/`G` throw, `R` interacts, `U` sends the dog, `M` opens the
+  map, `Tab` the inventory, `T` the skill selector, and tilde the developer
+  overlay.
+- There is still no pause menu or settings menu.
 
 ## 8. Defined but not yet realized as gameplay content
 
-The Chapter 1 map package already reserves and identifies several future features, but
-the markers are not the same as completed locations.
+The three largest items that used to sit here — the settlement decay layer, the
+road network, and landmarks as a content layer — are **built**, and are described
+in §2. What remains is the layer above them, and it is the current effort. See
+[AGENTS.md](AGENTS.md) and [docs/ROADMAP.md](docs/ROADMAP.md).
 
-- Settlement generation exists and produces terraced platforms, plazas, streets,
-  markets, lots, cottages and palisades — but it builds them INTACT. The pivot to a
-  post-population world (`plan.md` §2.1) needs the decay layer: reclamation, shuttering,
-  collapse, and the holdout/remnant/ruin states described in `plan.md` §11.
-- Road and trail markers exist; the complete authored road network is not rendered.
-- Landmark markers exist and nothing consumes them. Under the new direction landmarks
-  are the primary content layer (`plan.md` §13), so this is now the largest single gap
-  between the plan and the build.
+- **Scale.** Ruins are built at single-building size. The reference images in
+  `world-new/` establish that the unit should be a precinct or a district, an
+  order of magnitude larger. Nothing that creates a distant silhouette —
+  columns, arches, pylons, grand stairs — exists at all.
+  ([docs/RUINS.md](docs/RUINS.md) §2)
+- **The part kit.** The twelve-part architectural vocabulary is unbuilt.
+  ([docs/RUINS.md](docs/RUINS.md) §3)
+- **Composition.** Sites are fitted and scattered, not composed. There is no
+  axis, level hierarchy, boundary or centre. ([docs/RUINS.md](docs/RUINS.md) §4)
+- **Precinct-scale terracing.** Footings handle one building. They need to
+  generalise to several polygons at several levels with revetment and stairs, so
+  that terrain and architecture become the same system.
+  ([docs/RUINS.md](docs/RUINS.md) §5)
+- **The canonical authored map.** The map is still seeded with zones rather than
+  authored with named places, and there is no way to say "this site, here,
+  oriented this way". ([docs/MAP_PIPELINE.md](docs/MAP_PIPELINE.md))
+- **The story layer.** Regions with roles, domains, and site allocation by
+  meaning rather than by fit. ([docs/WORLD.md](docs/WORLD.md))
 - Biome identities affect terrain, flora, ground detail, and airborne detail, but the
-  complete biome-specific fauna, encounters, resources, audio, and weather do not exist.
-- Generated river bridges exist, but the broader authored structure and building kits
-  do not.
+  complete biome-specific encounters, resources, audio, and weather do not exist.
 
 ## 9. Major game systems not yet present
 
 - The living: hermits, traders and named characters, plus dialogue and trading. Note
   that populations, schedules and crowd behaviour are no longer in scope at all — see
   `plan.md` §20.
-- General NPC, structure, artifact, and contextual interaction systems beyond world-item pickup.
-- Full inventory management, loadout assignment UI, consumables, tools, weapons,
-  crafting, trading, and two-handed item behavior.
+- General NPC, structure and artifact interaction beyond world-item pickup,
+  fishing and campfire building.
+- Consumables, tools, weapons, crafting, trading, and two-handed item behaviour.
 - Quests, chapter progression, discoveries, and finished Chapter 1 narrative content.
 - Save files and persistent world-state changes.
 - Audio and music systems.
-- Pause, settings, accessibility, and final game-facing UI.
-- Blender-authored production assets and their final import/outline pipeline.
-- Ruins, abandoned buildings, monuments and the authored road network.
+- Pause, settings and accessibility.
+- Blender-authored production assets and their final import/outline pipeline —
+  deliberately deferred until the composition layer exists
+  ([docs/RUINS.md](docs/RUINS.md) §7).
 - The wilds: creature AI, damage, death, weapons, and everything else in `plan.md`
   §22b. None of it exists; it is milestone M5.
 - The target compositor-based union-coverage outline renderer.
