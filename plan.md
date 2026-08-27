@@ -285,17 +285,28 @@ Procedural generation should fill and vary the natural spaces between fixed feat
 - Ambient fauna and decorative environmental motion.
 
 Generated content must obey biome identity, authored exclusion areas, road clearance, remnant boundaries, navigation needs, and landmark compositions.
+For Chapter 1 it is evaluated in global atlas coordinates and compiled in
+sector-local windows, so independently rebuilt wilderness meets exactly at a
+sector seam. Its permitted wavelengths, amplitudes, surface sets and density
+ranges come from the authored biome profile; a seed does not choose a province.
 
 ### 7.4 Deterministic Results
 
 The same Chapter 1 world should remain recognizable and stable between sessions and builds unless the map design intentionally changes. Randomness should contribute natural variation without making important geography or gameplay unreliable.
 
+For significant content, stability is not merely a fixed seed. Domains, sites,
+entrances, sightlines and primary/secondary roads have stable IDs and absolute
+block coordinates in authored source. Procedural systems realise and dress those
+facts; they do not choose or relocate them.
+
 ---
 
 ## 8. Chapter 1 World Direction
 
-Chapter 1 should feel like a connected region of a much larger abandoned
-continent rather than a showcase island.
+Chapter 1 is a large 4:3 walking continent rather than a showcase island: a
+12,288 × 9,216 logical atlas with room for long wilderness journeys between
+connected domains. It is compiled in sectors rather than allocated as one
+runtime grid; [docs/ATLAS.md](docs/ATLAS.md) owns the physical contract.
 
 It should contain:
 
@@ -317,11 +328,12 @@ It should contain:
 
 ### 8.1 The gradient
 
-Chapter 1's difficulty and reward curve is a MAP, not a progression track. Near
-the coast and the surviving roads the land was held longest: remnants are recent,
-roads are still walkable, the few living people are here, and little threatens
-you. Inland and upward the abandonment gets older — roads fade into the grass,
-buildings give way to earthworks and monuments, and the wilds are held.
+Chapter 1's difficulty and reward curve is a MAP, not a progression track. The
+southern delta and archipelago were left first as water rose: their works are the
+oldest, largest and most drowned. The north was held longest and contains the
+smallest reused structures, the most walkable surviving roads and nearly all of
+the few living people. East and west complicate that south-to-north history with
+cultivation, quarrying and wetland preservation rather than replacing it.
 
 The player should be able to read that gradient from the landscape itself before
 anything tells them, and should be able to walk into trouble early if they
@@ -338,6 +350,12 @@ remain open until the world layout and core interaction loop are established.
 Biomes should be recognizable through terrain, vegetation, water, weather, props, creatures, sound, color, and what people once did there. They should transition naturally instead of appearing as hard, arbitrary zones.
 
 Each province also has its own relationship with the retreat: how long ago it was given up, what was worth building there, and what holds it now. A biome is a climate and a chapter of the history at the same time.
+
+Province identity and biome implementation are separate authored records. A
+province can blend several biome build profiles; every profile selects semantic
+terrain surfaces, vegetation/detail sets, atmosphere and road treatment while
+reusing the common terrain, water, ink, wind and material shaders. See
+[docs/ATLAS.md](docs/ATLAS.md) §6–8.
 
 ### 9.1 Forests
 
@@ -795,6 +813,11 @@ Custom shaders remain an important part of Petalfell's identity. They should cov
 - Petals and other lightweight environmental particles.
 - Atmospheric grading and distance treatment.
 - The explicit outline system.
+
+Biome identity should normally be data supplied to these shared shader families,
+not a separate shader fork. Terrain shape, road cuts and erosion are authored or
+compiled geometry first; a shader may reinforce wetness, snow, material breakup
+or distance response but may not substitute for missing landform.
 
 The existing shader math and visual results are references, but the Godot shaders should belong naturally to the Godot rendering pipeline rather than imitate the structure of the Three.js code.
 
@@ -1312,10 +1335,11 @@ These phases describe outcomes rather than implementation procedures.
 ### Phase 2 — Reusable World Foundation
 
 - Define the map and chapter content structure.
+- Author and validate the complete significant-site and major-route topology before producing more isolated site geometry.
 - Establish fixed geography combined with procedural natural infill.
 - Support large-region loading, unloading, persistence, and revisiting.
 - Establish terrain, biome, road, settlement, and landmark vocabularies.
-- Create a small representative region that includes all major content types.
+- Create one connected representative domain rather than a disconnected content showcase.
 
 ### Phase 3 — Core Exploration Gameplay
 
@@ -1404,7 +1428,9 @@ The following creative decisions should be resolved after the reference scene an
 - **Resolved:** the wilds are hostile and hold the abandoned country. What remains open is the exact combat model, the consequence of death, and how many creature families Chapter 1 needs (start with one, finished, before designing a second).
 - **Resolved:** the continent emptied by slow withdrawal, not catastrophe. What remains open is the timeline — how many generations, and which provinces went first.
 - Whether interiors are seamless, separate spaces, limited to key locations, or mostly implied.
-- Final world size and expected chapter duration.
+- **Resolved:** the production canvas is 12,288 × 9,216 × 192 blocks in
+  deterministic 768-block sectors. Expected chapter duration and travel support
+  at that scale remain open.
 - The names, cultures, histories, and functions of the peoples who left, and of the holdout that remains.
 - The role of money, barter, or other trading values.
 - Crafting depth and the number of useful item families.

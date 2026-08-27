@@ -17,13 +17,19 @@ proceed as decided.
 | Decision | Choice |
 |---|---|
 | **Map identity** | One canonical world, authored once. Not re-generated from a seed. |
+| **Production extent** | 12,288 × 9,216 × 192 blocks, compiled as a 16 × 12 grid of deterministic 768-block sectors. The 3,456-square runtime is a review fixture, not the production map. |
 | **Site count** | 30–60 sites for Chapter 1, mixed: a few great districts, more precincts, many small marks. |
-| **Starting point** | Scale and the part kit first — before any authoring tooling. |
+| **Current starting point** | Paint and validate the production atlas, then place every significant site and route before producing more site geometry. |
+| **Hero-site composition** | Authored plan. Procedural systems assist with repetition, fitting, damage and dressing; they do not invent the composition. |
+| **Coordinates** | Significant content uses stable absolute block coordinates and stable IDs. |
+| **Wilderness** | Deterministic procedural infill inside authored land, elevation, water, region, culture, abandonment and wilderness fields. Noise may vary a fact; it may not invent a major fact. |
+| **Roads and erosion** | Roads are authored splines realised against terrain. Erosion changes geometry and material before shader treatment; it is not a surface-only effect. |
 | **Direction** | Post-population. A continent left by slow decline, not catastrophe. (`plan.md` §2.1) |
-| **Resolution** | Voxel for now. Authored meshes deferred until the composition layer exists. |
+| **Resolution** | Voxel for now. Authored meshes remain optional after the authored composition layer exists. |
+| **First accepted macro sources** | Land, elevation, hydrology and categorical region are accepted as the canonical L0/L1 basis. Province polygons remain allocation guides only; `region.png` owns organic province shape and derived transitions. |
 
-The reasoning behind the first three is in [MAP_PIPELINE.md](MAP_PIPELINE.md) §1
-and [RUINS.md](RUINS.md) §7; the reasoning behind the ordering is §3 below.
+The reasoning is in [ATLAS.md](ATLAS.md), [MAP_PIPELINE.md](MAP_PIPELINE.md)
+§1–3 and [RUINS.md](RUINS.md) §4 and §7; the production order is §3 below.
 
 ---
 
@@ -52,127 +58,138 @@ is the large structural layer above it.
 
 ## 3. The build order
 
-Each slice is chosen to answer a question. The order exists so that expensive
-decisions are made *after* the cheap experiments that inform them.
+> **Direction shift (author, 2026-08-27).** The part yard, flat precinct and
+> summit sanctum proved individual vocabulary and one earthwork technique, but
+> the far captures still read as a sparse isolated prop on a generic generated
+> landscape. The references are authored domains: several precincts, routes,
+> boundaries and landforms designed as one composition. The previous plan to
+> generate a hero site from intent and postpone the map until last is reversed.
+> **The canonical atlas and topology come first; remembered places are authored.**
+>
+> **Atlas scale decision (author, 2026-08-27).** The selected colour, line and
+> elevation-map references establish a much larger 4:3 continent with large
+> wilderness, strongly separated climate masses and a north-to-south relief
+> hierarchy. Chapter 1 now targets the atlas in
+> [ATLAS.md](ATLAS.md): 12,288 × 9,216 × 192, built as deterministic sectors.
+> The current 3,456-square runtime cannot be stretched to that size because its
+> remaining two-dimensional fields are global; it becomes a review fixture.
 
-> **Direction shift (author, 2026-08).** The first pass at slices 1–3 — a part
-> yard and a flat hand-composed courtyard — was reviewed against the reference
-> images and judged **"very basic"**: simple structures placed together on flat
-> ground. The correction, in the author's terms: the references are complex,
-> intricate, MULTI-LAYERED TERRAIN with the landmarks built on top of and out of
-> it; parts are not one component reused (every stair differs in width, length,
-> rise and what joins it); and the mossy green look is dropped — the stone is
-> bare pale grey, reclamation returns later as its own layer. The new order:
-> **build one full site to exact reference detail, integrated with sculpted
-> terrain, walk it, then move to the next.** The yard and the flat precinct were
-> retired; their part builders live on as the library. Slices 1–3 below are
-> therefore superseded by the one-site-at-a-time slice, kept for the record.
+Each slice below leaves an artifact that the next one consumes.
 
-### Slice 1 — the part kit ✅ built, yard retired
+### Slice A — canonical source and authoring tools ✅ built
 
-Build the twelve parts of [RUINS.md](RUINS.md) §3 in voxels, at the scale in §2
-of that file. Nothing composed yet; just the vocabulary, placeable and
-inspectable.
+Define versioned authored records for domains, named sites, entrances, route
+nodes and route polylines. Build a fast audit and preview path that does not
+generate the continent. Invalid IDs, coordinates, bounds or connections fail
+loudly.
 
-*Answers:* do columns, arches, pylons and grand stairs read at reference scale in
-this palette and this ink system?
+*Answers:* can the world be understood and checked as a document before it is
+rendered?
 
-*Status:* built in `src/World/RuinKit.cs`; the parts read at scale and the
-meander carves legibly. The review YARD was retired in the direction shift —
-parts in a row proved nothing about composition — and the builders became
-parametric (column weights 1×1 / 2×2 / 3×3, any height, break states; stairs of
-any width and flight plan) so no two placed instances need be alike.
+*Status:* `content/chapter_01/world.json` is a versioned absolute-coordinate L2
+source. `src/World/CanonicalWorld.cs` audits domains, sites, entrances, graph
+nodes, routes, plan references and required connectivity. `./tools/world-authoring.sh`
+runs the audit or writes a whole-map SVG without constructing `Planner` or
+`Terrain`. The same source is overlaid on the in-game map. Canonical runtime mode
+stamps the authored route polylines directly and disables procedural settlements,
+significant landmarks and the location-seeking sanctum fixture.
 
-### Slice 2 — precinct terracing ◐ one strong case, not generalised
+### Slice B — production atlas contract and preview ✅ built
 
-Generalise footings from one rectangle and one or two floors to several polygons
-and several levels, with revetment where levels meet and stairs where they
-connect. ([RUINS.md](RUINS.md) §5)
+Adopt the selected macro-map references without inheriting their generated
+labels, contour numbers or theme-park density. Define the 12,288 × 9,216 logical canvas, global
+coordinates, 768-block sectors, registered L0/L1 layers, province polygons and
+biome build profiles. Audit and preview those sources without allocating the
+production terrain.
 
-*Answers:* can the terrain conform to a designed multi-level plan, and does the
-result read as terrain-that-is-architecture?
+*Answers:* can a huge world remain an inspectable, deterministic document rather
+than one enormous startup generation?
 
-*Status:* generalised as the **Massif process**
-([RUINS.md](RUINS.md) §5a, `src/World/Massif.cs`): a site's ground is an
-additive stack of noise-warped flat-topped slabs on a natural summit — final
-height is max(slab plan, existing ground), so a site can never dig or moat —
-with masonry decks on the tiers and stairs notched through the slab fronts
-before any block is placed. Fill is the monument's own coursed masonry. The
-sanctum is the working case. Arbitrary authored polygons
-are still to do.
+*Status:* `content/chapter_01/atlas.json` and `biomes.json` describe the accepted
+six-province macro basis and profile contracts. The authoring tool audits and
+previews registered elevation, hydrology and categorical regions with the sector
+grid; old province polygons render only as faint allocation guides.
 
-### Slice 3 — one site, built to reference detail ◐ built, awaiting the walk
+### Slice C — Chapter 1 macro layers and topology ◐ started
 
-The reformulated slice: pick ONE reference image and build it to exact detail —
-terrain and monument as a single thing, placed where the land wants it — then
-**stand in it**, and only then move to the next site.
+Paint the registered land, elevation, water, region, culture, abandonment and
+wilderness layers. Place all 30–60 site envelopes at permanent atlas coordinates.
+Author the Spine, Strand, quarry road and Fen causeways as a named graph;
+allocate every significant site to a domain and connect each required entrance.
+Geometry may be placeholder, but geography and topology may not be procedural.
 
-*Status:* the summit sanctum (`src/World/Sanctum.cs`), corrected against the
-reference three times: too small (rebuilt at ~3×), then concentric terrace
-rings, then an excavated mesa sitting in a carved-out basin — the author called
-out each in turn, the last with the key instruction: *pick a high spot and
-build ON it; no gradual slopes, no cutting holes — steep slabs gashed against
-each other.* That correction became the Massif process (slice 2 above,
-[RUINS.md](RUINS.md) §5a), and the current sanctum is a slab plan built with
-it: three tiers (base capping the summit, mid at +8, crown at +16) of warped
-sheer-faced slabs with satellite blocks shed around the skirt, masonry decks
-on the tiers, and the monument on the decks — 17-wide arched apse with meander
-glyphs and crystal light, the glowing emblem inlaid flush at its foot, the
-unequal column cluster and the torn round tower on the west deck, the two
-glyph pylons on the east. One axis organises it: base court → broad flight →
-mid landing → broader flight → emblem → apse, with side stairs leaving every
-tier at their own widths and angles, dressed slabs and a fallen column in the
-court, and shed stone below. Bare stone throughout — no moss. Built on every
-boot on the most prominent summit that leaves vertical headroom for the stack
-(the world ceiling is 76), marked on the world map (minty diamond, shift-click
-to stand in it), captured through the `sanctum*` shots. The author's walk is
-the acceptance test; the site is not yet pinned to a canonical coordinate.
+*Answers:* do we know what every remembered place is, where it is, what sees it,
+and how the player reaches it?
 
-### Slice 4 — the composition grammar
+*Status:* the author accepted the exact-registration land and elevation sources
+and the six working province envelopes on 2026-08-27. Image generation then
+proposed connected hydrology and terrain-shaped province masses from those
+accepted constraints. The normalized `water.png` and categorical `region.png`
+were accepted by the author on 2026-08-27 and are canonical macro sources. The
+province polygons are now only faint allocation guides. Culture, abandonment
+and wilderness remain planned. Exact layer values and provenance are in
+[ATLAS.md](ATLAS.md) §5 and §10.
+The older 3,456-square review source has one draft southern gateway domain with
+four site envelopes and seven routes; it must be migrated to atlas coordinates
+after the southern coastline and route grain are approved.
 
-Turn the hand-composed site into a generator driven by a site record: axis,
-level hierarchy, boundary, centre, part ranges, decay state. Re-rollable, with
-pinnable seeds.
+### Slice D — sector compiler and review window ◐ started
 
-*Answers:* how much of a site plan can be generated from intent, and what does a
-site record actually need to contain — which is the input to the authoring
-format.
+Compile L0/L1 sources and deterministic wilderness for one 768-block sector plus
+seam apron. Replace the current assumption that all two-dimensional terrain,
+road and biome arrays exist globally. Load and inspect an arbitrary atlas sector
+or small sector window without generating the whole continent.
 
-### Slice 5 — one district
+*Answers:* can the production scale exist without multi-gigabyte global state,
+and do independently built seams agree exactly?
 
-Four to six precincts on a shared axis at 250–350 blocks, `reference-11` scale.
+*Status:* compiler version 3 emits a `PTFLSEC2` terrain artifact and PNG for any
+addressed sector. It derives primary/secondary profile weights across authored
+transition widths; compiles ocean, enclosed lakes and high-altitude river cores
+with absolute water surfaces and beds; and lowers profile-controlled floodplains
+and banks before terrace quantization. Sector data validates its own profile,
+land, bed and surface invariants. Corner, boundary, mountain and drowned-south
+sectors rebuilt deterministically; every available independently compiled east/
+south edge matched all 39,168 overlap cells. It does not yet materialise voxel
+columns/water meshes, compile roads or sites, or provide a runtime sector window.
 
-### Slice 6 — the map and story layer
+### Slice E — one connected southern domain
 
-Only now: painted continent layers, region definition, the site record format,
-authored roads, domains. [WORLD.md](WORLD.md) and
-[MAP_PIPELINE.md](MAP_PIPELINE.md) become implementable.
+Build one 500–1000-block domain containing a 250–350-block primary district and
+two or more connected precincts. Use the monumental gate, water causeway and
+lower precinct references as one continuous composition. Author its platform
+polygons, levels, walls, stairs, route sockets and silhouette; use generators
+only to realise and dress those decisions.
 
-*Why last:* the authoring format should be designed once we know what a site plan
-contains. Designing it first is guessing at fields.
+*Answers:* can authored terrain, routes and architecture read as one world at
+normal play distance and at the fixed 280/460/560-unit review distances?
 
-### Alongside, early — partial regeneration
+### Slice F — local content compilation and partial regeneration
 
-Rebuild one site's region without regenerating the continent. Not a slice of its
-own but it should land early: authoring 30–60 sites means hundreds of
-regenerations and the full path already takes several seconds.
-([MAP_PIPELINE.md](MAP_PIPELINE.md) §6)
+Compile authored sources into disposable terrain, road, structure, navigation
+and chunk artifacts. Rebuilding one site or domain must leave unrelated tile
+hashes unchanged.
+
+### Slice G — production
+
+Author the remaining great districts and precincts one connected domain at a
+time. Template-assisted generation is reserved for minor marks and repeated
+substructures; every generated result remains subordinate to an authored plan.
+
+### Retained evidence from the retired order
+
+- The twelve-part voxel kit in `src/World/RuinKit.cs` is reusable vocabulary.
+- `src/World/Massif.cs` is a useful additive slab-stack operation, not the
+  universal site representation.
+- `src/World/Sanctum.cs` is a review fixture and source of measured failures. It
+  is not canonical content until a site record places it and a connected domain
+  absorbs it.
 
 ---
 
 ## 4. Open questions
 
 Genuinely undecided. Do not silently pick an answer; raise them.
-
-**Block scale in metres.** The references put the player at two blocks. If a
-block is a metre then a 250-block district is 250 m, which is right for a real
-archaeological site, and the current map is about 3.4 km. Is that enough for 30–60
-sites plus meaningful wilderness, or should the canonical map be larger now that
-voxel storage is derived rather than dense?
-
-**World height.** Currently 76. A five-level district with 30-block columns and a
-mountain behind it starts to squeeze. Worth checking before the vertical
-vocabulary is committed to.
 
 **How many cultures.** One is cheaper and makes the meander motif a strong single
 signature; two or three give the map real regional identity. Working assumption

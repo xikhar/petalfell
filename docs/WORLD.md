@@ -67,14 +67,16 @@ inhabitant.
 
 ## 3. The regions
 
-Five, arranged to the compass. Names below are working names and are the
-author's to change; the *roles* are the load-bearing part.
+Six broad provinces arranged around the central river country. The selected
+macro-map references fix their spatial read; names below remain working names
+and are the author's to change. The *roles* are load-bearing.
 
 ### 3.1 South — the Shallows
 
-**Physically.** Broad low plains sloping into a shallow warm sea. Sand and
-sakura, thin soil over stone. Standing water in the flats. The coastline is
-indistinct: it is not clear where the land stops.
+**Physically.** A broad delta and warm shallow sea occupying the southern edge,
+fragmented into drowned flats, long shoals and secondary islands. Sand and thin
+soil lie over built stone. The coastline is indistinct: it is not clear where
+the land stops or the old city begins.
 
 **What it was for.** This is where the civilisation was largest. Everything of
 consequence was built here, on the assumption that the sea was where it had
@@ -89,7 +91,7 @@ ruin field going on past the fog).
 highest age, most reclaimed. Colonnades that walk into the water. Causeways to
 nowhere. Precinct walls that run out into the shallows and stop.
 
-### 3.2 West — the Fen
+### 3.2 South-west — the Fen
 
 **Physically.** Slow water, reed, mud, alder, standing mist. Almost no relief.
 Ground that is not reliably ground.
@@ -107,10 +109,12 @@ where the *ordinary* past survives while the monumental past is in the south.
 went. Sunken structures. Things that are intact but small. This is where a
 player learns what these people actually used, as opposed to what they built.
 
-### 3.3 East — the Scarp
+### 3.3 West and upper interior — the Scarp and quarry belt
 
-**Physically.** A high rampart running roughly north–south, cut by ravines. Bare
-stone, scree, thin highland grass.
+**Physically.** A broad belt of shelves and high ramparts running from the rocky
+western coast toward the upper interior, cut by ravines and river heads. Bare
+stone, scree and thin highland grass separate the cold crown from the central
+basin.
 
 **What it was for.** The quarry. Every pale stone in every ruin on the continent
 came out of this wall.
@@ -126,7 +130,7 @@ floors, abandoned blanks. Different vocabulary from everywhere else: this is the
 only region where the architecture is *unfinished* rather than *ruined*, which
 is a distinct and valuable second flavour of emptiness.
 
-### 3.4 North — the Cold Shelf
+### 3.4 North and north-west — the Cold Shelf
 
 **Physically.** High country above the snowline. Sparse, thin, bright. Long
 sight lines.
@@ -160,6 +164,26 @@ continent belongs here, and it should be the thing the roads were built to serve
 — and it should be **incomplete, failed, or unexplained**. `plan.md` §11.4 is
 explicit that the deepest works should be legibly purposeful and *not*
 explained; the Waist is where that idea gets its largest expression.
+
+### 3.6 East — the Bloom Reach
+
+**Physically.** Broad warmer shelves and river-cut meadows running to an islanded
+eastern coast. Blossom canopy forms the largest single colour mass on the atlas,
+but it breaks around long grass clearings, old field boundaries and pale stone.
+
+**What it was for.** The last great cultivated country: orchards, ceremonial
+groves, water gardens and managed roads rather than a surviving city. Its beauty
+is work people once performed, now continuing without them.
+
+**What crossing it teaches.** That abandonment can look abundant. The Reach is
+not less empty because it is flowering; the regularity of grove lines, terraces
+and irrigation is how the player understands that the apparently natural beauty
+is inherited infrastructure.
+
+**Site character.** Open precincts, grove shrines, water stairs, field walls and
+tall isolated pylons visible across the canopy. It has fewer giant districts
+than the Shallows and more long sightline marks. It is the later culture's
+clearest independent vocabulary before that culture retreats north.
 
 ---
 
@@ -216,7 +240,7 @@ Their job is threefold and all three matter equally:
 - **The Strand.** The old coastal road in the south, now intermittent — long
   stretches under water, reappearing as causeway stubs and bridge piers. Reads
   as a road that the sea ate.
-- **The Scarp road.** Along the eastern quarries, wide, ramped, and heavily
+- **The quarry road.** Along the Scarp and quarry belt, wide, ramped, and heavily
   built because it carried stone. Overbuilt for a footpath, which is the clue.
 - **The Fen causeways.** In the west, on piles, mostly gone. Crossing the fen
   should feel like following a rumour of a road.
@@ -246,8 +270,8 @@ The allocation rule is the gradient of §2 expressed as parameters:
 | **Scale** | Largest in the south, smallest in the north. |
 | **Age** | Oldest in the south, newest in the north. |
 | **Reclamation** | Heaviest in the wet south and fen, lightest on the scarp and above the snowline. |
-| **Archetype** | Sacred/monumental south · trace/preserved west · working/unfinished east · small/maintained north · junction/inexplicable centre. |
-| **Culture** | See §6. |
+| **Archetype** | Sacred/monumental south · trace/preserved south-west · working/unfinished stone belt · grove/water east · small/maintained north · junction/inexplicable centre. |
+| **Culture** | See §7. |
 | **Population** | Effectively zero except in the north, and rare there. |
 
 Two rules that keep it from becoming a formula:
@@ -305,7 +329,7 @@ Stated explicitly so it stays true as both sides evolve.
 what age, what culture, where), region parameters (biome, snowline, water level,
 abandonment bias), road network shape, and domain boundaries.
 
-**It must never reach into:** the part kit, the composition grammar, terracing
+**It must never reach into:** the part kit, authored composition plans, terracing
 and footings, decay mechanics, reclamation, or anything in rendering. Those are
 [RUINS.md](RUINS.md)'s and they are parameterised, not special-cased. If a
 region seems to need a new *mechanism* rather than new *parameters*, that is a
@@ -315,10 +339,13 @@ signal the mechanism is under-general — fix it there, not here.
 
 ## 9. Status
 
-Everything in this document is a **proposal derived from the author's cardinal
-brief** (north mountainous, south low plains and shore, west marsh, east
-mountains, centre something) plus the reference images. The regions' *roles* are
-the considered part and are meant to be argued with. The names are placeholders.
+The slow northward withdrawal and the six province roles are the accepted story
+reading of the selected macro-map references. Exact coastlines, province borders
+and names remain authored working material; generated labels in the references
+are not canon. [ATLAS.md](ATLAS.md) owns their physical blockout and formats.
 
-Nothing here is implemented. See [ROADMAP.md](ROADMAP.md) for what is being
-built first and why this layer is deliberately not it.
+The review-map L2 source contains one four-site southern gateway domain. It
+proves stable identity and authored connections, not final atlas placement:
+Chapter 1 still needs its registered macro layers, all 30–60 site envelopes and
+the complete Spine, Strand, quarry and Fen graph. See
+[ROADMAP.md](ROADMAP.md) §3.

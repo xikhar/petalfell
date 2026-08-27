@@ -230,9 +230,18 @@ public partial class WorldMap : CanvasLayer
 				if (m.Form == LandmarkForm.Cairn) continue;
 				Dot(m.X, m.Z, 2, LandmarkColour(m.Form));
 			}
-			foreach (var site in t.Sites)
-				Dot(site.X, site.Z, site.Kind == SettlementKind.Town ? 5
-					: site.Kind == SettlementKind.Village ? 4 : 3, StateColour(site.State));
+				foreach (var site in t.Sites)
+					Dot(site.X, site.Z, site.Kind == SettlementKind.Town ? 5
+						: site.Kind == SettlementKind.Village ? 4 : 3, StateColour(site.State));
+				if (t.Plan.Definition.CanonicalWorld != null)
+					foreach (var site in t.Plan.Definition.CanonicalWorld.Sites)
+						Dot(site.Centre.X, site.Centre.Z, site.Tier switch
+						{
+							SiteTier.GreatWork => 6,
+							SiteTier.District => 5,
+							SiteTier.Precinct => 4,
+							_ => 3,
+						}, AuthoredSiteColour(site.Tier));
 
 			// The review fixture, biggest of all and in the fixture green
 			// nothing else on the map uses.
@@ -268,6 +277,14 @@ public partial class WorldMap : CanvasLayer
 		LandmarkForm.Shrine => new Color(0.72f, 0.88f, 0.92f),
 		LandmarkForm.Farmstead => new Color(0.88f, 0.82f, 0.62f),
 		_ => new Color(0.78f, 0.76f, 0.78f),
+	};
+
+	private static Color AuthoredSiteColour(SiteTier tier) => tier switch
+	{
+		SiteTier.GreatWork => new Color(1.00f, 0.88f, 0.54f),
+		SiteTier.District => new Color(1.00f, 0.72f, 0.64f),
+		SiteTier.Precinct => new Color(0.84f, 0.70f, 0.94f),
+		_ => new Color(0.64f, 0.86f, 0.82f),
 	};
 
 	/* ================================================================
@@ -345,15 +362,31 @@ public partial class WorldMap : CanvasLayer
 			}
 		}
 
-		public override void _Draw()
-		{
+			public override void _Draw()
+			{
 			if (Texture == null || Terrain == null) return;
 			var r = MapRect();
 
 			DrawRect(r.Grow(3f), new Color(0.16f, 0.14f, 0.20f));
-			DrawTextureRect(Texture, r, false);
+				DrawTextureRect(Texture, r, false);
 
-			// Settlements. Size carries rank, because on a map of this scale a
+				var authored = Terrain.Plan.Definition.CanonicalWorld;
+				if (authored != null)
+				{
+					// Domain boundaries and site envelopes are source data, drawn over
+					// the derived terrain so a mismatch is visible instead of hidden.
+					foreach (var domain in authored.Domains)
+					for (int i = 0; i < domain.Boundary.Count; i++)
+					{
+						var a = domain.Boundary[i]; var b = domain.Boundary[(i + 1) % domain.Boundary.Count];
+						DrawDashedLine(ToMap(a.X, a.Z), ToMap(b.X, b.Z),
+							new Color(0.78f, 0.64f, 0.90f, 0.8f), 2f, 7f);
+					}
+
+					foreach (var site in authored.Sites) DrawAuthoredSite(site);
+				}
+
+				// Settlements. Size carries rank, because on a map of this scale a
 			// town and a hamlet are both one dot unless something says otherwise.
 			foreach (var site in Terrain.Sites)
 			{
@@ -382,6 +415,37 @@ public partial class WorldMap : CanvasLayer
 			DrawCircle(me, 7.5f, new Color(0.10f, 0.09f, 0.13f, 0.9f));
 			DrawCircle(me, 5.2f, new Color(0.42f, 0.72f, 0.78f));
 			DrawCircle(me, 2.2f, Colors.White);
+		}
+
+		private void DrawAuthoredSite(CanonicalSite site)
+		{
+			var centre = ToMap(site.Centre.X, site.Centre.Z);
+			var edgeX = ToMap(site.Centre.X + site.ExtentX * 0.5f, site.Centre.Z) - centre;
+			var edgeZ = ToMap(site.Centre.X, site.Centre.Z + site.ExtentZ * 0.5f) - centre;
+			float angle = Mathf.DegToRad(site.OrientationDegrees);
+			Vector2 Rotate(Vector2 p) => new(
+				p.X * Mathf.Cos(angle) - p.Y * Mathf.Sin(angle),
+				p.X * Mathf.Sin(angle) + p.Y * Mathf.Cos(angle));
+			var corners = new[]
+			{
+				centre + Rotate(new Vector2(-edgeX.X, -edgeZ.Y)),
+				centre + Rotate(new Vector2(edgeX.X, -edgeZ.Y)),
+				centre + Rotate(new Vector2(edgeX.X, edgeZ.Y)),
+				centre + Rotate(new Vector2(-edgeX.X, edgeZ.Y)),
+			};
+			Color colour = AuthoredSiteColour(site.Tier);
+			for (int i = 0; i < corners.Length; i++)
+				DrawLine(corners[i], corners[(i + 1) % corners.Length], colour, 2f);
+			DrawCircle(centre, site.Tier == SiteTier.District ? 5f : 3.5f, colour);
+
+			if (_zoom >= 1.35f || site.Tier is SiteTier.District or SiteTier.GreatWork)
+			{
+				var at = centre + new Vector2(8f, -8f);
+				DrawString(ThemeDB.FallbackFont, at + Vector2.One, site.DisplayName,
+					HorizontalAlignment.Left, -1, 13, new Color(0.10f, 0.09f, 0.13f));
+				DrawString(ThemeDB.FallbackFont, at, site.DisplayName,
+					HorizontalAlignment.Left, -1, 13, colour);
+			}
 		}
 
 		private void Fixture(int x, int z, string label)

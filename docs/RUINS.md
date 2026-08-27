@@ -136,12 +136,19 @@ one culture, one axis grid and one wall system, inside which several sites sit.
 A landscape says *one people lived across all of this* through its connective
 geometry, not through its monuments.
 
-### Composition is a grammar with a pinned seed
+### Composition is authored; grammar is an assistant
 
-Site plans are generated from the site record, re-rollable while you are
-iterating, and **pinned once good** so they never change again. See
-[MAP_PIPELINE.md](MAP_PIPELINE.md) §2, L3. An individual precinct may always be
-overridden with an authored layout.
+The axis, level hierarchy, boundary, centre, silhouette and major part placement
+of a remembered site are authored facts. A generator may repeat a colonnade
+between authored endpoints, fit a stair between authored levels, vary coherent
+damage or dress rubble and paving; it may not invent the composition and ask the
+author to re-roll until one happens to work. See [MAP_PIPELINE.md](MAP_PIPELINE.md)
+§2, L3.
+
+The site record is anchored in permanent atlas coordinates; its detailed plan
+uses a site-local origin and authored sockets. The sector compiler may split the
+derived result across storage boundaries, but no sector boundary may split the
+composition or become visible in its terrain, damage or dressing.
 
 ---
 
@@ -174,10 +181,12 @@ stone as its walls.
 
 ### 5a. The Massif process — how every site's ground is built
 
-The standard technique, arrived at after three failed shapes for the first site
+One available technique, arrived at after three failed shapes for the first site
 (a small stamp, concentric terrace rings, an excavated mesa — each corrected by
 the author against the reference). It is implemented as `src/World/Massif.cs`
-and it is how ALL reference-scale sites get their ground from now on.
+and retained for sites or parts of sites whose landform actually has this
+additive slab-stack character. It is not a substitute for authored platform
+polygons, causeways, cliff works or domain-scale terrain plans.
 
 The observation it encodes: in the references the monumental ground is **slabs
 of stone stacked on a natural high point** — flat tops, sheer warped faces
@@ -250,9 +259,9 @@ insets for fluting. The arch voussoirs are stepped single blocks. The corbelled
 capitals are two or three stepped courses. The inscribed pylons are flat faces
 with a meander picked out one block deep.
 
-So the kit and the composition grammar can be built and judged now, and a later
-swap to authored meshes changes the *parts* without disturbing the grammar above
-them.
+So the kit and authored composition plans can be built and judged now, and a
+later swap to authored meshes changes the *parts* without disturbing the plans
+above them.
 
 When that swap is wanted, the route is already proven: the ink system exists
 specifically so non-voxel geometry can join it — characters are non-voxel and
@@ -344,20 +353,16 @@ cultures is an open decision recorded in [WORLD.md](WORLD.md) §7.
 ## 10. Status
 
 **Built and working:** footings at single-building scale, the reclamation field,
-the material decay chain, sub-voxel growth rendered through the ground-detail
-layer. The twelve-part kit (`src/World/RuinKit.cs`) at the §2 scale table, now
-parametric (column weights, heights and break states; stairs of any width and
-flight plan), including the meander glyph of §9 carved one block deep. The
-Massif process of §5a (`src/World/Massif.cs`) — the additive slab-stack
-earthworks every site is built with. One reference-exact site: the summit
-sanctum (`src/World/Sanctum.cs`), a slab plan stacked on a natural summit with
-the monument on its decks — the current standard for what "built" means; see
-[ROADMAP.md](ROADMAP.md) §3 for its full description and the direction shift
-that produced it. It is a review fixture, built on every boot and marked on the
-world map. Bare stone, no moss — the author dropped the mossy pass; reclamation
-returns later as its own layer.
+the material decay chain and sub-voxel growth rendered through the ground-detail
+layer. The twelve-part kit (`src/World/RuinKit.cs`) is parametric, including the
+meander glyph of §9. `src/World/Massif.cs` implements one additive slab-stack
+earthwork technique. `src/World/Sanctum.cs` is the review fixture that exposed
+the failure of one isolated monument on generic terrain; canonical mode disables
+it because it chooses its own summit.
 
-**Not built:** the composition grammar, terracing from arbitrary authored
-polygons, domains, sites placed as canonical world content.
+**Not built:** authored site plans, terracing from arbitrary authored polygons,
+connected domain geometry, sector compilation, or an accepted production site.
+A review-map topology draft names and connects the first southern domain, but it
+must move into the production atlas after the southern L0/L1 layers are painted.
 
 See [ROADMAP.md](ROADMAP.md) for order and slice status.

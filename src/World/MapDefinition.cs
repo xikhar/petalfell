@@ -16,6 +16,19 @@ public sealed class MapDefinition
 {
 	public string Id { get; set; } = "";
 	public string DisplayName { get; set; } = "";
+	/// <summary>
+	/// Production L0/L1 atlas contract. It is deliberately separate from the
+	/// current runtime size: loading it validates metadata and never allocates the
+	/// 12,288 × 9,216 terrain.
+	/// </summary>
+	public string CanonicalAtlasPath { get; set; } = "";
+	[JsonIgnore] public WorldAtlasDefinition CanonicalAtlas { get; private set; }
+	/// <summary>
+	/// Versioned authored L2 topology. An empty path selects the legacy seeded
+	/// placement path; a present path makes significant sites and routes canonical.
+	/// </summary>
+	public string CanonicalWorldPath { get; set; } = "";
+	[JsonIgnore] public CanonicalWorldDefinition CanonicalWorld { get; private set; }
 	public int DefaultSeed { get; set; }
 	public int DefaultWorldSize { get; set; } = 768;
 	public MapBoundary Boundary { get; set; } = new();
@@ -43,6 +56,20 @@ public sealed class MapDefinition
 		var map = JsonSerializer.Deserialize<MapDefinition>(file.GetAsText(), options)
 		          ?? throw new InvalidOperationException($"Map definition '{resourcePath}' was empty.");
 		map.Validate(resourcePath);
+		if (!string.IsNullOrWhiteSpace(map.CanonicalAtlasPath))
+		{
+			map.CanonicalAtlas = WorldAtlasDefinition.Load(map.CanonicalAtlasPath);
+			var report = map.CanonicalAtlas.Audit();
+			if (!report.Valid)
+				throw new InvalidOperationException(report.Format(map.CanonicalAtlasPath));
+		}
+		if (!string.IsNullOrWhiteSpace(map.CanonicalWorldPath))
+		{
+			map.CanonicalWorld = CanonicalWorldDefinition.Load(map.CanonicalWorldPath);
+			var report = map.CanonicalWorld.Audit(map);
+			if (!report.Valid)
+				throw new InvalidOperationException(report.Format(map.CanonicalWorldPath));
+		}
 		return map;
 	}
 
@@ -71,6 +98,25 @@ public sealed class MapDefinition
 	{
 		foreach (var spawn in Spawns)
 			if (Distance(nx, nz, spawn.Centre) <= 0.010f + padding) return true;
+		if (CanonicalWorld != null)
+		{
+			float size = CanonicalWorld.WorldSize;
+			float wx = nx * size, wz = nz * size, pad = padding * size;
+			foreach (var site in CanonicalWorld.Sites)
+			{
+				float dx = wx - site.Centre.X, dz = wz - site.Centre.Z;
+				float a = -site.OrientationDegrees * MathF.PI / 180f;
+				float lx = dx * MathF.Cos(a) - dz * MathF.Sin(a);
+				float lz = dx * MathF.Sin(a) + dz * MathF.Cos(a);
+				if (MathF.Abs(lx) <= site.ExtentX * 0.5f + pad &&
+				    MathF.Abs(lz) <= site.ExtentZ * 0.5f + pad) return true;
+			}
+			foreach (var route in CanonicalWorld.Routes)
+			for (int i = 0; i + 1 < route.Points.Count; i++)
+				if (DistanceToSegment(wx, wz, route.Points[i], route.Points[i + 1]) <= route.Width * 0.5f + pad)
+					return true;
+			return false;
+		}
 		foreach (var settlement in Settlements)
 			if (Distance(nx, nz, settlement.Centre) <= settlement.Radius + padding) return true;
 		foreach (var landmark in Landmarks)
@@ -89,6 +135,16 @@ public sealed class MapDefinition
 	}
 
 	private static float DistanceToSegment(float x, float z, MapPoint a, MapPoint b)
+	{
+		float vx = b.X - a.X, vz = b.Z - a.Z;
+		float wx = x - a.X, wz = z - a.Z;
+		float vv = vx * vx + vz * vz;
+		float t = vv <= 0.0000001f ? 0f : Rng.Clamp((wx * vx + wz * vz) / vv, 0f, 1f);
+		float dx = x - (a.X + vx * t), dz = z - (a.Z + vz * t);
+		return MathF.Sqrt(dx * dx + dz * dz);
+	}
+
+	private static float DistanceToSegment(float x, float z, BlockPoint a, BlockPoint b)
 	{
 		float vx = b.X - a.X, vz = b.Z - a.Z;
 		float wx = x - a.X, wz = z - a.Z;

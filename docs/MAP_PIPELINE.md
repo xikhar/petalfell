@@ -16,7 +16,9 @@
 
 **Chapter 1 is one canonical world, authored once.** It is not re-generated from
 a seed. The map is a *document you edit and re-render*, not a lottery you re-roll
-until it is acceptable.
+until it is acceptable. Its production canvas and sector contract are in
+[ATLAS.md](ATLAS.md); "canonical" applies equally to painted landform and named
+topology.
 
 This was decided deliberately and it is the root that everything else in this
 file grows from. Do not quietly reintroduce seed-variance for the main map.
@@ -67,15 +69,16 @@ at each, which is the whole reason to name them.
 
 | | Level | Owns | Authored? |
 |---|---|---|---|
-| **L0** | Continent | Landmass silhouette, ranges, watersheds, sea level | Fully |
-| **L1** | Regions | Biome, climate, snowline, abandonment bias, **culture** | Fully |
-| **L2** | Sites | A named record: id, position, orientation, extent, archetype, age | Fully |
-| **L3** | Site plan | Precincts, axes, platform levels, stairs, part placement | Generated from L2, re-rollable, pinnable, overridable |
+| **L0** | Continent | Landmass silhouette, ranges, watersheds, sea level | Fully, as registered coarse images |
+| **L1** | Regions | Biome/build profile, climate, snowline, abandonment, wilderness bias, **culture** | Fully, as registered coarse images and profile records |
+| **L2** | Topology | Domains, named sites, absolute positions, extents, entrances, sightlines and route graph | Fully |
+| **L3** | Site plan | Precincts, axes, platform polygons, levels, stairs, walls and major part placement | Authored for remembered places; assisted for repetition and minor marks |
 | **L4** | Kit | The geometry of each part | Authored once, reused everywhere |
 
-The thing to hold onto: **the author's control is at L0–L2, and it is total. L3
-is a machine that serves that intent and can always be overruled. L4 is a
-library.**
+The thing to hold onto: **the author's control is total at L0–L3 wherever a
+player is expected to remember the result.** Machines at L3 repeat ranges,
+resolve fitted terrain, apply coherent damage and dress detail; they do not
+choose the composition. L4 is a library.
 
 L1 is where [WORLD.md](WORLD.md) attaches. L3 and L4 are where
 [RUINS.md](RUINS.md) attaches. This file owns the plumbing between them.
@@ -91,8 +94,10 @@ The single most important structural rule in the pipeline:
 
 Authored artifacts are the source of truth, live in version control as text or
 images, and are the only thing a human touches. Derived artifacts are a pure
-function of the authored ones plus pinned seeds, are regenerable at any time, and
-are disposable.
+function of the authored ones plus explicitly scoped dressing seeds, are
+regenerable at any time, and are disposable. A seed may vary trees, rubble or a
+repeated colonnade within authored limits; it may not move a site, reroute a
+major road or choose a hero composition.
 
 If those ever mix — if the generator writes back into an authored file, or a
 human patches a derived one — the map stops being reproducible and the canonical
@@ -122,22 +127,33 @@ existing routing code stays useful for trails, which genuinely should be
 
 ## 5. Where the data lives
 
-Sketch, not specification — the exact shape should be designed *after* the
-composition grammar tells us what a site plan actually contains. Designing the
-format first is guessing at fields.
+The topology format is deliberately small and versioned now. Detailed site-plan
+records may add fields as the first connected domain proves them, without making
+the location and connection graph wait.
 
 ```
-world/
-  continent/        painted layers — height, biome, water, culture   (L0/L1)
-  sites.toml        the site records                                 (L2)
-  sites/<id>.toml   per-site plan pins and overrides                 (L3)
-  kit/              part sources                                     (L4)
+content/chapter_01/
+  map.json          current runtime/review-map entrypoint
+  atlas.json        production extent, sectors, layers and provinces   (L0/L1 manifest)
+  biomes.json       terrain/surface/vegetation/atmosphere profiles      (L1)
+  world.json        domains, sites, entrances, graph nodes, routes      (L2)
+  continent/        registered land/elevation/water/region fields       (L0/L1 images)
+  sites/<id>.json   authored site plan                                  (L3)
+  kit/              part sources and socket metadata                    (L4)
+  derived/          disposable sector output; never hand-edited
 ```
 
-A site record needs roughly: a stable id and display name; position and
-orientation; extent or footprint polygon; archetype and form; culture and era;
-age; terrace-level count; what stands at the head of its axis; a pinned seed once
-the layout is good; and an optional authored-blockout reference.
+The atlas is 12,288 × 9,216 blocks while the current runtime fixture is 3,456
+square. `world.json` remains a review-window topology proof until the production
+L0/L1 fields fix the southern coastline; it is then migrated once into permanent
+atlas coordinates. Do not scale it implicitly at load time, because that would
+make the supposed absolute coordinates depend on a runtime setting.
+
+A site record carries a stable id and display name; absolute block position and
+orientation; extent; domain, tier and archetype; culture and age; named
+entrances bound to route nodes; optional sightline targets; build status; and an
+optional authored plan path. Dressing seeds belong to the plan or derived build,
+not to the site's identity.
 
 The **stable id** is the important field. It is what lets a quest, a map marker,
 a save file and a conversation all refer to the same place across every future
@@ -158,13 +174,15 @@ rather than late.**
 
 The loop that matters:
 
-1. Change an authored record or paint a layer.
-2. Regenerate *only what that change affects*.
-3. See it in the actual game render, at the actual scale, under the actual
-   lighting.
-4. Adjust, or pin the seed and move on.
+1. Change an authored record or paint a registered layer.
+2. Audit the atlas registration, biome/profile references and topology.
+3. Preview the whole atlas, sector grid and authored graph.
+4. Regenerate *only the affected sectors*, including deterministic seam aprons.
+5. See the affected domain in the actual game render, at the actual scale, under
+   the actual lighting.
+6. Adjust the authored plan; optionally regenerate only its subordinate detail.
 
-Step 3 is not negotiable. **Scale can only be judged in the game.** A layout that
+Step 5 is not negotiable. **Scale can only be judged in the game.** A layout that
 looks right in a top-down editor routinely reads as either toy-sized or
 incomprehensibly vast when you stand in it, and the entire reason this direction
 exists is that the previous ruins were an order of magnitude too small without
@@ -188,8 +206,7 @@ rotation or a name.
 
 **C — Blender.** Excellent for L4, and genuinely good for hand-authored L3
 blockouts: a district can be laid out at one unit per block with instanced parts
-and exported as a volume plus a socket list. Heavy and awkward for L0/L1, and
-poor at re-rolling.
+and exported as a volume plus a socket list. Heavy and awkward for L0/L1.
 
 **D — In-game editor.** Fly camera, place and rotate sites, tweak parameters,
 regenerate, see it immediately in the real render. **The shortest possible
@@ -201,12 +218,16 @@ menu, teleport and chunk streaming are all already there.
 
 ### The chosen hybrid
 
-- **L0/L1 painted** — coastline, relief, marsh, snowline, region and culture.
-- **L2 a text record, placed in-game** — position and orient a site with a fly
-  camera; the tool writes an *authored record* back to the file (§3).
-- **L3 a grammar with a pinnable seed** — generated and re-rollable; once a
-  layout is good its seed is pinned and it never changes again. Individual
-  precincts may be marked authored and take a blockout instead.
+- **L0/L1 painted and registered** — the 1,536 × 1,152 land, elevation,
+  water, region, culture, abandonment and wilderness fields described in
+  [ATLAS.md](ATLAS.md) §5.
+- **L2 a text record with map and in-game views** — position and orient a site,
+  name its entrances, and draw the routes between graph nodes. Every tool writes
+  an *authored record* (§3).
+- **L3 authored plans with procedural assistants** — hero districts and
+  precincts own their platform polygons, level hierarchy, walls, stairs and
+  major silhouettes. Assistants repeat parametric parts, conform terrain and
+  apply dressing without changing the plan.
 - **L4 Blender**, eventually. Not yet — see [RUINS.md](RUINS.md) §7: the part kit
   is achievable in voxels today and the reference images prove it, so the
   composition layer can be built and judged before any asset pipeline exists.
@@ -234,13 +255,27 @@ an authoring-time error you are told about rather than a silent absence.
 **Region assignment becomes a lookup.** Painted L1 layers replace the current
 region-cell computation for the canonical map.
 
+**Whole-map arrays become sector fields.** The current runtime's global
+height/water/road/biome arrays are viable for its 3,456-square review map and not
+for the 12,288 × 9,216 production atlas. Compilation and runtime access must use
+global coordinates over sector-local storage. See [ATLAS.md](ATLAS.md) §3.
+
 ---
 
 ## 9. Status
 
-Nothing in this document is implemented. The current build is a seeded map with
-procedural placement, described in [CURRENT_STATE.md](../CURRENT_STATE.md).
-
-This is deliberate: [ROADMAP.md](ROADMAP.md) puts the part kit and composition
-grammar first, so that the authoring format is designed once we know what a site
-plan actually contains rather than before.
+The versioned L2 source, strict audit, SVG preview, in-game source overlay and
+authored-route runtime path are implemented for the review map. The production
+atlas manifest, biome-profile catalog and exact-registration land/elevation,
+water and categorical-region sources are implemented without allocating
+production terrain. Land, elevation, water and region are accepted.
+An authoring-time compiler emits disposable `PTFLSEC2` terrain artifacts with
+bed/terrain height, absolute water surface, hydrology class and primary/secondary
+profile blend. It derives transition widths and hydrology shaping entirely in
+global coordinates and has passed repeat-hash and independent-neighbour overlap
+checks at atlas corners, a province boundary, high terrain and the drowned south.
+Canonical runtime mode no longer runs the procedural
+settlement/significant-landmark searches or the summit-seeking sanctum fixture.
+Culture, abandonment, wilderness, the playable sector window, full atlas
+topology and detailed L3 plans remain unbuilt. See [ROADMAP.md](ROADMAP.md) §3
+and [CURRENT_STATE.md](../CURRENT_STATE.md) §8.

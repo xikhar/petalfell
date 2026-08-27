@@ -1,0 +1,213 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "id": "cold-shelf",
+      "displayName": "Cold Shelf",
+      "runtimeBiomes": ["SnowyHills", "Highland"],
+      "terraceStep": 2,
+      "erosionResponse": "wind-scoured",
+      "hydrology": { "floodplainStart": 0.70, "bankStart": 0.84, "floodplainRise": 6, "bankRise": 3, "surfaceDrop": 2, "waterDepth": 3 },
+      "noiseBands": [
+        { "wavelength": 1536, "amplitude": 18 },
+        { "wavelength": 384, "amplitude": 6 },
+        { "wavelength": 96, "amplitude": 2 }
+      ],
+      "surfaces": {
+        "cap": "snow-pale",
+        "substrate": "frozen-soil",
+        "cliff": "stone-cold",
+        "shore": "ice-edge",
+        "underwater": "stone-cold-wet"
+      },
+      "vegetationSetId": "alpine-sparse",
+      "groundDetailSetId": "snow-windtrace",
+      "atmosphereProfileId": "cold-clear",
+      "shaderProfileId": "snow-highkey",
+      "roadProfileId": "kept-northern-stone",
+      "architecturePaletteId": "late-northern-reuse"
+    },
+    {
+      "id": "stone-highland",
+      "displayName": "Stone Highland",
+      "runtimeBiomes": ["Highland", "Plains"],
+      "terraceStep": 3,
+      "erosionResponse": "scree-and-fracture",
+      "hydrology": { "floodplainStart": 0.70, "bankStart": 0.84, "floodplainRise": 5, "bankRise": 2, "surfaceDrop": 2, "waterDepth": 4 },
+      "noiseBands": [
+        { "wavelength": 1280, "amplitude": 16 },
+        { "wavelength": 320, "amplitude": 7 },
+        { "wavelength": 80, "amplitude": 2 }
+      ],
+      "surfaces": {
+        "cap": "highland-grass",
+        "substrate": "thin-stony-soil",
+        "cliff": "stone-pale-quarried",
+        "shore": "stone-shingle",
+        "underwater": "stone-pale-wet"
+      },
+      "vegetationSetId": "highland-thin",
+      "groundDetailSetId": "scree-and-heather",
+      "atmosphereProfileId": "highland-distance",
+      "shaderProfileId": "stone-dry-highkey",
+      "roadProfileId": "quarry-haul-road",
+      "architecturePaletteId": "old-southern-source"
+    },
+    {
+      "id": "dry-scarp",
+      "displayName": "Dry Scarp",
+      "runtimeBiomes": ["Highland"],
+      "terraceStep": 4,
+      "erosionResponse": "cut-face-and-talus",
+      "hydrology": { "floodplainStart": 0.76, "bankStart": 0.88, "floodplainRise": 4, "bankRise": 2, "surfaceDrop": 3, "waterDepth": 4 },
+      "noiseBands": [
+        { "wavelength": 2048, "amplitude": 20 },
+        { "wavelength": 512, "amplitude": 8 },
+        { "wavelength": 128, "amplitude": 2 }
+      ],
+      "surfaces": {
+        "cap": "dry-highland-grass",
+        "substrate": "stone-dust",
+        "cliff": "stone-pale-bedded",
+        "shore": "rock-shelf",
+        "underwater": "stone-deep"
+      },
+      "vegetationSetId": "scarp-sparse",
+      "groundDetailSetId": "talus-and-blanks",
+      "atmosphereProfileId": "dry-long-view",
+      "shaderProfileId": "stone-dry-highkey",
+      "roadProfileId": "quarry-haul-road",
+      "architecturePaletteId": "unfinished-stone"
+    },
+    {
+      "id": "river-waist",
+      "displayName": "River Waist",
+      "runtimeBiomes": ["Meadow", "Forest", "Wetland"],
+      "terraceStep": 2,
+      "erosionResponse": "river-cut",
+      "hydrology": { "floodplainStart": 0.56, "bankStart": 0.76, "floodplainRise": 4, "bankRise": 2, "surfaceDrop": 1, "waterDepth": 4 },
+      "noiseBands": [
+        { "wavelength": 1536, "amplitude": 10 },
+        { "wavelength": 384, "amplitude": 4 },
+        { "wavelength": 96, "amplitude": 1 }
+      ],
+      "surfaces": {
+        "cap": "meadow-sage",
+        "substrate": "warm-soil",
+        "cliff": "stone-warm",
+        "shore": "river-sand",
+        "underwater": "river-silt"
+      },
+      "vegetationSetId": "meadow-river-mix",
+      "groundDetailSetId": "grass-flower-reed",
+      "atmosphereProfileId": "temperate-depth",
+      "shaderProfileId": "meadow-highkey",
+      "roadProfileId": "confluence-paving",
+      "architecturePaletteId": "mixed-reuse"
+    },
+    {
+      "id": "temperate-wood",
+      "displayName": "Temperate Wood",
+      "runtimeBiomes": ["Forest", "Meadow"],
+      "terraceStep": 2,
+      "erosionResponse": "root-held",
+      "hydrology": { "floodplainStart": 0.62, "bankStart": 0.80, "floodplainRise": 4, "bankRise": 2, "surfaceDrop": 1, "waterDepth": 3 },
+      "noiseBands": [
+        { "wavelength": 1024, "amplitude": 9 },
+        { "wavelength": 256, "amplitude": 4 },
+        { "wavelength": 64, "amplitude": 1 }
+      ],
+      "surfaces": {
+        "cap": "forest-sage",
+        "substrate": "dark-warm-soil",
+        "cliff": "stone-mossed",
+        "shore": "rooted-bank",
+        "underwater": "forest-silt"
+      },
+      "vegetationSetId": "temperate-canopy",
+      "groundDetailSetId": "fern-moss-flower",
+      "atmosphereProfileId": "woodland-soft",
+      "shaderProfileId": "forest-highkey",
+      "roadProfileId": "reclaimed-local-road",
+      "architecturePaletteId": "mixed-reuse"
+    },
+    {
+      "id": "bloom-reach",
+      "displayName": "Bloom Reach",
+      "runtimeBiomes": ["Sakura", "Meadow"],
+      "terraceStep": 2,
+      "erosionResponse": "cultivated-terrace",
+      "hydrology": { "floodplainStart": 0.62, "bankStart": 0.80, "floodplainRise": 4, "bankRise": 2, "surfaceDrop": 1, "waterDepth": 3 },
+      "noiseBands": [
+        { "wavelength": 1280, "amplitude": 8 },
+        { "wavelength": 320, "amplitude": 3 },
+        { "wavelength": 80, "amplitude": 1 }
+      ],
+      "surfaces": {
+        "cap": "blossom-meadow",
+        "substrate": "warm-cultivated-soil",
+        "cliff": "stone-pale-terraced",
+        "shore": "petal-bank",
+        "underwater": "clear-silt"
+      },
+      "vegetationSetId": "sakura-orchard",
+      "groundDetailSetId": "petal-grass-flower",
+      "atmosphereProfileId": "blossom-haze",
+      "shaderProfileId": "sakura-highkey",
+      "roadProfileId": "garden-processional-road",
+      "architecturePaletteId": "later-eastern-grove"
+    },
+    {
+      "id": "fen",
+      "displayName": "Fen",
+      "runtimeBiomes": ["Wetland", "Forest"],
+      "terraceStep": 1,
+      "erosionResponse": "saturated-and-buried",
+      "hydrology": { "floodplainStart": 0.48, "bankStart": 0.68, "floodplainRise": 3, "bankRise": 1, "surfaceDrop": 1, "waterDepth": 2 },
+      "noiseBands": [
+        { "wavelength": 1536, "amplitude": 4 },
+        { "wavelength": 384, "amplitude": 2 },
+        { "wavelength": 96, "amplitude": 1 }
+      ],
+      "surfaces": {
+        "cap": "wetland-mat",
+        "substrate": "peat-mud",
+        "cliff": "rooted-earth",
+        "shore": "reed-mud",
+        "underwater": "dark-silt"
+      },
+      "vegetationSetId": "fen-reed-alder",
+      "groundDetailSetId": "reed-root-moss",
+      "atmosphereProfileId": "fen-mist",
+      "shaderProfileId": "wetland-highkey",
+      "roadProfileId": "pile-causeway",
+      "architecturePaletteId": "preserved-ordinary-work"
+    },
+    {
+      "id": "drowned-shallows",
+      "displayName": "Drowned Shallows",
+      "runtimeBiomes": ["Shore", "Wetland", "Meadow"],
+      "terraceStep": 2,
+      "erosionResponse": "tidal-undercut",
+      "hydrology": { "floodplainStart": 0.50, "bankStart": 0.70, "floodplainRise": 3, "bankRise": 1, "surfaceDrop": 1, "waterDepth": 3 },
+      "noiseBands": [
+        { "wavelength": 1792, "amplitude": 6 },
+        { "wavelength": 448, "amplitude": 3 },
+        { "wavelength": 112, "amplitude": 1 }
+      ],
+      "surfaces": {
+        "cap": "warm-shore-grass",
+        "substrate": "sand-over-stone",
+        "cliff": "old-southern-masonry",
+        "shore": "cream-sand",
+        "underwater": "drowned-paving"
+      },
+      "vegetationSetId": "shallows-sparse-grove",
+      "groundDetailSetId": "sand-reed-petal",
+      "atmosphereProfileId": "warm-water-haze",
+      "shaderProfileId": "shallows-highkey",
+      "roadProfileId": "drowned-processional-road",
+      "architecturePaletteId": "old-southern-monumental"
+    }
+  ]
+}

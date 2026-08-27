@@ -168,20 +168,32 @@ public sealed class Terrain
 			Land[i] = (byte)(Level[i] > Sea || IsFordGround(i) ? 1 : 0);
 		}
 
-		// Places, then the roads between them, then blocks. Both stages read the
-		// finished heightfield and neither writes to it: roads decide only which
-		// material caps a column, so every contour invariant established above
-		// survives intact. See RoadNetwork for why that restraint is load-bearing.
-		Sites = Settlements.PlanSites(this, seed);
-		// Level the town platforms BEFORE the roads are routed over them.
-		Settlements.TerraceSites(this);
-		Stage("sites");
-		// Landmarks before roads, so trails can be routed out to them; cairns
-		// after, because a cairn's whole job is to stand beside a road.
-		Marks = Landmarks.PlanSignificant(this, Sites, seed);
-		Roads = RoadNetwork.Build(this, Sites, Marks, seed);
-		Landmarks.PlanCairns(this, Sites, Marks, seed);
-		Stage("roads");
+			// In canonical mode, important places and routes come from authored L2
+			// topology. The old settlement/landmark search remains available only to
+			// legacy sandbox maps; letting both paths run would make map.json look
+			// authoritative while filling the gaps with seed-chosen content.
+			if (Plan.Definition.CanonicalWorld != null)
+			{
+				Sites = new List<SettlementSite>();
+				Marks = new List<Landmark>();
+				Stage("sites");
+				Roads = RoadNetwork.BuildAuthored(this, Plan.Definition.CanonicalWorld);
+				// Cairns are subordinate road dressing, not significant sites.
+				Landmarks.PlanCairns(this, Sites, Marks, seed);
+			}
+			else
+			{
+				Sites = Settlements.PlanSites(this, seed);
+				// Level the town platforms BEFORE the roads are routed over them.
+				Settlements.TerraceSites(this);
+				Stage("sites");
+				// Landmarks before roads, so trails can be routed out to them; cairns
+				// after, because a cairn's whole job is to stand beside a road.
+				Marks = Landmarks.PlanSignificant(this, Sites, seed);
+				Roads = RoadNetwork.Build(this, Sites, Marks, seed);
+				Landmarks.PlanCairns(this, Sites, Marks, seed);
+			}
+			Stage("roads");
 
 		DescribeColumns();
 		Stage("columns");

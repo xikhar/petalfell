@@ -28,14 +28,21 @@ day cycle, voxel storage, chunk streaming, collision, terrain, biomes,
 vegetation, fauna, the player, the camera, the dog, inventory. These work to a
 standard the author is satisfied with. Do not rebuild them.
 
-**The large layer is beginning.** Two things, and they are the whole current
-effort:
+**The large layer is beginning.** Three things, in this order, are the whole
+current effort:
 
-1. **Ruins and monuments at the right scale**, matching the reference images in
-   `world-new/`. The previous build produced ruins that read as *"a few bricks
-   lying around"* — one small building where the references show districts.
-2. **A canonical, authored map that tells a story**, rather than a random seed
-   with special things sprinkled on top.
+1. **The production atlas and its sector tools.** Chapter 1 is a 12,288 × 9,216
+   logical continent, not a larger value fed to the current global-array
+   generator. Painted macro layers and deterministic 768-block sector builds
+   make that scale possible. Wilderness is derived inside authored limits.
+2. **The canonical authored topology and its production tools.** Every significant
+   domain, site, entrance, sightline and road connection has a permanent authored
+   identity before detailed geometry is built. Seeds may dress that intent; they
+   may not invent or move it.
+3. **Ruins and monuments at the right scale**, matching the reference images in
+   `world-new/`, produced as authored connected districts rather than isolated
+   generated fixtures. The previous builds produced first *"a few bricks lying
+   around"*, then one sparse sanctum where the references show domains.
 
 ---
 
@@ -51,6 +58,14 @@ a building; the terrain and the architecture are the same stone doing the same
 job; tall thin elements (columns, arches, pylons) carry the silhouette and are
 entirely absent from the current build; and the whole vocabulary is about twelve
 repeating parts.
+
+`world-new/map/map-color.png`, `world-new/map/map-line.png` and
+`world-new/map/map-elevation.png` are the selected macro-map references. The
+first owns the broad landform/biome read, the second the simple journey-graph
+read, and the third the mountain-front, basin and drainage hierarchy. None of
+their generated labels, exact roads, contour numbers or landmark density are
+canon. Their accepted and rejected lessons are in [docs/ATLAS.md](docs/ATLAS.md)
+§1.
 
 **The scenery baseline** — how landscape and architecture are *arranged* so a
 large empty world reads — is Shadow of the Colossus, Elden Ring and Skyrim, taken
@@ -70,8 +85,9 @@ Read the one that owns what you are changing. They cross-link; follow the links.
 | File | Owns |
 |---|---|
 | **[docs/WORLD.md](docs/WORLD.md)** | The **story layer**. The continent as a place: its regions, the history that explains their arrangement, the road network, and the rule by which sites are allocated. Sits *above* everything else and touches only parameters. |
+| **[docs/ATLAS.md](docs/ATLAS.md)** | The **physical atlas layer**. Production extent, sectors, L0/L1 source formats, deterministic wilderness, and the biome/material/model contracts that realise the story map. |
 | **[docs/MAP_PIPELINE.md](docs/MAP_PIPELINE.md)** | **How the map is made.** The canonical-map decision, the L0–L4 layer model, authored versus derived data, the iteration loop, and the authoring-surface options. |
-| **[docs/RUINS.md](docs/RUINS.md)** | **How things are built.** Scale targets, the twelve-part kit, the composition grammar, terrain-as-architecture, decay and reclamation. |
+| **[docs/RUINS.md](docs/RUINS.md)** | **How things are built.** Scale targets, the twelve-part kit, authored composition plans and their procedural assistants, terrain-as-architecture, decay and reclamation. |
 | **[docs/ROADMAP.md](docs/ROADMAP.md)** | **Settled decisions, build order, open questions, standing lessons.** The file that changes most often. Start here if you are picking up work. |
 
 ### The existing project documents
@@ -82,7 +98,7 @@ Read the one that owns what you are changing. They cross-link; follow the links.
 | **[ARCHITECTURE.md](ARCHITECTURE.md)** | Engineering decisions and system boundaries. Camera, ink, voxel storage, collision, footings and reclamation, repo layout. |
 | **[CURRENT_STATE.md](CURRENT_STATE.md)** | A factual snapshot of what is implemented today. Not a design target. |
 
-**Where they disagree, the newer four win on the new direction and `plan.md`
+**Where they disagree, the newer five win on the new direction and `plan.md`
 wins on creative intent.** If you find a real contradiction, say so rather than
 picking silently.
 
@@ -96,6 +112,16 @@ decided.
 
 **The map is canonical.** Chapter 1 is one authored world, not a seed to re-roll.
 Do not quietly reintroduce seed-variance for it. ([MAP_PIPELINE.md](docs/MAP_PIPELINE.md) §1)
+
+**The atlas is sector-built.** The production extent is not permission to grow
+the current global arrays. All natural fields sample global coordinates and are
+compiled in deterministic 768-block sectors with seam aprons.
+([ATLAS.md](docs/ATLAS.md) §2–4)
+
+**Significant content is authored.** A generator may realise terrain, repeat a
+range, fray paving, scatter rubble or dress wilderness. It may not choose the
+location, connection graph, major levels, silhouette or centre of a remembered
+place. ([MAP_PIPELINE.md](docs/MAP_PIPELINE.md) §2)
 
 **Authored data is never written by the generator; derived data is never edited
 by hand.** If those mix, reproducibility is silently lost.
@@ -203,6 +229,25 @@ Run the game:
 ```bash
 godot-mono --path .
 ```
+
+Audit the authored world topology without generating terrain, or write its SVG
+preview:
+
+```bash
+./tools/world-authoring.sh audit
+./tools/world-authoring.sh atlas-preview
+./tools/world-authoring.sh preview
+./tools/world-authoring.sh preview-domain shallows-gateway-domain
+./tools/world-authoring.sh compile-sector 8,8
+./tools/world-authoring.sh verify-sector 8,8
+```
+
+The atlas preview defaults to `../shots/world-atlas.svg`; a sector compile writes
+its disposable `.pfs` artifact under `content/chapter_01/derived/` and a PNG to
+`../shots/`. The verifier rebuilds the sector twice and compares every overlapping
+apron cell with its east and south neighbours. A topology warning means
+the authored production draft is incomplete; an error means IDs, coordinates or
+connections are invalid and the normal canonical runtime will refuse to boot.
 
 Compile without exporting:
 

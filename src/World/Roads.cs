@@ -17,6 +17,8 @@ public enum RoadClass : byte
 public sealed class RoadSegment
 {
 	public RoadClass Class;
+	/// <summary>Authored full surface width. Zero uses the legacy class default.</summary>
+	public float Width;
 	public int A, B;
 	public readonly List<(int x, int z)> Points = new();
 }
@@ -78,6 +80,47 @@ public sealed class RoadNetwork
 	}
 
 	private const float Blocked = float.MaxValue;
+
+	/// <summary>
+	/// Realise the authored connection graph directly. Major roads no longer ask
+	/// A* where the story should go; their polylines are already the answer. The
+	/// dense sampling keeps the existing stamp, reclamation and crossing code.
+	/// </summary>
+	public static RoadNetwork BuildAuthored(Terrain terrain, CanonicalWorldDefinition world)
+	{
+		var net = new RoadNetwork(terrain.Size);
+		foreach (var route in world.Routes)
+		{
+			var seg = new RoadSegment
+			{
+				Class = route.Kind switch
+				{
+					RoadKind.Major => RoadClass.Major,
+					RoadKind.Local or RoadKind.Street or RoadKind.Abandoned => RoadClass.Local,
+					_ => RoadClass.Trail,
+				},
+				Width = route.Width,
+				A = -1,
+				B = -1,
+			};
+
+			for (int p = 0; p + 1 < route.Points.Count; p++)
+			{
+				var a = route.Points[p]; var b = route.Points[p + 1];
+				float dx = b.X - a.X, dz = b.Z - a.Z;
+				int steps = Math.Max(1, (int)MathF.Ceiling(MathF.Sqrt(dx * dx + dz * dz) / 2f));
+				for (int s = p == 0 ? 0 : 1; s <= steps; s++)
+				{
+					float t = s / (float)steps;
+					var point = ((int)MathF.Round(a.X + dx * t), (int)MathF.Round(a.Z + dz * t));
+					if (seg.Points.Count == 0 || seg.Points[^1] != point) seg.Points.Add(point);
+				}
+			}
+			net.Segments.Add(seg);
+		}
+		net.Stamp(terrain);
+		return net;
+	}
 
 	public static RoadNetwork Build(Terrain terrain, List<SettlementSite> sites,
 		List<Landmark> marks, int seed)
@@ -275,7 +318,7 @@ public sealed class RoadNetwork
 		int S = _size;
 		foreach (var seg in Segments)
 		{
-			float half = seg.Class switch
+			float half = seg.Width > 0f ? seg.Width * 0.5f : seg.Class switch
 			{
 				RoadClass.Major => 2.2f,
 				RoadClass.Local => 1.5f,

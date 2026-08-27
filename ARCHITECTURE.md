@@ -190,36 +190,53 @@ kept, fine internal edges dropped) as a flag on the exporter.
 
 ---
 
-## 3. World representation — voxel storage, authored geography
+## 3. World representation — sector fields, derived voxels, authored geography
 
-**Decision: as requested, keep the reference model. A single dense voxel grid for the
-whole map (one byte per block) plus per-chunk meshing, streaming, and unloading around
-the player.**
+**Production decision:** Chapter 1 is a 12,288 × 9,216 × 192 logical atlas,
+compiled and loaded in deterministic 768 × 768 sectors. It is not represented by
+one dense continent-wide voxel or column grid. [docs/ATLAS.md](docs/ATLAS.md)
+owns dimensions, source formats and sector semantics.
 
-- Chunk footprint 24×24, full world height, matching `CHUNK = 24`.
-- Stream radius 8 chunks (`DEFAULT_STREAM_RADIUS`), exposed in the developer view per
-  `plan.md` §25.
-- Meshing on `WorkerThreadPool` tasks with a per-frame budget for uploads, mirroring the
-  reference's `voxel-worker.js` + incremental `pump(deadline)`.
-- Determinism: the in-tree `Rng` and value-noise implementation is the stable randomness
-  boundary. Do not silently substitute an engine noise source: Chapter maps must remain
-  stable for their own seed even though they do not match the browser demo's coordinates.
+- Chunk footprint remains 24×24 blocks. A sector is exactly 32×32 chunks.
+- The current stream radius remains a runtime quality/performance control; it
+  does not change compilation or authored coordinates.
+- Meshing remains worker-threaded with budgeted main-thread uploads.
+- Every procedural field samples global atlas coordinates and an explicit stable
+  key. Sector build order and neighbouring-sector availability cannot affect it.
+- A sector is built with an apron for noise, hydrology, route fitting and site
+  work, then cropped to its owned 768-square result. Shared edges must be exact.
 
-The voxel store is runtime representation, not map authorship. Each map is a content
-package under `content/` whose normalized definition owns its boundary, macro elevation
-zones, biome zones, major lakes and waterways, plus remnant, road and landmark anchors.
-The planner consumes that fixed intent and supplies deterministic natural infill. Major
-features are never inferred from map area unless that map explicitly requests additional
-procedural counts.
+The current `VoxelGrid` already derives deep terrain blocks from per-column cap,
+substrate and height plus a sparse placed-block overlay. That representation
+remains correct **inside a loaded sector window**. What cannot scale is the
+current assumption that `Terrain`, `Planner`, `RoadNetwork` and `VoxelGrid` each
+own several `size * size` arrays for the entire continent. At production extent
+those arrays alone would occupy gigabytes. The 3,456-square executable is
+therefore a review fixture until those fields become sector-local storage.
 
-Cost of this choice, stated plainly so it is not a surprise later: the dense grid is a
-global allocation and it is what caps world size. At `WORLD.height = 76` that is ~45 MB
-at 768 blocks square, ~80 MB at 1024, ~320 MB at 2048. **1024 is the practical ceiling**,
-which at this block scale is roughly a square kilometre of playable region — comfortably
-"considerably larger than the current world" per §8. If Chapter 1 ever needs to exceed
-it, the escape hatch is already identified in `WORLDGEN.md`: keep the 2D layers (heights,
-surface, wetness, plan) globally and materialise voxels per tile. We are not building
-that now; we are keeping the mesher's inputs narrow enough that it stays possible.
+The voxel store is runtime representation, not map authorship. Each production
+map is a content package under `content/`: the atlas manifest registers painted
+macro fields and biome build profiles, while canonical topology owns domains,
+significant sites, entrances and roads at absolute atlas coordinates. The
+compiler consumes fixed intent, supplies deterministic natural infill and emits
+disposable sector artifacts. Major features are never inferred from map area.
+
+`MapDefinition.CanonicalAtlasPath` loads and audits the physical production
+contract without allocating it. `MapDefinition.CanonicalWorldPath` currently
+selects the 3,456-square topology review path; `RoadNetwork.BuildAuthored()`
+rasterises those named polylines directly. The procedural settlement search,
+significant-landmark scatter and location-seeking review fixtures are legacy-map
+behaviour only. `tools/world-authoring.sh` audits and previews atlas/topology
+sources before `Planner` or `Terrain` exists. `AtlasSectorCompiler` is the first
+production storage boundary: it reads registered land, elevation, hydrology and
+categorical region sources and writes a disposable `PTFLSEC2` artifact for one
+768-block sector plus apron. Its per-cell schema is terrain/bed height, optional
+absolute water-surface height, land, authored water value, hydrology class,
+primary profile, secondary profile and secondary weight. It derives profile
+transitions, floodplains, banks and permanent-water beds in absolute coordinates;
+the coarse atlas-wide water-component labels remain authoring metadata rather
+than block arrays. The tool does not yet materialise `VoxelGrid` columns, water
+meshes or the runtime sector window.
 
 ---
 

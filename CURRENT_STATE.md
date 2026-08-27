@@ -9,7 +9,7 @@
 > [docs/ROADMAP.md](docs/ROADMAP.md). Everything below is the substrate that work
 > builds on.
 
-Last updated: 26 August 2026
+Last updated: 28 August 2026
 
 This document records what is present in the Godot project today. It is a factual
 snapshot, not a design target or implementation guide. Keep it that way: nothing
@@ -29,7 +29,12 @@ aspirational belongs here, and anything listed must have been seen working.
 - The game is assembled in code from `src/Main.cs`; `main.tscn` is the entry scene.
 - The default world footprint is **3456×3456 columns** with a voxel height of 76 —
   roughly twenty times the area it began at. That growth was only possible because
-  voxel storage became derived rather than dense; see §2.
+  voxel storage became derived rather than dense; see §2. This is now a review
+  fixture, not the production-map footprint.
+- The authored production atlas contract is **12,288×9,216×192 blocks**, divided
+  into sixteen by twelve 768-block sectors, with sea level at 40. Its first land
+  and elevation blockouts and authoring-time sector compiler exist; the playable
+  runtime still does not allocate production terrain.
 - The project builds cleanly with `dotnet build`, with no warnings.
 
 ## 2. Map and world generation
@@ -37,6 +42,33 @@ aspirational belongs here, and anything listed must have been seen working.
 ### In place
 
 - A validated JSON map-package format for authored macro geography.
+- `content/chapter_01/atlas.json` now defines the production dimensions, sea
+  level, sector and chunk registration, seven L0/L1 source layers, three selected
+  map references, two generated working references and six province allocation
+  polygons. `biomes.json` defines eight
+  build profiles with relief wavelengths, surface roles, erosion response,
+  vegetation/detail sets, atmosphere/shader profiles, road treatment and
+  architecture palette bias.
+- `./tools/world-authoring.sh audit` validates both the production atlas/profile
+  contract and the review-map topology without generating terrain.
+  `atlas-preview` writes an SVG of the registered elevation, hydrology and
+  categorical-region sources with the 16×12 sector grid and faint province guides.
+- `continent/land.png` and `elevation.png` are exact-registration L0 blockouts at
+  1,536×1,152 pixels and were accepted by the author on 27 August 2026. The six
+  province envelopes are approved working allocation guides rather than physical
+  borders. `water.png` and `region.png` are normalized, exact-registration
+  image-generated drafts accepted by the author on 27 August 2026; culture,
+  abandonment and wilderness remain `Planned`. The audit checks dimensions, PNG encoding, the
+  exact region palette and land-mask agreement for water and region.
+- `AtlasSectorCompiler` version 3 compiles an arbitrary 768-block sector plus a
+  24-block apron into a disposable `PTFLSEC2` artifact and PNG preview. Each cell
+  carries terrain/bed height, optional absolute water surface, compiled land,
+  authored water value, hydrology class, primary/secondary profiles and blend.
+  It derives region transitions, floodplains, banks, oceans, enclosed lakes and
+  high-altitude permanent-water cores in global coordinates. Sectors 0,0, 4,2,
+  6,4, 8,8 and 15,11 rebuilt deterministically; every tested available east and
+  south neighbor matched all 39,168 overlap cells. This remains an authoring
+  artifact compiler, not playable voxel terrain, rendered water or a runtime window.
 - `content/chapter_01/map.json` currently defines:
   - the playable boundary and chapter spawn;
   - six elevation zones and six authored biome zones;
@@ -304,7 +336,7 @@ in §2. What remains is the layer above them, and it is the current effort. See
   height max(slab plan, existing ground) so a site can never dig or moat,
   masonry decks with frayed edges and parapet blocks, stairs notched through
   the slab fronts, fill in the monument's own coursed pale masonry, the land
-  beyond the slabs untouched. The summit sanctum (`src/World/Sanctum.cs`) is
+  beyond the slabs untouched. The summit sanctum (`src/World/Sanctum.cs`) was
   its working case: three tiers (base capping the peak, mid +8, crown +16)
   with satellite slabs shed around the skirt, and the monument on the decks —
   17-wide arched apse with meander glyphs and crystal light, the glowing
@@ -314,22 +346,41 @@ in §2. What remains is the layer above them, and it is the current effort. See
   a fallen column and rubble. Bare stone, no moss. Placed on the most
   prominent summit that leaves vertical headroom for the stack under the
   world ceiling of 76.
-  Built from the parametric part library in `src/World/RuinKit.cs`, on every
-  boot, marked on the world map with a labelled minty-green diamond
-  (shift-click teleports there), reviewed through the `sanctum*` capture shots.
+  Built from the parametric part library in `src/World/RuinKit.cs`, it was
+  reviewed through the `sanctum*` capture shots. Canonical mode now disables it
+  because it searches for its own summit; it remains available to legacy
+  sandbox maps.
   The earlier kit YARD and flat hand-composed PRECINCT were retired in the
   2026-08 direction shift ([docs/ROADMAP.md](docs/ROADMAP.md) §3): the author
   judged them "very basic" against the references — sites must be multi-layered
   terrain with the landmarks integrated, one built to exact detail at a time.
-  What does NOT yet exist: sites placed as canonical world content, the
-  composition grammar to generate more of them, and terracing from arbitrary
+  What does NOT yet exist: authored L3 site plans or terracing from arbitrary
   authored polygons.
-- **Composition of generated sites.** Settlement sites are still fitted and
-  scattered, not composed; only the hand-built sanctum has an axis, level
-  hierarchy, boundary and centre. ([docs/RUINS.md](docs/RUINS.md) §4)
-- **The canonical authored map.** The map is still seeded with zones rather than
-  authored with named places, and there is no way to say "this site, here,
-  oriented this way". ([docs/MAP_PIPELINE.md](docs/MAP_PIPELINE.md))
+- **Canonical topology and its first tools exist.**
+  `content/chapter_01/world.json` is a versioned absolute-coordinate source for
+  domains, sites, entrances, graph nodes and routes. The first production-draft
+  southern domain has four named site envelopes and seven connected routes.
+  `src/World/CanonicalWorld.cs` performs a strict pre-generation audit;
+  `./tools/world-authoring.sh audit|preview` checks it or writes an SVG without
+  generating terrain. The in-game map overlays the authored domain and site
+  envelopes. Canonical runtime mode stamps only authored route polylines and
+  disables procedural settlements, significant landmarks and the sanctum
+  fixture. The draft deliberately remains below the 30–60-site target and has
+  no structure geometry yet. ([docs/MAP_PIPELINE.md](docs/MAP_PIPELINE.md))
+- **The production atlas manifest, first macro blockouts and first sector compiler
+  exist.** The selected colour, line and elevation maps are tracked under
+  `world-new/map/`; atlas dimensions, sector grid, registered macro layers,
+  province polygons and biome build contracts are machine-audited and
+  previewable. Land, elevation, generated water and categorical region sources
+  are accepted; culture, abandonment and wilderness remain planned. A
+  deterministic compiler emits one disposable terrain/hydrology/profile sector
+  plus apron and verifies neighbor overlap. The current runtime still owns global
+  3,456-square fields; production route/site compilation, voxel-column and water-
+  mesh materialisation, and a windowed runtime have not been built.
+  ([docs/ATLAS.md](docs/ATLAS.md))
+- **Authored site composition is not built.** The topology says where a site is
+  and how it connects, but no L3 plan yet supplies its platform polygons,
+  levels, walls, stairs or major silhouette. ([docs/RUINS.md](docs/RUINS.md) §4)
 - **The story layer.** Regions with roles, domains, and site allocation by
   meaning rather than by fit. ([docs/WORLD.md](docs/WORLD.md))
 - Biome identities affect terrain, flora, ground detail, and airborne detail, but the

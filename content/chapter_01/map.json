@@ -1,6 +1,8 @@
 {
   "id": "chapter-01",
   "displayName": "Petalfell Chapter 1",
+  "canonicalAtlasPath": "res://content/chapter_01/atlas.json",
+  "canonicalWorldPath": "res://content/chapter_01/world.json",
   "defaultSeed": 20260820,
   "defaultWorldSize": 3456,
   "boundary": {

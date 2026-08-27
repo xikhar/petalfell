@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "id": "chapter-01-atlas",
+  "displayName": "Petalfell Chapter 1 Production Atlas",
+  "width": 12288,
+  "depth": 9216,
+  "height": 192,
+  "seaLevel": 40,
+  "sectorSize": 768,
+  "chunkSize": 24,
+  "blocksPerPixel": 8,
+  "biomeCatalogPath": "res://content/chapter_01/biomes.json",
+  "previewReferencePath": "res://world-new/map/map-color.png",
+  "compositionReferencePaths": [
+    "res://world-new/map/map-color.png",
+    "res://world-new/map/map-line.png",
+    "res://world-new/map/map-elevation.png",
+    "res://world-new/map/map-hydrology-generated-v1.png",
+    "res://world-new/map/map-region-generated-v1.png"
+  ],
+  "sourceLayers": [
+    {
+      "id": "land",
+      "kind": "Land",
+      "format": "Gray8Png",
+      "status": "Accepted",
+      "path": "res://content/chapter_01/continent/land.png",
+      "blocksPerPixel": 8
+    },
+    {
+      "id": "elevation",
+      "kind": "Elevation",
+      "format": "Gray16Png",
+      "status": "Accepted",
+      "path": "res://content/chapter_01/continent/elevation.png",
+      "blocksPerPixel": 8
+    },
+    {
+      "id": "water",
+      "kind": "Water",
+      "format": "Gray8Png",
+      "status": "Accepted",
+      "path": "res://content/chapter_01/continent/water.png",
+      "blocksPerPixel": 8
+    },
+    {
+      "id": "region",
+      "kind": "Region",
+      "format": "IndexedRgbPng",
+      "status": "Accepted",
+      "path": "res://content/chapter_01/continent/region.png",
+      "blocksPerPixel": 8
+    },
+    {
+      "id": "culture",
+      "kind": "Culture",
+      "format": "IndexedRgbPng",
+      "status": "Planned",
+      "path": "res://content/chapter_01/continent/culture.png",
+      "blocksPerPixel": 8
+    },
+    {
+      "id": "abandonment",
+      "kind": "Abandonment",
+      "format": "Gray8Png",
+      "status": "Planned",
+      "path": "res://content/chapter_01/continent/abandonment.png",
+      "blocksPerPixel": 8
+    },
+    {
+      "id": "wilderness",
+      "kind": "Wilderness",
+      "format": "Gray8Png",
+      "status": "Planned",
+      "path": "res://content/chapter_01/continent/wilderness.png",
+      "blocksPerPixel": 8
+    }
+  ],
+  "provinces": [
+    {
+      "id": "cold-shelf",
+      "displayName": "Cold Shelf",
+      "previewColour": "#d9dcf1",
+      "transitionBlocks": 384,
+      "biomeProfileIds": ["cold-shelf", "stone-highland"],
+      "boundary": [
+        { "x": 500, "z": 350 },
+        { "x": 6200, "z": 250 },
+        { "x": 7200, "z": 1800 },
+        { "x": 6100, "z": 3100 },
+        { "x": 3500, "z": 3000 },
+        { "x": 900, "z": 2450 }
+      ]
+    },
+    {
+      "id": "scarp-quarry-belt",
+      "displayName": "Scarp and Quarry Belt",
+      "previewColour": "#c7ae9e",
+      "transitionBlocks": 320,
+      "biomeProfileIds": ["stone-highland", "dry-scarp"],
+      "boundary": [
+        { "x": 350, "z": 2050 },
+        { "x": 3550, "z": 2250 },
+        { "x": 5900, "z": 3250 },
+        { "x": 4700, "z": 6050 },
+        { "x": 650, "z": 6200 },
+        { "x": 250, "z": 3950 }
+      ]
+    },
+    {
+      "id": "waist",
+      "displayName": "The Waist",
+      "previewColour": "#aebf91",
+      "transitionBlocks": 448,
+      "biomeProfileIds": ["river-waist", "temperate-wood"],
+      "boundary": [
+        { "x": 3900, "z": 2250 },
+        { "x": 8150, "z": 2050 },
+        { "x": 9150, "z": 5450 },
+        { "x": 7500, "z": 6800 },
+        { "x": 4250, "z": 6250 },
+        { "x": 3000, "z": 4100 }
+      ]
+    },
+    {
+      "id": "bloom-reach",
+      "displayName": "Bloom Reach",
+      "previewColour": "#e6b6ca",
+      "transitionBlocks": 448,
+      "biomeProfileIds": ["bloom-reach", "river-waist"],
+      "boundary": [
+        { "x": 7850, "z": 1150 },
+        { "x": 11650, "z": 1050 },
+        { "x": 12050, "z": 6700 },
+        { "x": 9900, "z": 7400 },
+        { "x": 8100, "z": 6050 },
+        { "x": 7350, "z": 3300 }
+      ]
+    },
+    {
+      "id": "fen",
+      "displayName": "The Fen",
+      "previewColour": "#8fae9e",
+      "transitionBlocks": 384,
+      "biomeProfileIds": ["fen", "drowned-shallows"],
+      "boundary": [
+        { "x": 450, "z": 5450 },
+        { "x": 4350, "z": 5200 },
+        { "x": 5650, "z": 7350 },
+        { "x": 4050, "z": 9000 },
+        { "x": 400, "z": 8250 }
+      ]
+    },
+    {
+      "id": "shallows",
+      "displayName": "The Shallows",
+      "previewColour": "#9eb9d8",
+      "transitionBlocks": 512,
+      "biomeProfileIds": ["drowned-shallows", "fen"],
+      "boundary": [
+        { "x": 3900, "z": 5900 },
+        { "x": 9200, "z": 5650 },
+        { "x": 11700, "z": 7900 },
+        { "x": 10350, "z": 9050 },
+        { "x": 3300, "z": 9050 },
+        { "x": 2500, "z": 7550 }
+      ]
+    }
+  ]
+}

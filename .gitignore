@@ -23,6 +23,10 @@
 /captures/
 /renders/
 
+# Reproducible world compiler output. Authored continent sources live beside
+# this directory and remain tracked; sector artifacts are disposable caches.
+/content/**/derived/
+
 # Reference images are TRACKED on purpose. docs/RUINS.md and AGENTS.md both
 # tell future sessions to look at world-new/ rather than trust a summary of it,
 # so the images have to survive a fresh clone or that instruction is a lie.
@@ -39,4 +43,3 @@ Thumbs.db
 *.tmp
 *.log
 mono_crash.*.json
-

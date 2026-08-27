@@ -54,9 +54,19 @@ public partial class Main : Node3D
 	private Vector3? _focusOverride;
 	private ShaderMaterial _inkLight, _inkDark, _waterMat;
 	private Tools.DeveloperMenu _developerMenu;
+	private bool _authoringMode;
 
 	public override void _Ready()
 	{
+		// Topology authoring must not pay the several-second world-generation cost.
+		// Audit/preview commands load only authored sources, write their result and
+		// exit before any renderer or terrain state exists.
+		if (Tools.WorldAuthoring.TryRun(this, MapDefinitionPath))
+		{
+			_authoringMode = true;
+			return;
+		}
+
 		// Before any material is built: a shader naming a global uniform that has
 		// not been registered fails to compile.
 		DayCycle.RegisterGlobals();
@@ -64,6 +74,9 @@ public partial class Main : Node3D
 		Map = MapDefinition.Load(MapDefinitionPath);
 		if (Seed == 0) Seed = Map.DefaultSeed;
 		if (WorldSize <= 0) WorldSize = Map.DefaultWorldSize;
+		if (Map.CanonicalWorld != null && WorldSize != Map.CanonicalWorld.WorldSize)
+			throw new InvalidOperationException(
+				$"Canonical world uses absolute coordinates at size {Map.CanonicalWorld.WorldSize}; runtime requested {WorldSize}.");
 
 		var t0 = Time.GetTicksMsec();
 		Plan = new Planner(Seed, WorldSize, Map);
@@ -78,18 +91,17 @@ public partial class Main : Node3D
 		Footing.ResetCounters();
 		Settlements.Build(Terrain, Terrain.Sites, Seed);
 		Landmarks.Build(Terrain, Terrain.Marks);
-		// The ONE reference-exact site of the current direction: the summit
-		// sanctum, terrain and monument built as a single thing. Built on every
-		// boot (a fixture that needs a flag cannot be found), seeded from the
-		// world like everything else, and marked loudly on the world map. The
-		// kit-yard and flat-precinct fixtures it replaces were judged "very
-		// basic" against the references and retired — the parts live on as the
-		// library this site is built from. Before vegetation, so trees crowd
-		// the shelves but stay out of the masonry.
-		Sanctum.Build(Terrain, Seed);
-		GD.Print(Sanctum.Built
-			? $"[sanctum] at {Sanctum.SiteX},{Sanctum.SiteZ}  blocks {RuinKit.LastBlockCount}"
-			: "[sanctum] no summit found — not built");
+		// The summit sanctum chooses its own location and therefore cannot coexist
+		// with canonical topology. Keep it only as a legacy review fixture until an
+		// authored L3 plan absorbs the useful parts of it.
+		if (Map.CanonicalWorld == null)
+		{
+			Sanctum.Build(Terrain, Seed);
+			GD.Print(Sanctum.Built
+				? $"[sanctum] at {Sanctum.SiteX},{Sanctum.SiteZ}  blocks {RuinKit.LastBlockCount}"
+				: "[sanctum] no summit found — not built");
+		}
+		else GD.Print($"[canonical] {Map.CanonicalWorld.Sites.Count} authored sites; legacy sanctum fixture disabled");
 		var tTown = Time.GetTicksMsec();
 		Vegetation.Populate(Terrain, Seed);
 		var t3 = Time.GetTicksMsec();
@@ -696,6 +708,10 @@ public partial class Main : Node3D
 
 	public override void _UnhandledInput(InputEvent e)
 	{
+		// Authoring commands deliberately return from _Ready before constructing the
+		// gameplay graph. A focused window can still receive wheel/key events during
+		// the few frames before Quit is processed, so it must have no input surface.
+		if (_authoringMode || Rig == null || Player == null) return;
 		// T owns the skills surface even if another reading surface is currently
 		// open. Only one modal may own movement and mouse input at a time.
 		if (_skillSelector?.HandleInput(e) == true)
