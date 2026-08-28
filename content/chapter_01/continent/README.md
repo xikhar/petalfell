@@ -41,9 +41,10 @@ registration and PNG mode unchanged.
   increases drainage, wet-valley, bank and floodplain influence, and `240–255`
   is the permanent-water band. Every pixel outside `land.png` must be `255`.
   Paint connected watersheds and river corridors, not disconnected decorative
-  strokes. Compiler version 3 converts this intent into floodplain, bank,
-  permanent-water bed and absolute water-surface fields; it does not yet build
-  voxel columns or rendered water meshes.
+  strokes. Compiler version 4 converts this intent into floodplain, bank,
+  permanent-water bed and absolute water-surface fields. The runtime review
+  window materialises those derived fields; edit this image and rebuild rather
+  than editing a `.pfs` artifact or the resulting voxel columns.
 - `region.png` is an exact categorical image: black outside land; Cold Shelf
   `#d9dcf1`; Scarp `#c7ae9e`; Waist `#aebf91`; Bloom Reach `#e6b6ca`; Fen
   `#8fae9e`; Shallows `#9eb9d8`. Do not antialias, shade or introduce gradient
@@ -62,11 +63,27 @@ After every edit:
 ```bash
 ./tools/world-authoring.sh audit
 ./tools/world-authoring.sh atlas-preview
+./tools/world-authoring.sh atlas-topology-preview
+./tools/world-authoring.sh preview-atlas-domain shallows-gateway-domain
+./tools/world-authoring.sh sample-atlas 6400,6500
 ./tools/world-authoring.sh compile-sector 8,8
 ./tools/world-authoring.sh verify-sector 8,8
+./tools/world-authoring.sh review-domain shallows-gateway-domain
+./tools/world-authoring.sh capture-domain shallows-gateway-domain
 ```
 
-Review `../shots/world-atlas.svg` first, then the sector PNG. Keep a revised layer
-at `Blockout` while iterating. `Accepted` is an author decision after the macro read
-and representative sector terrain have both been approved; the compiler never
-promotes a layer itself.
+Review `../shots/world-atlas.svg` first, then the topology/domain overlay and
+representative sector PNG. The permanent topology lives in sibling
+`../topology.json`; the generated preview never writes it. Keep a revised layer
+at `Blockout` while iterating. `Accepted` is an author decision after the macro
+read and representative sector terrain have both been approved; the compiler
+never promotes a layer itself.
+
+The domain review reads these accepted sources through the same ordinary sector
+artifacts and assembles only the nine sectors touched by the current southern
+domain. Its platforms, routes, ruins, frayed paving, reclamation and trees are
+derived review data. `capture-domain` records fixed near, wide, reverse and far
+views in both late-morning and night light through the game's ordinary day-cycle
+rig. To change a significant location, level, collapse depth, reclamation limit,
+connection or silhouette, edit `../topology.json` or the registered domain
+plan—not a capture, `.pfs` file or runtime voxel window.

@@ -279,7 +279,7 @@ stairs and rubble as one ground operation before dressing either side.
 |---|---|---|---|
 | Wilderness terrain | painted L0/L1 layers + biome profile | sector height/surface fields and voxel columns | existing voxel shader and palette/material table |
 | Roads and ordinary causeways | route spline + construction profile | fitted voxel surface, cuts/fills and crossing records | shared voxel/wetness/reclamation path |
-| Hero district composition | `sites/<id>.json` plan | terrain directives, placed kit parts and navigation | voxel blockout first; optional `.glb` replacement without moving sockets |
+| Hero district composition | `domains/<id>.json` connected plan, optional site refinements | terrain directives, placed kit parts and navigation | voxel blockout first; optional `.glb` replacement without moving sockets |
 | Reusable architecture | parametric voxel kit now; Blender source later | voxel placement or imported `.glb` with socket metadata | shared architecture material family, culture/profile parameters |
 | Vegetation and props | reusable set definition; Blender source where needed | instanced geometry/MultiMesh and block forms | shared wind/ground-detail shaders, biome-selected parameters |
 | Water | painted water/hydrology intent | sector water surfaces and crossing data | existing water shader, profile-selected colour/fog response |
@@ -319,6 +319,14 @@ masses. The atlas audit validates dimensions and PNG encoding, and
 the whole-atlas preview uses the registered elevation source rather than the
 reference once that source exists.
 
+The manifest also registers the separate version 2 `topology.json`. Its audit
+requires the same 12,288 × 9,216 extent and valid province ids. The first
+southern gateway domain is permanently placed across sectors 7–9 in both axes at
+the central delta threshold. `atlas-topology-preview` draws all L2 records over
+the accepted macro sources; `preview-atlas-domain` crops that composite and
+labels every intersecting sector. Sector boundaries report build ownership only
+and do not alter the domain boundary, site axes or route geometry.
+
 The built-in image-generation tool used the three references plus the accepted
 land/elevation sources to propose a connected hydrology system, then used that
 result to propose six terrain-shaped regions. Those proposals were deterministically
@@ -328,7 +336,7 @@ registered `water.png` and `region.png` were accepted by the author on 2026-08-2
 Their exact prompt set and normalization record live beside them in
 `world-new/map/GENERATED.md`; the generated proposals themselves are not canon.
 
-Compiler version 3 consumes land, elevation, water and region, blends
+Compiler version 4 consumes land, elevation, water and region, blends
 profile-bounded relief in global coordinates, shapes floodplains and banks, and
 emits the `PTFLSEC2` artifact plus PNG. Each cell carries terrain/bed height,
 optional absolute water-surface height, compiled land, authored water value,
@@ -340,14 +348,31 @@ to 24 blocks so the eight-block source pixels do not become visible bands.
 Enclosed authored water bodies receive altitude from their surrounding accepted
 elevation; generated permanent-water cores follow a five-source-pixel local
 valley guide. The floodplain and bank passes lower terrain toward that guide
-before terrace quantization. Sectors 0,0, 4,2, 6,4, 8,8 and 15,11 rebuild to
+before terrace quantization. A channel surface is also constrained below the
+locally realised valley, so profile relief cannot leave compiled land submerged.
+Sectors 0,0, 4,2, 6,4, 8,8 and 15,11 rebuild to
 stable hashes. Every independently compiled east/south neighbor that exists
 matched all 39,168 overlapping apron cells per edge, including every new field.
 The coarse atlas-wide water-body label is authoring-time source metadata, not a
 continent-scale block array.
 
-Culture, abandonment and wilderness images remain planned. The current
-executable still builds the 3,456-square review world with whole-map arrays.
-The artifact is not yet voxel columns or rendered water geometry. Playable
-voxel-sector materialisation, the windowed runtime, production topology and the
-L3 site-plan compiler do not yet exist.
+The strict artifact reader rejects old compiler versions, stale source
+fingerprints, malformed dimensions and invalid cell payloads. `review-sector`
+materialises one artifact plus apron into a sector-local `VoxelGrid` at its true
+global atlas origin, resolves profile surface IDs, streams the ordinary voxel
+and ink meshes, and renders all compiled water elevations through the existing
+water shader. `capture-sector` judges the same window at four fixed distances.
+Mountain, confluence and drowned-south windows have been inspected in the game;
+the legacy 3,456-square runtime also passed its fixed hero capture after the
+shared material construction was extracted.
+
+Culture, abandonment and wilderness images remain planned. The ordinary game
+still builds the 3,456-square review world with whole-map arrays. The production
+window remains a review surface with no player, collision or multi-elevation
+planar reflections. A temporary domain mode composes nine normal sector
+artifacts, realises the first plan's routes and structures, and adds preliminary
+globally anchored biome trees; it does not enlarge or replace the sector
+artifact format. Persistent route/site/plan output and the accepted wilderness
+density source do not yet exist. `sample-atlas <x,z>` compiles one
+addressed source point on demand so authored absolute platform levels can be
+chosen against the actual deterministic terrain rather than the grayscale map.

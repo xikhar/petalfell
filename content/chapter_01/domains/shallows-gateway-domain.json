@@ -1,0 +1,514 @@
+{
+  "version": 1,
+  "domainId": "shallows-gateway-domain",
+  "origin": { "x": 6400, "z": 6500 },
+  "axisDegrees": 180,
+  "referencePaths": [
+    "res://world-new/reference-2.png",
+    "res://world-new/reference-5.png",
+    "res://world-new/reference-9.png"
+  ],
+  "platforms": [
+    {
+      "id": "gate-forecourt",
+      "siteId": "shallows-monumental-gate",
+      "role": "Court",
+      "surfaceY": 106,
+      "materialId": "stone-pale-terraced",
+      "edgeTreatment": "Ragged",
+      "reclamation": 0.48,
+      "polygon": [
+        { "x": -150, "z": -160 }, { "x": 150, "z": -160 },
+        { "x": 150, "z": 20 }, { "x": -150, "z": 20 }
+      ],
+      "cutouts": [
+        {
+          "id": "forecourt-west-terrain-court", "role": "Terrain", "reclamation": 0.78,
+          "polygon": [
+            { "x": -132, "z": -136 }, { "x": -62, "z": -136 },
+            { "x": -52, "z": -108 }, { "x": -66, "z": -58 },
+            { "x": -126, "z": -48 }, { "x": -140, "z": -88 }
+          ]
+        },
+        {
+          "id": "forecourt-east-collapse", "role": "Collapsed", "depth": 7, "reclamation": 0.42,
+          "polygon": [
+            { "x": 58, "z": -142 }, { "x": 130, "z": -132 },
+            { "x": 140, "z": -84 }, { "x": 118, "z": -46 },
+            { "x": 66, "z": -58 }, { "x": 50, "z": -102 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gate-upper-court",
+      "siteId": "shallows-monumental-gate",
+      "role": "Deck",
+      "surfaceY": 112,
+      "materialId": "stone-pale-terraced",
+      "edgeTreatment": "Revetment",
+      "reclamation": 0.22,
+      "polygon": [
+        { "x": -120, "z": 20 }, { "x": 120, "z": 20 },
+        { "x": 120, "z": 120 }, { "x": -120, "z": 120 }
+      ]
+    },
+    {
+      "id": "gate-crown",
+      "siteId": "shallows-monumental-gate",
+      "role": "Slab",
+      "surfaceY": 116,
+      "materialId": "stone-pale-bedded",
+      "edgeTreatment": "Revetment",
+      "reclamation": 0.12,
+      "polygon": [
+        { "x": -85, "z": 120 }, { "x": 85, "z": 120 },
+        { "x": 85, "z": 160 }, { "x": -85, "z": 160 }
+      ]
+    },
+    {
+      "id": "causeway-deck",
+      "siteId": "shallows-water-causeway",
+      "role": "Causeway",
+      "surfaceY": 106,
+      "materialId": "stone-pale-bedded",
+      "edgeTreatment": "Submerged",
+      "reclamation": 0.32,
+      "polygon": [
+        { "x": -55, "z": -560 }, { "x": 55, "z": -560 },
+        { "x": 55, "z": -200 }, { "x": -55, "z": -200 }
+      ]
+    },
+    {
+      "id": "lower-precinct-deck",
+      "siteId": "shallows-lower-precinct",
+      "role": "Terrace",
+      "surfaceY": 106,
+      "materialId": "stone-pale-terraced",
+      "edgeTreatment": "Submerged",
+      "reclamation": 0.62,
+      "polygon": [
+        { "x": 275, "z": -160 }, { "x": 525, "z": -160 },
+        { "x": 525, "z": 80 }, { "x": 275, "z": 80 }
+      ],
+      "cutouts": [
+        {
+          "id": "lower-precinct-drowned-court", "role": "Collapsed", "depth": 5, "reclamation": 0.55,
+          "polygon": [
+            { "x": 292, "z": -142 }, { "x": 370, "z": -146 },
+            { "x": 380, "z": -104 }, { "x": 350, "z": -72 },
+            { "x": 292, "z": -84 }
+          ]
+        },
+        {
+          "id": "lower-precinct-terrain-bay", "role": "Terrain", "reclamation": 0.86,
+          "polygon": [
+            { "x": 438, "z": -150 }, { "x": 510, "z": -138 },
+            { "x": 512, "z": -82 }, { "x": 478, "z": -62 },
+            { "x": 432, "z": -86 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lower-inner-court",
+      "siteId": "shallows-lower-precinct",
+      "role": "Court",
+      "surfaceY": 108,
+      "materialId": "stone-pale-terraced",
+      "edgeTreatment": "Ragged",
+      "reclamation": 0.38,
+      "polygon": [
+        { "x": 320, "z": -90 }, { "x": 480, "z": -90 },
+        { "x": 480, "z": 50 }, { "x": 320, "z": 50 }
+      ]
+    },
+    {
+      "id": "stela-terrace",
+      "siteId": "shallows-stela-field",
+      "role": "Trace",
+      "surfaceY": 106,
+      "materialId": "stone-pale-bedded",
+      "edgeTreatment": "Ragged",
+      "reclamation": 0.78,
+      "polygon": [
+        { "x": -460, "z": -70 }, { "x": -340, "z": -70 },
+        { "x": -340, "z": 70 }, { "x": -460, "z": 70 }
+      ]
+    }
+  ],
+  "stairs": [
+    {
+      "id": "gate-grand-stair",
+      "siteId": "shallows-monumental-gate",
+      "role": "Grand",
+      "fromPlatformId": "gate-forecourt",
+      "toPlatformId": "gate-upper-court",
+      "from": { "x": 0, "z": 4 },
+      "to": { "x": 0, "z": 36 },
+      "width": 14
+    },
+    {
+      "id": "gate-crown-stair",
+      "siteId": "shallows-monumental-gate",
+      "role": "Grand",
+      "fromPlatformId": "gate-upper-court",
+      "toPlatformId": "gate-crown",
+      "from": { "x": 0, "z": 104 },
+      "to": { "x": 0, "z": 132 },
+      "width": 12
+    },
+    {
+      "id": "lower-side-stair",
+      "siteId": "shallows-lower-precinct",
+      "role": "Side",
+      "fromPlatformId": "lower-precinct-deck",
+      "toPlatformId": "lower-inner-court",
+      "from": { "x": 400, "z": -112 },
+      "to": { "x": 400, "z": -78 },
+      "width": 8
+    }
+  ],
+  "walls": [
+    {
+      "id": "monumental-gate-west-wing",
+      "siteId": "shallows-monumental-gate",
+      "points": [ { "x": -125, "z": 108 }, { "x": -18, "z": 108 } ],
+      "height": 28,
+      "state": "Broken",
+      "materialId": "stone-pale-bedded",
+      "openingSocketIds": []
+    },
+    {
+      "id": "monumental-gate-east-wing",
+      "siteId": "shallows-monumental-gate",
+      "points": [ { "x": 18, "z": 108 }, { "x": 125, "z": 108 } ],
+      "height": 28,
+      "state": "Broken",
+      "materialId": "stone-pale-bedded",
+      "openingSocketIds": []
+    },
+    {
+      "id": "gate-west-side-wall",
+      "siteId": "shallows-monumental-gate",
+      "points": [ { "x": 150, "z": -148 }, { "x": 150, "z": 16 } ],
+      "height": 6,
+      "state": "Broken",
+      "materialId": "stone-pale-terraced",
+      "openingSocketIds": []
+    },
+    {
+      "id": "gate-east-side-wall",
+      "siteId": "shallows-monumental-gate",
+      "points": [ { "x": -150, "z": -148 }, { "x": -150, "z": 16 } ],
+      "height": 5,
+      "state": "Broken",
+      "materialId": "stone-pale-terraced",
+      "openingSocketIds": []
+    },
+    {
+      "id": "gate-south-west-return",
+      "siteId": "shallows-monumental-gate",
+      "points": [ { "x": -148, "z": -156 }, { "x": -20, "z": -156 } ],
+      "height": 4,
+      "state": "Stub",
+      "materialId": "stone-pale-terraced",
+      "openingSocketIds": ["gate-south-socket"]
+    },
+    {
+      "id": "gate-south-east-return",
+      "siteId": "shallows-monumental-gate",
+      "points": [ { "x": 20, "z": -156 }, { "x": 148, "z": -156 } ],
+      "height": 4,
+      "state": "Stub",
+      "materialId": "stone-pale-terraced",
+      "openingSocketIds": ["gate-south-socket"]
+    },
+    {
+      "id": "west-precinct-link",
+      "points": [
+        { "x": 150, "z": 10 }, { "x": 230, "z": 35 },
+        { "x": 275, "z": 80 }, { "x": 430, "z": 80 }
+      ],
+      "height": 5,
+      "state": "Broken",
+      "materialId": "stone-pale-terraced",
+      "openingSocketIds": ["lower-east-socket"]
+    },
+    {
+      "id": "east-precinct-link",
+      "points": [
+        { "x": -150, "z": 10 }, { "x": -240, "z": 30 },
+        { "x": -340, "z": 60 }, { "x": -440, "z": 60 }
+      ],
+      "height": 4,
+      "state": "Stub",
+      "materialId": "stone-pale-terraced",
+      "openingSocketIds": ["stela-west-socket"]
+    },
+    {
+      "id": "causeway-west-cheek",
+      "siteId": "shallows-water-causeway",
+      "points": [ { "x": 60, "z": -560 }, { "x": 60, "z": -200 } ],
+      "height": 3,
+      "state": "Broken",
+      "materialId": "stone-pale-bedded",
+      "openingSocketIds": []
+    },
+    {
+      "id": "causeway-east-cheek",
+      "siteId": "shallows-water-causeway",
+      "points": [ { "x": -60, "z": -560 }, { "x": -60, "z": -200 } ],
+      "height": 3,
+      "state": "Stub",
+      "materialId": "stone-pale-bedded",
+      "openingSocketIds": []
+    }
+  ],
+  "routeSockets": [
+    { "id": "gate-south-socket", "routeNodeId": "gate-south", "point": { "x": 0, "z": -160 }, "platformId": "gate-forecourt" },
+    { "id": "gate-north-socket", "routeNodeId": "gate-north", "point": { "x": 0, "z": 160 }, "platformId": "gate-crown" },
+    { "id": "causeway-south-socket", "routeNodeId": "causeway-south", "point": { "x": 0, "z": -560 }, "platformId": "causeway-deck" },
+    { "id": "causeway-north-socket", "routeNodeId": "causeway-north", "point": { "x": 0, "z": -200 }, "platformId": "causeway-deck" },
+    { "id": "lower-east-socket", "routeNodeId": "lower-east", "point": { "x": 275, "z": -40 }, "platformId": "lower-precinct-deck" },
+    { "id": "stela-west-socket", "routeNodeId": "stela-west", "point": { "x": -340, "z": 0 }, "platformId": "stela-terrace" },
+    { "id": "strand-socket", "routeNodeId": "strand-approach", "point": { "x": 0, "z": -660 } },
+    { "id": "spine-socket", "routeNodeId": "spine-north", "point": { "x": 0, "z": 400 } }
+  ],
+  "landmarks": [
+    {
+      "id": "gate-hero-arch", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-crown", "kind": "Arch", "state": "Broken",
+      "point": { "x": 0, "z": 140 }, "orientationDegrees": 180,
+      "height": 28, "span": 14
+    },
+    {
+      "id": "gate-west-pylon", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-upper-court", "kind": "Pylon", "state": "Standing",
+      "point": { "x": 34, "z": 92 }, "orientationDegrees": 180,
+      "height": 24
+    },
+    {
+      "id": "gate-east-pylon", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-upper-court", "kind": "Pylon", "state": "Broken",
+      "point": { "x": -34, "z": 92 }, "orientationDegrees": 180,
+      "height": 21
+    },
+    {
+      "id": "gate-west-colonnade", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-forecourt", "kind": "Colonnade", "state": "Broken",
+      "point": { "x": 92, "z": -55 }, "orientationDegrees": 180,
+      "height": 18, "length": 100, "count": 6
+    },
+    {
+      "id": "gate-east-colonnade", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-forecourt", "kind": "Colonnade", "state": "Stump",
+      "point": { "x": -92, "z": -55 }, "orientationDegrees": 180,
+      "height": 17, "length": 96, "count": 5
+    },
+    {
+      "id": "gate-floor-emblem", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-upper-court", "kind": "Emblem", "state": "Buried",
+      "point": { "x": 0, "z": 68 }, "orientationDegrees": 180,
+      "span": 20
+    },
+    {
+      "id": "gate-west-crown-column", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-crown", "kind": "Column", "state": "Standing",
+      "point": { "x": 62, "z": 142 }, "orientationDegrees": 180,
+      "height": 22
+    },
+    {
+      "id": "gate-east-crown-column", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-crown", "kind": "Column", "state": "Broken",
+      "point": { "x": -62, "z": 142 }, "orientationDegrees": 180,
+      "height": 19
+    },
+    {
+      "id": "gate-west-forecourt-pylon", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-forecourt", "kind": "Pylon", "state": "Broken",
+      "point": { "x": 122, "z": -120 }, "orientationDegrees": 180,
+      "height": 18
+    },
+    {
+      "id": "gate-east-forecourt-pylon", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-forecourt", "kind": "Pylon", "state": "Stump",
+      "point": { "x": -122, "z": -120 }, "orientationDegrees": 180,
+      "height": 17
+    },
+    {
+      "id": "causeway-column-range", "siteId": "shallows-water-causeway",
+      "platformId": "causeway-deck", "kind": "Colonnade", "state": "Stump",
+      "point": { "x": 0, "z": -390 }, "orientationDegrees": 180,
+      "height": 16, "length": 250, "count": 8
+    },
+    {
+      "id": "lower-precinct-arch", "siteId": "shallows-lower-precinct",
+      "platformId": "lower-inner-court", "kind": "Arch", "state": "Broken",
+      "point": { "x": 400, "z": 10 }, "orientationDegrees": 90,
+      "height": 17, "span": 10
+    },
+    {
+      "id": "lower-fallen-column", "siteId": "shallows-lower-precinct",
+      "platformId": "lower-precinct-deck", "kind": "FallenColumn", "state": "Fallen",
+      "point": { "x": 450, "z": -110 }, "orientationDegrees": 120,
+      "length": 14
+    },
+    {
+      "id": "lower-precinct-colonnade", "siteId": "shallows-lower-precinct",
+      "platformId": "lower-inner-court", "kind": "Colonnade", "state": "Broken",
+      "point": { "x": 400, "z": -18 }, "orientationDegrees": 90,
+      "height": 16, "length": 108, "count": 6
+    },
+    {
+      "id": "stela-primary", "siteId": "shallows-stela-field",
+      "platformId": "stela-terrace", "kind": "Pylon", "state": "Standing",
+      "point": { "x": -400, "z": 10 }, "orientationDegrees": 180,
+      "height": 20
+    },
+    {
+      "id": "stela-toppled", "siteId": "shallows-stela-field",
+      "platformId": "stela-terrace", "kind": "FallenColumn", "state": "Toppled",
+      "point": { "x": -430, "z": -20 }, "orientationDegrees": 255,
+      "length": 12
+    },
+    {
+      "id": "stela-companion", "siteId": "shallows-stela-field",
+      "platformId": "stela-terrace", "kind": "Column", "state": "Broken",
+      "point": { "x": -360, "z": 34 }, "orientationDegrees": 180,
+      "height": 15
+    },
+    {
+      "id": "gate-south-west-pylon", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-forecourt", "kind": "Pylon", "state": "Broken",
+      "point": { "x": 28, "z": -130 }, "orientationDegrees": 180,
+      "height": 18
+    },
+    {
+      "id": "gate-south-east-pylon", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-forecourt", "kind": "Pylon", "state": "Standing",
+      "point": { "x": -28, "z": -130 }, "orientationDegrees": 180,
+      "height": 20
+    },
+    {
+      "id": "gate-west-side-arch", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-forecourt", "kind": "Arch", "state": "Broken",
+      "point": { "x": 126, "z": -18 }, "orientationDegrees": 90,
+      "height": 16, "span": 8
+    },
+    {
+      "id": "gate-east-side-arch", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-forecourt", "kind": "Arch", "state": "Broken",
+      "point": { "x": -126, "z": -8 }, "orientationDegrees": 90,
+      "height": 15, "span": 8
+    },
+    {
+      "id": "gate-upper-west-column", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-upper-court", "kind": "Column", "state": "Standing",
+      "point": { "x": 88, "z": 54 }, "orientationDegrees": 180,
+      "height": 20
+    },
+    {
+      "id": "gate-upper-east-column", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-upper-court", "kind": "Column", "state": "Broken",
+      "point": { "x": -88, "z": 56 }, "orientationDegrees": 180,
+      "height": 18
+    },
+    {
+      "id": "gate-upper-fallen-column", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-upper-court", "kind": "FallenColumn", "state": "Fallen",
+      "point": { "x": 70, "z": 30 }, "orientationDegrees": 65,
+      "length": 18
+    },
+    {
+      "id": "gate-upper-basin", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-upper-court", "kind": "Basin", "state": "Buried",
+      "point": { "x": -70, "z": 62 }, "orientationDegrees": 180,
+      "span": 14
+    },
+    {
+      "id": "gate-crown-colonnade", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-crown", "kind": "Colonnade", "state": "Broken",
+      "point": { "x": 0, "z": 128 }, "orientationDegrees": 90,
+      "height": 19, "length": 108, "count": 7
+    },
+    {
+      "id": "gate-forecourt-basin", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-forecourt", "kind": "Basin", "state": "Buried",
+      "point": { "x": 0, "z": -82 }, "orientationDegrees": 180,
+      "span": 24
+    },
+    {
+      "id": "lower-west-pylon", "siteId": "shallows-lower-precinct",
+      "platformId": "lower-inner-court", "kind": "Pylon", "state": "Standing",
+      "point": { "x": 334, "z": -38 }, "orientationDegrees": 90,
+      "height": 20
+    },
+    {
+      "id": "lower-east-pylon", "siteId": "shallows-lower-precinct",
+      "platformId": "lower-inner-court", "kind": "Pylon", "state": "Broken",
+      "point": { "x": 466, "z": -34 }, "orientationDegrees": 90,
+      "height": 18
+    },
+    {
+      "id": "lower-court-basin", "siteId": "shallows-lower-precinct",
+      "platformId": "lower-inner-court", "kind": "Basin", "state": "Buried",
+      "point": { "x": 400, "z": -50 }, "orientationDegrees": 90,
+      "span": 18
+    },
+    {
+      "id": "lower-west-column", "siteId": "shallows-lower-precinct",
+      "platformId": "lower-inner-court", "kind": "Column", "state": "Broken",
+      "point": { "x": 338, "z": 26 }, "orientationDegrees": 90,
+      "height": 17
+    },
+    {
+      "id": "lower-east-fallen-column", "siteId": "shallows-lower-precinct",
+      "platformId": "lower-precinct-deck", "kind": "FallenColumn", "state": "Fallen",
+      "point": { "x": 482, "z": -58 }, "orientationDegrees": 35,
+      "length": 16
+    },
+    {
+      "id": "stela-secondary", "siteId": "shallows-stela-field",
+      "platformId": "stela-terrace", "kind": "Pylon", "state": "Broken",
+      "point": { "x": -380, "z": -34 }, "orientationDegrees": 180,
+      "height": 16
+    },
+    {
+      "id": "stela-third", "siteId": "shallows-stela-field",
+      "platformId": "stela-terrace", "kind": "Pylon", "state": "Standing",
+      "point": { "x": -438, "z": 34 }, "orientationDegrees": 180,
+      "height": 15
+    },
+    {
+      "id": "stela-sunken-basin", "siteId": "shallows-stela-field",
+      "platformId": "stela-terrace", "kind": "Basin", "state": "Buried",
+      "point": { "x": -402, "z": -38 }, "orientationDegrees": 180,
+      "span": 12
+    },
+    {
+      "id": "causeway-north-arch", "siteId": "shallows-water-causeway",
+      "platformId": "causeway-deck", "kind": "Arch", "state": "Broken",
+      "point": { "x": 0, "z": -226 }, "orientationDegrees": 180,
+      "height": 18, "span": 12
+    },
+    {
+      "id": "causeway-south-arch", "siteId": "shallows-water-causeway",
+      "platformId": "causeway-deck", "kind": "Arch", "state": "Broken",
+      "point": { "x": 0, "z": -534 }, "orientationDegrees": 180,
+      "height": 16, "span": 10
+    },
+    {
+      "id": "causeway-west-pylon", "siteId": "shallows-water-causeway",
+      "platformId": "causeway-deck", "kind": "Pylon", "state": "Standing",
+      "point": { "x": 36, "z": -320 }, "orientationDegrees": 180,
+      "height": 17
+    },
+    {
+      "id": "causeway-east-pylon", "siteId": "shallows-water-causeway",
+      "platformId": "causeway-deck", "kind": "Pylon", "state": "Broken",
+      "point": { "x": -36, "z": -454 }, "orientationDegrees": 180,
+      "height": 15
+    }
+  ]
+}

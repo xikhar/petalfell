@@ -26,18 +26,27 @@ public sealed class WorldAtlasDefinition
 	public int ChunkSize { get; set; }
 	public int BlocksPerPixel { get; set; }
 	public string BiomeCatalogPath { get; set; } = "";
+	/// <summary>
+	/// Registered L2 companion source. The manifest points to it so an atlas audit
+	/// can prove that physical geography and authored topology share one extent;
+	/// the topology itself remains a separate authored file.
+	/// </summary>
+	public string TopologyPath { get; set; } = "";
 	public string PreviewReferencePath { get; set; } = "";
 	public List<string> CompositionReferencePaths { get; set; } = new();
 	public List<AtlasSourceLayer> SourceLayers { get; set; } = new();
 	public List<AtlasProvince> Provinces { get; set; } = new();
 
 	[JsonIgnore] public BiomeCatalogDefinition BiomeCatalog { get; private set; }
+	[JsonIgnore] public CanonicalWorldDefinition Topology { get; private set; }
 
 	public static WorldAtlasDefinition Load(string resourcePath)
 	{
 		var atlas = ReadJson<WorldAtlasDefinition>(resourcePath, "world atlas");
 		if (!string.IsNullOrWhiteSpace(atlas.BiomeCatalogPath))
 			atlas.BiomeCatalog = BiomeCatalogDefinition.Load(atlas.BiomeCatalogPath);
+		if (!string.IsNullOrWhiteSpace(atlas.TopologyPath))
+			atlas.Topology = CanonicalWorldDefinition.Load(atlas.TopologyPath);
 		return atlas;
 	}
 
@@ -60,6 +69,10 @@ public sealed class WorldAtlasDefinition
 		if (string.IsNullOrWhiteSpace(BiomeCatalogPath)) report.Error("biomeCatalogPath is required");
 		else if (BiomeCatalog == null) report.Error($"biome catalog '{BiomeCatalogPath}' did not load");
 		else report.Include(BiomeCatalog.Audit(), "biomes");
+
+		if (string.IsNullOrWhiteSpace(TopologyPath)) report.Error("topologyPath is required");
+		else if (Topology == null) report.Error($"topology '{TopologyPath}' did not load");
+		else report.Include(Topology.Audit(this), "topology");
 
 		if (string.IsNullOrWhiteSpace(PreviewReferencePath)) report.Error("previewReferencePath is required");
 		else if (!Godot.FileAccess.FileExists(PreviewReferencePath))
@@ -376,6 +389,12 @@ public sealed class AtlasAuditReport
 	public void Warning(string message) => Warnings.Add(message);
 
 	public void Include(AtlasAuditReport child, string scope)
+	{
+		foreach (string error in child.Errors) Error($"{scope}: {error}");
+		foreach (string warning in child.Warnings) Warning($"{scope}: {warning}");
+	}
+
+	public void Include(WorldAuditReport child, string scope)
 	{
 		foreach (string error in child.Errors) Error($"{scope}: {error}");
 		foreach (string warning in child.Warnings) Warning($"{scope}: {warning}");

@@ -344,8 +344,11 @@ reading of the selected macro-map references. Exact coastlines, province borders
 and names remain authored working material; generated labels in the references
 are not canon. [ATLAS.md](ATLAS.md) owns their physical blockout and formats.
 
-The review-map L2 source contains one four-site southern gateway domain. It
-proves stable identity and authored connections, not final atlas placement:
-Chapter 1 still needs its registered macro layers, all 30–60 site envelopes and
-the complete Spine, Strand, quarry and Fen graph. See
+The first four-site southern gateway domain now has permanent production-atlas
+coordinates at the central delta threshold. Its gate and side precincts occupy
+the last coherent shelf; its processional axis descends through a water causeway
+to a local authored segment of the drowned Strand, while the Spine continues
+north. This is the first connected fragment, not the complete network: Chapter 1
+still needs the remaining 26–56 site envelopes and the full Spine, Strand, quarry
+and Fen graph. See
 [ROADMAP.md](ROADMAP.md) §3.

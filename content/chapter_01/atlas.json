@@ -10,6 +10,7 @@
   "chunkSize": 24,
   "blocksPerPixel": 8,
   "biomeCatalogPath": "res://content/chapter_01/biomes.json",
+  "topologyPath": "res://content/chapter_01/topology.json",
   "previewReferencePath": "res://world-new/map/map-color.png",
   "compositionReferencePaths": [
     "res://world-new/map/map-color.png",

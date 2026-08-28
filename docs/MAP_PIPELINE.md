@@ -127,33 +127,49 @@ existing routing code stays useful for trails, which genuinely should be
 
 ## 5. Where the data lives
 
-The topology format is deliberately small and versioned now. Detailed site-plan
-records may add fields as the first connected domain proves them, without making
-the location and connection graph wait.
+The topology format is deliberately small and versioned. A connected domain's
+L3 plan is a separate record so platform and wall detail can grow without making
+the permanent location and connection graph wait.
 
 ```
 content/chapter_01/
   map.json          current runtime/review-map entrypoint
   atlas.json        production extent, sectors, layers and provinces   (L0/L1 manifest)
   biomes.json       terrain/surface/vegetation/atmosphere profiles      (L1)
-  world.json        domains, sites, entrances, graph nodes, routes      (L2)
+  topology.json     permanent atlas domains, sites, nodes and routes     (L2)
+  world.json        3,456-square runtime topology fixture                (legacy review)
   continent/        registered land/elevation/water/region fields       (L0/L1 images)
-  sites/<id>.json   authored site plan                                  (L3)
+  domains/<id>.json connected platforms, levels, walls and silhouettes  (L3)
+  sites/<id>.json   optional later refinement below a domain plan        (L3)
   kit/              part sources and socket metadata                    (L4)
   derived/          disposable sector output; never hand-edited
 ```
 
 The atlas is 12,288 × 9,216 blocks while the current runtime fixture is 3,456
-square. `world.json` remains a review-window topology proof until the production
-L0/L1 fields fix the southern coastline; it is then migrated once into permanent
-atlas coordinates. Do not scale it implicitly at load time, because that would
-make the supposed absolute coordinates depend on a runtime setting.
+square. `topology.json` is the permanent rectangular source and `atlas.json`
+registers it through `topologyPath`. `world.json` remains only the review-runtime
+fixture until production sectors can compile routes and sites. The two are never
+scaled into one another at load time, because that would make supposedly absolute
+coordinates depend on a runtime setting.
 
 A site record carries a stable id and display name; absolute block position and
 orientation; extent; domain, tier and archetype; culture and age; named
 entrances bound to route nodes; optional sightline targets; build status; and an
 optional authored plan path. Dressing seeds belong to the plan or derived build,
 not to the site's identity.
+
+The first L3 format is domain-local because the connective walls, causeway and
+shared level hierarchy are the composition. Its origin and axis are authored in
+atlas coordinates; every platform, platform cutout, stair, wall, route socket
+and landmark uses integer offsets from that frame and names the L2 site it
+belongs to. Cutouts name intentional terrain courts or collapsed voids inside a
+platform. A collapsed cutout owns its exact depth; platforms and cutouts own a
+0–1 reclamation density that says how strongly the biome may reclaim their made
+ground. The compiler may dress edges and realise those values with coherent
+fields, but may not invent, erase or move them. The audit transforms those
+offsets back to atlas coordinates, checks site envelopes and exact route-node
+sockets, and enforces the reference scale for columns, arches, pylons,
+colonnades and grand stairs.
 
 The **stable id** is the important field. It is what lets a quest, a map marker,
 a save file and a conversation all refer to the same place across every future
@@ -194,9 +210,9 @@ that being obvious from the code.
 
 Five options were considered. Summarised so the reasoning is not lost.
 
-**A — Extended text records.** Free, diffable, deterministic, no tooling. Good
-for L2 records. Hopeless for L3: nobody can compose a courtyard by typing
-coordinates.
+**A — Extended text records alone.** Free, diffable and deterministic. Good for
+L2, but inadequate as the only L3 surface: typed coordinates need an immediate
+terrain-backed plan view or nobody can judge the courtyard they describe.
 
 **B — Painted layers.** Author L0/L1 as image layers at a coarse blocks-per-pixel
 ratio, edited in any paint program. A brush is the correct instrument for a
@@ -226,8 +242,10 @@ menu, teleport and chunk streaming are all already there.
   an *authored record* (§3).
 - **L3 authored plans with procedural assistants** — hero districts and
   precincts own their platform polygons, level hierarchy, walls, stairs and
-  major silhouettes. Assistants repeat parametric parts, conform terrain and
-  apply dressing without changing the plan.
+  major silhouettes. The first domain plan is currently text plus an immediate
+  terrain-backed SVG; an in-game manipulation surface remains future work.
+  Assistants repeat parametric parts, conform terrain and apply dressing without
+  changing the plan.
 - **L4 Blender**, eventually. Not yet — see [RUINS.md](RUINS.md) §7: the part kit
   is achievable in voxels today and the reference images prove it, so the
   composition layer can be built and judged before any asset pipeline exists.
@@ -264,18 +282,39 @@ global coordinates over sector-local storage. See [ATLAS.md](ATLAS.md) §3.
 
 ## 9. Status
 
-The versioned L2 source, strict audit, SVG preview, in-game source overlay and
-authored-route runtime path are implemented for the review map. The production
-atlas manifest, biome-profile catalog and exact-registration land/elevation,
-water and categorical-region sources are implemented without allocating
-production terrain. Land, elevation, water and region are accepted.
+The versioned L2 schema supports both the legacy square fixture and rectangular
+production coordinates. The strict atlas audit now validates the permanent
+`topology.json` against the 12,288 × 9,216 extent and registered province ids;
+the topology preview draws domains, site envelopes, routes and affected sector
+addresses directly over the accepted elevation, water and region sources. The
+first southern gateway domain is permanently placed at the central delta
+threshold. Its first L3 domain plan fixes seven platform polygons at Y106/108/
+112/116, four named platform cutouts, three stairs, ten connective wall runs,
+eight exact route sockets and thirty-nine scale-checked silhouette placements.
+The terrain-backed domain preview shows those records over the accepted delta
+shelf and water. A review compiler now composes the nine affected sector
+artifacts, realises the exact L2/L3 records as terrain-backed voxel geometry and
+applies globally deterministic paving-edge, reclamation and biome-vegetation
+assistants within the authored densities. Fixed late-morning and night captures
+use the ordinary game lighting and atmosphere at all four review distances. The
+authored sources remain untouched. The old source overlay and authored-route
+playable runtime still consume `world.json` only.
 An authoring-time compiler emits disposable `PTFLSEC2` terrain artifacts with
 bed/terrain height, absolute water surface, hydrology class and primary/secondary
 profile blend. It derives transition widths and hydrology shaping entirely in
 global coordinates and has passed repeat-hash and independent-neighbour overlap
 checks at atlas corners, a province boundary, high terrain and the drowned south.
+The current artifact reader rejects stale or malformed derived data. A read-only
+runtime review window materialises one sector plus apron, or a temporary square
+mosaic of ordinary sector artifacts, into local voxel storage at true atlas
+coordinates. Fixed sector and domain captures render through the ordinary
+terrain, ink, atmosphere, grade and water paths without allocating the
+continent.
 Canonical runtime mode no longer runs the procedural
 settlement/significant-landmark searches or the summit-seeking sanctum fixture.
-Culture, abandonment, wilderness, the playable sector window, full atlas
-topology and detailed L3 plans remain unbuilt. See [ROADMAP.md](ROADMAP.md) §3
+Culture, abandonment, the authored wilderness density source, player traversal
+of production sectors, the remaining 26–56 site envelopes and continent-scale
+road graph, persistent per-sector structure/navigation output, reference-grade
+realisation of the first L3 plan, and all later domain plans remain unbuilt. See
+[ROADMAP.md](ROADMAP.md) §3
 and [CURRENT_STATE.md](../CURRENT_STATE.md) §8.

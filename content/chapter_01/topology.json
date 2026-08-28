@@ -1,0 +1,236 @@
+{
+  "version": 2,
+  "width": 12288,
+  "depth": 9216,
+  "domains": [
+    {
+      "id": "shallows-gateway-domain",
+      "displayName": "Shallows Gateway Domain",
+      "regionId": "shallows",
+      "cultureId": "old-southern",
+      "axisDegrees": 180,
+      "planPath": "res://content/chapter_01/domains/shallows-gateway-domain.json",
+      "boundary": [
+        { "x": 5700, "z": 6100 },
+        { "x": 7050, "z": 6120 },
+        { "x": 7120, "z": 7380 },
+        { "x": 5580, "z": 7420 }
+      ]
+    }
+  ],
+  "sites": [
+    {
+      "id": "shallows-monumental-gate",
+      "displayName": "Monumental Gate",
+      "domainId": "shallows-gateway-domain",
+      "tier": "District",
+      "archetype": "Monumental",
+      "status": "Planned",
+      "centre": { "x": 6400, "z": 6500 },
+      "extentX": 360,
+      "extentZ": 320,
+      "orientationDegrees": 180,
+      "age": 0.88,
+      "entrances": [
+        { "id": "south-approach", "routeNodeId": "gate-south" },
+        { "id": "north-exit", "routeNodeId": "gate-north" }
+      ],
+      "sightlineSiteIds": ["shallows-water-causeway", "shallows-lower-precinct"]
+    },
+    {
+      "id": "shallows-water-causeway",
+      "displayName": "Water Causeway",
+      "domainId": "shallows-gateway-domain",
+      "tier": "Precinct",
+      "archetype": "Causeway",
+      "status": "Planned",
+      "centre": { "x": 6400, "z": 6880 },
+      "extentX": 280,
+      "extentZ": 360,
+      "orientationDegrees": 180,
+      "age": 0.92,
+      "entrances": [
+        { "id": "south-landing", "routeNodeId": "causeway-south" },
+        { "id": "north-landing", "routeNodeId": "causeway-north" }
+      ],
+      "sightlineSiteIds": ["shallows-monumental-gate"]
+    },
+    {
+      "id": "shallows-lower-precinct",
+      "displayName": "Lower Precinct",
+      "domainId": "shallows-gateway-domain",
+      "tier": "Precinct",
+      "archetype": "Drowned",
+      "status": "Planned",
+      "centre": { "x": 6000, "z": 6540 },
+      "extentX": 280,
+      "extentZ": 250,
+      "orientationDegrees": 90,
+      "age": 0.84,
+      "entrances": [
+        { "id": "east-stair", "routeNodeId": "lower-east" }
+      ],
+      "sightlineSiteIds": ["shallows-monumental-gate"]
+    },
+    {
+      "id": "shallows-stela-field",
+      "displayName": "Stela Field",
+      "domainId": "shallows-gateway-domain",
+      "tier": "Mark",
+      "archetype": "Trace",
+      "status": "Planned",
+      "centre": { "x": 6800, "z": 6500 },
+      "extentX": 140,
+      "extentZ": 120,
+      "orientationDegrees": 270,
+      "age": 0.9,
+      "entrances": [
+        { "id": "west-path", "routeNodeId": "stela-west" }
+      ],
+      "sightlineSiteIds": ["shallows-monumental-gate"]
+    }
+  ],
+  "routeNodes": [
+    { "id": "strand-west", "point": { "x": 5600, "z": 7160 } },
+    { "id": "strand-approach", "point": { "x": 6400, "z": 7160 } },
+    { "id": "strand-east", "point": { "x": 7120, "z": 7160 } },
+    { "id": "causeway-south", "point": { "x": 6400, "z": 7060 }, "siteId": "shallows-water-causeway", "entranceId": "south-landing" },
+    { "id": "causeway-north", "point": { "x": 6400, "z": 6700 }, "siteId": "shallows-water-causeway", "entranceId": "north-landing" },
+    { "id": "gate-south", "point": { "x": 6400, "z": 6660 }, "siteId": "shallows-monumental-gate", "entranceId": "south-approach" },
+    { "id": "gate-north", "point": { "x": 6400, "z": 6340 }, "siteId": "shallows-monumental-gate", "entranceId": "north-exit" },
+    { "id": "spine-north", "point": { "x": 6400, "z": 6100 } },
+    { "id": "lower-east", "point": { "x": 6125, "z": 6540 }, "siteId": "shallows-lower-precinct", "entranceId": "east-stair" },
+    { "id": "stela-west", "point": { "x": 6740, "z": 6500 }, "siteId": "shallows-stela-field", "entranceId": "west-path" }
+  ],
+  "routes": [
+    {
+      "id": "strand-west-segment",
+      "displayName": "Western Strand Segment",
+      "kind": "Abandoned",
+      "fromNodeId": "strand-west",
+      "toNodeId": "strand-approach",
+      "width": 7,
+      "construction": "drowned-coastal-road",
+      "points": [
+        { "x": 5600, "z": 7160 },
+        { "x": 5850, "z": 7130 },
+        { "x": 6100, "z": 7190 },
+        { "x": 6400, "z": 7160 }
+      ]
+    },
+    {
+      "id": "strand-east-segment",
+      "displayName": "Eastern Strand Segment",
+      "kind": "Abandoned",
+      "fromNodeId": "strand-approach",
+      "toNodeId": "strand-east",
+      "width": 7,
+      "construction": "drowned-coastal-road",
+      "points": [
+        { "x": 6400, "z": 7160 },
+        { "x": 6660, "z": 7200 },
+        { "x": 6900, "z": 7140 },
+        { "x": 7120, "z": 7160 }
+      ]
+    },
+    {
+      "id": "strand-to-causeway",
+      "displayName": "Strand Approach",
+      "kind": "Abandoned",
+      "fromNodeId": "strand-approach",
+      "toNodeId": "causeway-south",
+      "width": 5,
+      "construction": "drowned-paving",
+      "points": [
+        { "x": 6400, "z": 7160 },
+        { "x": 6390, "z": 7110 },
+        { "x": 6400, "z": 7060 }
+      ]
+    },
+    {
+      "id": "water-causeway-axis",
+      "displayName": "Water Causeway Axis",
+      "kind": "Major",
+      "fromNodeId": "causeway-south",
+      "toNodeId": "causeway-north",
+      "width": 12,
+      "construction": "masonry-causeway",
+      "points": [
+        { "x": 6400, "z": 7060 },
+        { "x": 6400, "z": 6880 },
+        { "x": 6400, "z": 6700 }
+      ]
+    },
+    {
+      "id": "causeway-to-gate",
+      "displayName": "Gate Approach",
+      "kind": "Major",
+      "fromNodeId": "causeway-north",
+      "toNodeId": "gate-south",
+      "width": 10,
+      "construction": "processional-paving",
+      "points": [
+        { "x": 6400, "z": 6700 },
+        { "x": 6400, "z": 6660 }
+      ]
+    },
+    {
+      "id": "gate-processional-axis",
+      "displayName": "Gate Processional Axis",
+      "kind": "Major",
+      "fromNodeId": "gate-south",
+      "toNodeId": "gate-north",
+      "width": 12,
+      "construction": "terraced-paving",
+      "points": [
+        { "x": 6400, "z": 6660 },
+        { "x": 6400, "z": 6500 },
+        { "x": 6400, "z": 6340 }
+      ]
+    },
+    {
+      "id": "gate-to-spine",
+      "displayName": "Spine Connection",
+      "kind": "Major",
+      "fromNodeId": "gate-north",
+      "toNodeId": "spine-north",
+      "width": 8,
+      "construction": "worn-stone",
+      "points": [
+        { "x": 6400, "z": 6340 },
+        { "x": 6380, "z": 6220 },
+        { "x": 6400, "z": 6100 }
+      ]
+    },
+    {
+      "id": "lower-precinct-link",
+      "displayName": "Lower Precinct Link",
+      "kind": "Local",
+      "fromNodeId": "gate-south",
+      "toNodeId": "lower-east",
+      "width": 5,
+      "construction": "broken-stair-road",
+      "points": [
+        { "x": 6400, "z": 6660 },
+        { "x": 6280, "z": 6630 },
+        { "x": 6200, "z": 6590 },
+        { "x": 6125, "z": 6540 }
+      ]
+    },
+    {
+      "id": "stela-field-link",
+      "displayName": "Stela Field Link",
+      "kind": "Trail",
+      "fromNodeId": "gate-south",
+      "toNodeId": "stela-west",
+      "width": 3,
+      "construction": "foundation-trace",
+      "points": [
+        { "x": 6400, "z": 6660 },
+        { "x": 6530, "z": 6600 },
+        { "x": 6650, "z": 6540 },
+        { "x": 6740, "z": 6500 }
+      ]
+    }
+  ]
+}

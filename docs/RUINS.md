@@ -145,9 +145,12 @@ damage or dress rubble and paving; it may not invent the composition and ask the
 author to re-roll until one happens to work. See [MAP_PIPELINE.md](MAP_PIPELINE.md)
 §2, L3.
 
-The site record is anchored in permanent atlas coordinates; its detailed plan
-uses a site-local origin and authored sockets. The sector compiler may split the
-derived result across storage boundaries, but no sector boundary may split the
+Sites are anchored in permanent atlas coordinates. A connected domain plan uses
+one domain-local origin and axis so shared walls and causeways cannot drift apart;
+each component still names its owning L2 site, and route sockets map exactly back
+to authored graph nodes. A later site-specific refinement may subdivide that
+plan without changing its frame. The sector compiler may split the derived
+result across storage boundaries, but no sector boundary may split the
 composition or become visible in its terrain, damage or dressing.
 
 ---
@@ -360,9 +363,27 @@ earthwork technique. `src/World/Sanctum.cs` is the review fixture that exposed
 the failure of one isolated monument on generic terrain; canonical mode disables
 it because it chooses its own summit.
 
-**Not built:** authored site plans, terracing from arbitrary authored polygons,
-connected domain geometry, sector compilation, or an accepted production site.
-A review-map topology draft names and connects the first southern domain, but it
-must move into the production atlas after the southern L0/L1 layers are painted.
+**Authored and realised as a review blockout:** the first southern domain's
+versioned L3 plan fixes seven platform polygons at four absolute levels, three
+stairs, ten wall runs, eight graph-bound route sockets and thirty-nine silhouette
+placements. Four named platform cutouts preserve terrain or expose a collapse;
+collapsed cutout depth and platform/cutout reclamation density are authored, not
+decay chosen by the compiler. The strict audit enforces domain/site bounds,
+socket identity, reference paths and the scale table. The domain review composes
+its nine terrain sectors, fits the authored levels and routes, repeats only named
+ranges, frays named edges and derives terraces, coping, buttresses, cutout rims,
+rubble and surviving colonnade lintels within those contracts. The biome-driven
+grove pass supplies surrounding scale and enters made ground only where its
+authored reclamation value permits. Fixed late-morning and night views run
+through the ordinary game lighting rather than a presentation-only material rig.
+
+**Not accepted:** the fixed day/night captures read as a real district-scale
+axis rather than a small fixture, and the denser edges and silhouette remain
+legible at 1,000 units. Court-scale ground detail, localized wall failure, glyph
+treatment and L4 variation are still materially thinner than `reference-2`,
+`reference-5` and `reference-9`, and the structure geometry is not persisted
+into per-sector artifacts. A working compiler and a beautiful review frame are
+evidence of composition and scale, not evidence that the production site matches
+the reference at walking distance.
 
 See [ROADMAP.md](ROADMAP.md) for order and slice status.

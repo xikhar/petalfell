@@ -236,18 +236,41 @@ preview:
 ```bash
 ./tools/world-authoring.sh audit
 ./tools/world-authoring.sh atlas-preview
+./tools/world-authoring.sh atlas-topology-preview
+./tools/world-authoring.sh preview-atlas-domain shallows-gateway-domain
+./tools/world-authoring.sh sample-atlas 6400,6500
 ./tools/world-authoring.sh preview
 ./tools/world-authoring.sh preview-domain shallows-gateway-domain
 ./tools/world-authoring.sh compile-sector 8,8
 ./tools/world-authoring.sh verify-sector 8,8
+./tools/world-authoring.sh review-sector 8,8
+./tools/world-authoring.sh capture-sector 8,8
+./tools/world-authoring.sh review-domain shallows-gateway-domain
+./tools/world-authoring.sh capture-domain shallows-gateway-domain
 ```
 
-The atlas preview defaults to `../shots/world-atlas.svg`; a sector compile writes
-its disposable `.pfs` artifact under `content/chapter_01/derived/` and a PNG to
-`../shots/`. The verifier rebuilds the sector twice and compares every overlapping
-apron cell with its east and south neighbours. A topology warning means
-the authored production draft is incomplete; an error means IDs, coordinates or
-connections are invalid and the normal canonical runtime will refuse to boot.
+The atlas and production-topology previews default under `../shots/`; the domain
+preview crops the accepted terrain layers to one permanent L2 domain and labels
+its intersecting sectors and, when present, its audited L3 plan. `sample-atlas`
+reports the deterministic terrain/water/profile values at one global coordinate.
+`preview` and `preview-domain` remain the smaller runtime fixture. A sector
+compile writes its disposable `.pfs` artifact under
+`content/chapter_01/derived/` and a PNG to `../shots/`. The verifier rebuilds the
+sector twice and compares every overlapping apron cell with its east and south
+neighbours. A topology warning means the authored production draft is incomplete;
+an error means IDs, coordinates or connections are invalid.
+`review-sector` opens the compiled terrain at its true atlas coordinates; use
+W/A/S/D to pan, Q/E to orbit and the wheel to zoom. `capture-sector` runs the
+fixed near, wide, reverse and far views and exits. Both rebuild a missing or
+stale derived artifact automatically; neither edits an authored source layer.
+`review-domain` and `capture-domain` compose only the sectors intersecting one
+audited domain, realise its L2 routes and L3 plan into a disposable blockout,
+and add biome-driven wilderness dressing within the plan's authored reclamation
+limits. The domain capture writes fixed near, wide, reverse and far views in
+both late-morning and night light through the ordinary `DayCycle`; its extended
+shadow and fog distances are review framing, not a second art pipeline. The
+mosaic and geometry remain derived review data; they never rewrite
+`topology.json`, a domain plan or an L0/L1 image.
 
 Compile without exporting:
 

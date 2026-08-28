@@ -59,6 +59,15 @@ global uniform float pf_night;
 // World height of the surface plane. Needed to reconstruct the fragment's
 // position analytically — see the note in fragment().
 uniform float plane_y = 24.35;
+// Production atlas windows can contain ocean, rivers and high lakes in one
+// mesh. Their small quads interpolate accurately, so those windows reconstruct
+// the surface from the real mesh position instead of one global plane.
+uniform bool surface_from_mesh = false;
+varying vec3 mesh_world;
+
+void vertex() {
+	mesh_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
 
 // Per-channel absorption per world unit travelled. The ratio matters far more
 // than the magnitude: keep blue well below red or depth stops being a hue shift.
@@ -207,7 +216,9 @@ void fragment() {
 	vec3 cam = CAMERA_POSITION_WORLD;
 	// Guard the degenerate case: a ray parallel to the surface never meets it.
 	float denom = abs(dir.y) < 0.0005 ? 0.0005 * sign(dir.y + 0.0001) : dir.y;
-	vec3 wpos = cam + dir * ((plane_y - cam.y) / denom);
+	vec3 wpos = surface_from_mesh
+		? mesh_world
+		: cam + dir * ((plane_y - cam.y) / denom);
 	float surface = -(VIEW_MATRIX * vec4(wpos, 1.0)).z;
 
 	// A slow, shallow swell. The reference water is nearly still — glassy enough
@@ -278,7 +289,7 @@ void fragment() {
 	float bed_depth = depth_at(SCREEN_UV, INV_PROJECTION_MATRIX);
 	float through = max(bed_depth - surface, 0.0);
 	float bed_y = world_at(SCREEN_UV, INV_PROJECTION_MATRIX, INV_VIEW_MATRIX).y;
-	float column = max(plane_y - bed_y, 0.0);
+	float column = max(wpos.y - bed_y, 0.0);
 
 	// The colour lookup is displaced, and only where there is water in front of
 	// the bed — offsetting at the shoreline drags the bank's colour out over the

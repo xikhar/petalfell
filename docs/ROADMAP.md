@@ -86,13 +86,14 @@ loudly.
 *Answers:* can the world be understood and checked as a document before it is
 rendered?
 
-*Status:* `content/chapter_01/world.json` is a versioned absolute-coordinate L2
-source. `src/World/CanonicalWorld.cs` audits domains, sites, entrances, graph
-nodes, routes, plan references and required connectivity. `./tools/world-authoring.sh`
-runs the audit or writes a whole-map SVG without constructing `Planner` or
-`Terrain`. The same source is overlaid on the in-game map. Canonical runtime mode
-stamps the authored route polylines directly and disables procedural settlements,
-significant landmarks and the location-seeking sanctum fixture.
+*Status:* `src/World/CanonicalWorld.cs` provides the versioned L2 schema and
+strictly audits domains, sites, entrances, graph nodes, routes, plan references,
+bounds and required connectivity. Version 1 preserves the 3,456-square
+`world.json` review fixture; version 2 uses explicit rectangular extent for the
+permanent `topology.json`. `./tools/world-authoring.sh` audits both and writes
+terrain-backed production topology previews without constructing `Planner` or
+`Terrain`. The runtime overlay and authored road stamps still use the review
+fixture only.
 
 ### Slice B — production atlas contract and preview ✅ built
 
@@ -129,9 +130,14 @@ were accepted by the author on 2026-08-27 and are canonical macro sources. The
 province polygons are now only faint allocation guides. Culture, abandonment
 and wilderness remain planned. Exact layer values and provenance are in
 [ATLAS.md](ATLAS.md) §5 and §10.
-The older 3,456-square review source has one draft southern gateway domain with
-four site envelopes and seven routes; it must be migrated to atlas coordinates
-after the southern coastline and route grain are approved.
+`content/chapter_01/topology.json` now permanently places the first southern
+gateway domain at the central delta threshold: four stable site envelopes, ten
+nodes and nine connected route segments span the shelf, southward causeway,
+local Strand and northbound Spine approach. The atlas audit checks its
+12,288 × 9,216 extent and province references; the domain preview overlays the
+accepted terrain/water/region layers and names its nine intersecting sectors.
+This completes only the first connected fragment. The remaining 26–56 sites and
+continent-scale Spine, Strand, quarry and Fen graph are still Slice C work.
 
 ### Slice D — sector compiler and review window ◐ started
 
@@ -143,15 +149,23 @@ or small sector window without generating the whole continent.
 *Answers:* can the production scale exist without multi-gigabyte global state,
 and do independently built seams agree exactly?
 
-*Status:* compiler version 3 emits a `PTFLSEC2` terrain artifact and PNG for any
+*Status:* compiler version 4 emits a `PTFLSEC2` terrain artifact and PNG for any
 addressed sector. It derives primary/secondary profile weights across authored
 transition widths; compiles ocean, enclosed lakes and high-altitude river cores
 with absolute water surfaces and beds; and lowers profile-controlled floodplains
-and banks before terrace quantization. Sector data validates its own profile,
+and banks before terrace quantization without allowing local profile relief to
+submerge compiled land. Sector data validates its own profile,
 land, bed and surface invariants. Corner, boundary, mountain and drowned-south
 sectors rebuilt deterministically; every available independently compiled east/
-south edge matched all 39,168 overlap cells. It does not yet materialise voxel
-columns/water meshes, compile roads or sites, or provide a runtime sector window.
+south edge matched all 39,168 overlap cells. A strict reader now loads current
+artifacts into a sector-local `VoxelGrid`; the runtime review window uses the
+ordinary chunk mesher, ink, atmosphere, grade and a multi-height water mesh at
+true atlas coordinates. Fixed captures have been inspected for mountain,
+confluence and drowned-south sectors. A review-only mosaic can now join a square
+set of those artifacts without changing their persistence boundary; the first
+domain uses sectors 7–9 in both axes. Collision, player traversal, multi-plane
+reflections and persistent road/site overlays remain outside the sector
+artifact, so the slice stays open.
 
 ### Slice E — one connected southern domain
 
@@ -162,7 +176,25 @@ polygons, levels, walls, stairs, route sockets and silhouette; use generators
 only to realise and dress those decisions.
 
 *Answers:* can authored terrain, routes and architecture read as one world at
-normal play distance and at the fixed 280/460/560-unit review distances?
+normal play distance and in the fixed 240-unit near, 440-unit wide/reverse and
+1,000-unit far review views?
+
+*Status:* L3 blockout compilation has started. `domains/shallows-gateway-domain.json`
+fixes seven terrain/platform polygons at Y106/108/112/116, three fitted stair
+connections, four named terrain/collapse cutouts, ten shared wall runs, eight
+route sockets and thirty-nine measured silhouette placements across all four L2
+sites. `DomainPlanDefinition` audits the local-to-atlas transform, plan/site
+bounds, exact graph sockets, references, cutout containment and depth, authored
+reclamation densities, level hierarchy and reference scale.
+`preview-atlas-domain` composites the plan over accepted terrain. `review-domain`
+now composes its nine normal sector artifacts and realises platforms, exact
+routes, stairs, walls and landmarks into the ordinary voxel renderer;
+deterministic terraces, courses, buttresses, coping, cutout rims, rubble and a
+global-coordinate grove pass dress only authored or biome-owned intent. Eight
+fixed late-morning/night captures have been inspected through the real day-cycle
+rig. The district scale, connected level axis, long-range shadows and silhouette
+now work. Slice E stays open because the court surfaces, wall damage, glyphs and
+L4 ground detail still lack the density and local variation of the references.
 
 ### Slice F — local content compilation and partial regeneration
 
@@ -241,3 +273,9 @@ variety — not parts. Judge work as a composed place or not at all.
 rise and what joins it; every column differs in weight, height and state. A
 builder must take those as parameters, and a site must vary them on every
 instance — one part stamped repeatedly is what "very basic" looks like.
+
+**A valid platform polygon can still compile into a blank slab.** The first L3
+runtime pass was topologically correct and visually wrong: a complete pale cap
+greedily merged into one empty plane with isolated monuments on it. Made courses,
+broad terrain-cap survival, authored openings and dense edge/reclamation tissue
+must be judged in the first blockout, not deferred as cosmetic polish.

@@ -35,6 +35,7 @@ public partial class ChunkStreamer : Node3D
 	private ShaderMaterial _inkDark;
 	private ShaderMaterial _detailMat;
 	private ShaderMaterial _waterDetailMat;
+	private bool _buildCollision = true;
 
 	public int LoadRadius = 8;
 	public int UnloadPadding = 3;
@@ -48,12 +49,28 @@ public partial class ChunkStreamer : Node3D
 		ShaderMaterial inkDark, ShaderMaterial detail, ShaderMaterial waterDetail)
 	{
 		_terrain = terrain;
-		_grid = terrain.Grid;
+		Setup(terrain.Grid, voxel, inkLight, inkDark, buildCollision: true);
 		_voxelMat = voxel;
 		_inkLight = inkLight;
 		_inkDark = inkDark;
 		_detailMat = detail;
 		_waterDetailMat = waterDetail;
+	}
+
+	/// <summary>
+	/// Review a compiled atlas window without constructing the legacy whole-map
+	/// Terrain graph. Ground detail and gameplay collision are deliberately absent
+	/// until their production compilers exist; the voxel surface and ink are the
+	/// same meshes used by the game.
+	/// </summary>
+	public void Setup(VoxelGrid grid, ShaderMaterial voxel, ShaderMaterial inkLight,
+		ShaderMaterial inkDark, bool buildCollision = false)
+	{
+		_grid = grid;
+		_voxelMat = voxel;
+		_inkLight = inkLight;
+		_inkDark = inkDark;
+		_buildCollision = buildCollision;
 	}
 
 	private static long Key(int ci, int ck) => ((long)(ci + 4096) << 20) | (uint)(ck + 4096);
@@ -171,7 +188,7 @@ public partial class ChunkStreamer : Node3D
 		// Ground detail. Tufts, flowers and pebbles are what make a shelf read as
 		// made rather than as fill, and one merged mesh per chunk makes them the
 		// cheapest life in the world.
-		var detail = GroundDetail.Build(_terrain, ci, ck);
+		var detail = _terrain == null ? null : GroundDetail.Build(_terrain, ci, ck);
 		if (detail != null)
 		{
 			root.AddChild(new MeshInstance3D
@@ -182,7 +199,7 @@ public partial class ChunkStreamer : Node3D
 			});
 		}
 
-		var floating = GroundDetail.BuildWater(_terrain, ci, ck);
+		var floating = _terrain == null ? null : GroundDetail.BuildWater(_terrain, ci, ck);
 		if (floating != null)
 		{
 			root.AddChild(new MeshInstance3D
@@ -197,7 +214,7 @@ public partial class ChunkStreamer : Node3D
 			});
 		}
 
-		if (data.CollisionFaces is { Length: > 0 })
+		if (_buildCollision && data.CollisionFaces is { Length: > 0 })
 		{
 			var shape = new ConcavePolygonShape3D();
 			shape.SetFaces(data.CollisionFaces);

@@ -18,7 +18,7 @@ namespace Petalfell.World;
 /// </summary>
 public sealed class AtlasSectorCompiler
 {
-	public const int CompilerVersion = 3;
+	public const int CompilerVersion = 4;
 	public const int DefaultApron = 24;
 	private const byte PermanentWaterValue = 240;
 	private const byte HydrologyDry = 0;
@@ -138,7 +138,13 @@ public sealed class AtlasSectorCompiler
 			float height = Rng.Lerp(HeightForProfile(authoredHeight, profile, globalX, globalZ),
 				HeightForProfile(authoredHeight, secondary, globalX, globalZ), profileBlend);
 			float valleyGuide = ValleyGuideAt(globalX, globalZ);
-			int waterSurface = QuantizeWaterSurface(valleyGuide - hydrology.SurfaceDrop);
+			// The authored valley owns the broad drainage altitude, but profile
+			// relief can coherently lower the realised ground beneath it. Holding the
+			// old surface in that case floods cells still classified as land. Lower
+			// the surface with the compiled valley; never raise the bank to repair it.
+			float localSurfaceCeiling = height - Math.Max(1, hydrology.BankRise);
+			int waterSurface = QuantizeWaterSurface(Math.Min(
+				valleyGuide - hydrology.SurfaceDrop, localSurfaceCeiling));
 			if (data.Water[index] >= PermanentWaterValue)
 			{
 				data.Land[index] = 0;
@@ -464,6 +470,69 @@ public sealed class AtlasSectorCompiler
 		byte[] bytes = stream.ToArray();
 		File.WriteAllBytes(absolute, bytes);
 		return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+	}
+
+	/// <summary>
+	/// Load a disposable sector artifact only when it still describes the current
+	/// authored sources. A stale derived file is not a degraded success: callers
+	/// must rebuild it, otherwise an atlas edit can appear to have had no effect in
+	/// the runtime review window.
+	/// </summary>
+	public AtlasSectorData ReadArtifact(string resourcePath)
+	{
+		string absolute = ProjectSettings.GlobalizePath(resourcePath);
+		if (!File.Exists(absolute))
+			throw new FileNotFoundException($"sector artifact '{resourcePath}' does not exist", absolute);
+
+		using var stream = File.OpenRead(absolute);
+		using var reader = new BinaryReader(stream, Encoding.UTF8, false);
+		string magic = Encoding.ASCII.GetString(reader.ReadBytes(8));
+		if (magic != "PTFLSEC2")
+			throw new InvalidDataException($"sector artifact '{resourcePath}' has unknown magic '{magic}'");
+		int version = reader.ReadInt32();
+		if (version != CompilerVersion)
+			throw new InvalidDataException(
+				$"sector artifact '{resourcePath}' uses compiler {version}, expected {CompilerVersion}");
+
+		int sectorX = reader.ReadInt32();
+		int sectorZ = reader.ReadInt32();
+		int originX = reader.ReadInt32();
+		int originZ = reader.ReadInt32();
+		int coreSize = reader.ReadInt32();
+		int apron = reader.ReadInt32();
+		int width = reader.ReadInt32();
+		int depth = reader.ReadInt32();
+		int worldHeight = reader.ReadInt32();
+		int seaLevel = reader.ReadInt32();
+		string fingerprint = reader.ReadString();
+
+		if (fingerprint != SourceFingerprint)
+			throw new InvalidDataException($"sector artifact '{resourcePath}' is stale against the accepted atlas sources");
+		if (coreSize != _atlas.SectorSize || worldHeight != _atlas.Height || seaLevel != _atlas.SeaLevel ||
+		    width != coreSize + apron * 2 || depth != coreSize + apron * 2)
+			throw new InvalidDataException($"sector artifact '{resourcePath}' metadata does not match the atlas contract");
+		if (originX != sectorX * coreSize - apron || originZ != sectorZ * coreSize - apron)
+			throw new InvalidDataException($"sector artifact '{resourcePath}' has an invalid global origin");
+
+		var data = new AtlasSectorData(sectorX, sectorZ, originX, originZ, coreSize, apron,
+			width, depth, worldHeight, seaLevel, fingerprint);
+		long expectedPayload = data.CellCount * 10L;
+		if (stream.Length - stream.Position != expectedPayload)
+			throw new InvalidDataException(
+				$"sector artifact '{resourcePath}' has {stream.Length - stream.Position} payload bytes, expected {expectedPayload}");
+		for (int i = 0; i < data.CellCount; i++)
+		{
+			data.Height[i] = reader.ReadUInt16();
+			data.WaterSurface[i] = reader.ReadUInt16();
+			data.Land[i] = reader.ReadByte();
+			data.Water[i] = reader.ReadByte();
+			data.Hydrology[i] = reader.ReadByte();
+			data.Profile[i] = reader.ReadByte();
+			data.SecondaryProfile[i] = reader.ReadByte();
+			data.ProfileBlend[i] = reader.ReadByte();
+		}
+		data.Validate(_atlas.BiomeCatalog.Profiles.Count);
+		return data;
 	}
 
 	public void WritePreview(AtlasSectorData data, string resourcePath)

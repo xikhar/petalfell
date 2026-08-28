@@ -71,6 +71,11 @@ public partial class Main : Node3D
 		// not been registered fails to compile.
 		DayCycle.RegisterGlobals();
 		SetupInput();
+		if (Tools.AtlasSectorReview.TryRun(this, MapDefinitionPath))
+		{
+			_authoringMode = true;
+			return;
+		}
 		Map = MapDefinition.Load(MapDefinitionPath);
 		if (Seed == 0) Seed = Map.DefaultSeed;
 		if (WorldSize <= 0) WorldSize = Map.DefaultWorldSize;
@@ -851,58 +856,23 @@ public partial class Main : Node3D
 
 	private void BuildMaterials()
 	{
-		var inkShader = GD.Load<Shader>("res://shaders/ink.gdshader");
-
-		// Pale runs draw first and dark runs draw over them by default. Endpoint
-		// topology in the shader makes the sole exception: at least two actually
-		// pale incident edges mask dark coverage inside their shared vertex.
-		ShaderMaterial Ink(int priority, int pass = 0)
-		{
-			var m = new ShaderMaterial { Shader = inkShader, RenderPriority = priority };
-			m.SetShaderParameter("ink_dark", Palette.InkDark);
-			m.SetShaderParameter("ink_light", Palette.InkLight);
-			m.SetShaderParameter("core_width", Palette.InkWidth);
-			m.SetShaderParameter("ink_pass", pass);
-			m.SetShaderParameter("water_level", Palette.WaterLevel);
-			return m;
-		}
-
-		_inkLight = Ink(1, pass: 0);
-		_inkDark = Ink(2, pass: 2);
-		_inkLight.NextPass = Ink(3, pass: 1);
+		var ink = WorldMaterials.CreateInk(Palette.WaterLevel);
+		_inkLight = ink.Light;
+		_inkDark = ink.Dark;
 	}
 
 	private ShaderMaterial MakeDetailMaterial() =>
-		new() { Shader = GD.Load<Shader>("res://shaders/detail.gdshader") };
+		WorldMaterials.CreateDetail();
 
 	private ShaderMaterial MakeWaterDetailMaterial() =>
-		new() { Shader = GD.Load<Shader>("res://shaders/waterdetail.gdshader") };
+		WorldMaterials.CreateWaterDetail();
 
-	private ShaderMaterial MakeVoxelMaterial()
-	{
-		var mat = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/voxel.gdshader") };
-		mat.SetShaderParameter("sun_dir", Palette.SunDir);
-		mat.SetShaderParameter("plane_y", Palette.WaterLevel);
-		return mat;
-	}
+	private ShaderMaterial MakeVoxelMaterial() => WorldMaterials.CreateVoxel(Palette.WaterLevel);
 
 	private MeshInstance3D BuildWater()
 	{
-		var mat = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/water.gdshader") };
+		var mat = WorldMaterials.CreateWater(Palette.WaterLevel);
 		_waterMat = mat;
-		mat.SetShaderParameter("shoal", Palette.WaterShoal);
-		mat.SetShaderParameter("shallow", Palette.WaterShallow);
-		mat.SetShaderParameter("deep", Palette.WaterDeep);
-		mat.SetShaderParameter("warm", Palette.WaterWarm);
-		mat.SetShaderParameter("sheen", Palette.WaterSheen);
-		// The mirrored pass is held partway toward this gradient where it sees
-		// through the world's shell, so it has to be the same sky the player is
-		// standing under.
-		mat.SetShaderParameter("sky_low", Palette.SkyHorizon);
-		mat.SetShaderParameter("sky_high", Palette.SkyZenith);
-		mat.SetShaderParameter("sun_colour", Palette.SunColor);
-		mat.SetShaderParameter("sun_dir", Palette.SunDir);
-		mat.SetShaderParameter("plane_y", Palette.WaterLevel);
 
 		return new MeshInstance3D
 		{
@@ -929,26 +899,7 @@ public partial class Main : Node3D
 	}
 
 	private CanvasLayer BuildGrade()
-	{
-		var mat = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/grade.gdshader") };
-		mat.SetShaderParameter("lift", Palette.GradeLift);
-		mat.SetShaderParameter("gamma_", Palette.GradeGamma);
-		mat.SetShaderParameter("gain", Palette.GradeGain);
-		mat.SetShaderParameter("saturation", Palette.GradeSaturation);
-		mat.SetShaderParameter("contrast", Palette.GradeContrast);
-		mat.SetShaderParameter("vignette", Palette.GradeVignette);
-
-		var rect = new ColorRect
-		{
-			Material = mat,
-			MouseFilter = Control.MouseFilterEnum.Ignore,
-		};
-		rect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-
-		var layer = new CanvasLayer { Name = "Grade", Layer = 100 };
-		layer.AddChild(rect);
-		return layer;
-	}
+		=> WorldMaterials.CreateGrade();
 
 	private static void SetupInput()
 	{

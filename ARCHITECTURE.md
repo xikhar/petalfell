@@ -222,12 +222,19 @@ compiler consumes fixed intent, supplies deterministic natural infill and emits
 disposable sector artifacts. Major features are never inferred from map area.
 
 `MapDefinition.CanonicalAtlasPath` loads and audits the physical production
-contract without allocating it. `MapDefinition.CanonicalWorldPath` currently
-selects the 3,456-square topology review path; `RoadNetwork.BuildAuthored()`
+contract without allocating it. The atlas manifest's `TopologyPath` registers
+the separate version 2 rectangular L2 source and validates it against the atlas
+extent and province catalog. `MapDefinition.CanonicalWorldPath` still selects
+the version 1 3,456-square topology review path; `RoadNetwork.BuildAuthored()`
 rasterises those named polylines directly. The procedural settlement search,
 significant-landmark scatter and location-seeking review fixtures are legacy-map
-behaviour only. `tools/world-authoring.sh` audits and previews atlas/topology
-sources before `Planner` or `Terrain` exists. `AtlasSectorCompiler` is the first
+behaviour only. `tools/world-authoring.sh` audits and previews both topology
+sources before `Planner` or `Terrain` exists; production previews composite L2
+over accepted L0/L1 layers and the sector grid. `DomainPlanDefinition` is the
+first L3 source boundary: a domain-local integer frame holds platforms, absolute
+levels, stairs, walls, graph sockets and scale-checked landmarks, while the audit
+maps every point back into permanent atlas/site bounds. It is authored input and
+is not written by a compiler. `AtlasSectorCompiler` is the first
 production storage boundary: it reads registered land, elevation, hydrology and
 categorical region sources and writes a disposable `PTFLSEC2` artifact for one
 768-block sector plus apron. Its per-cell schema is terrain/bed height, optional
@@ -235,8 +242,35 @@ absolute water-surface height, land, authored water value, hydrology class,
 primary profile, secondary profile and secondary weight. It derives profile
 transitions, floodplains, banks and permanent-water beds in absolute coordinates;
 the coarse atlas-wide water-component labels remain authoring metadata rather
-than block arrays. The tool does not yet materialise `VoxelGrid` columns, water
-meshes or the runtime sector window.
+than block arrays. Its strict reader refuses stale or malformed artifacts.
+`AtlasSectorWindow` is the first production runtime boundary: it materialises a
+sector-local square plus apron into `VoxelGrid`, preserves the window's global
+atlas origin for material fields, resolves semantic profile surfaces and
+supplies a greedily merged multi-height water mesh. For domain review only,
+`AtlasSectorMosaic` joins a square set of ordinary artifacts into one temporary
+window; the first domain is a 3×3-sector, 2,352-square window including its outer
+apron. It does not create a larger persistent artifact or change the sector as
+the compilation unit.
+
+`DomainPlanBlockout` realises authored L2 route polylines and L3 platform levels,
+named terrain/collapse cutouts, stairs, walls and landmarks into that local
+voxel window. Cutouts are intentional negative-space records owned by the plan,
+not holes inferred by decay. Their collapse depth and their reclamation density,
+and every platform's reclamation density, are authored compositional parameters.
+Its assistants may repeat authored ranges, fray an edge named `Ragged`, course
+made paving, terrace platform margins and dress revetments; they never choose a
+site, level, opening, connection or silhouette. `AtlasDomainDressing` is a
+preliminary review pass: registered biome vegetation sets select the grammar, a
+global wavelength field selects grove density and a global lattice selects
+trees. Authored reclamation changes only where that grammar may encroach on made
+ground; the future wilderness source will modulate the surrounding density.
+`AtlasSectorReview` sends either terrain alone or the domain blockout through the
+existing chunk mesher, ink, atmosphere, water, grade and `DayCycle`; it never
+constructs `Planner`, `Terrain` or a continent-sized field. Fixed domain capture
+uses the same sun, moon, sky and fog at authored late-morning and night states,
+with shadow/fog ranges expanded only far enough for the current review distance.
+Collision, player traversal, persistent structure artifacts, final ground
+detail and accepted L4 variation remain outside this review boundary.
 
 ---
 

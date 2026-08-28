@@ -40,6 +40,13 @@ public sealed class VoxelGrid
 	public readonly short[] Top;
 	/// <summary>The block capping each terrain column, and the one directly under it.</summary>
 	public readonly byte[] Cap, Sub;
+	/// <summary>
+	/// Optional authored deep/cliff material per column. Zero preserves the
+	/// legacy repeating stone field; production atlas profiles set it explicitly.
+	/// </summary>
+	public readonly byte[] Deep;
+	/// <summary>Global atlas origin of this local window, used by stable material fields.</summary>
+	public readonly int OriginX, OriginZ;
 
 	/// <summary>
 	/// Everything placed on the terrain, keyed by absolute block index.
@@ -86,14 +93,17 @@ public sealed class VoxelGrid
 	private readonly byte[] _deep;
 	private const int DeepW = 64, DeepH = 32;
 
-	public VoxelGrid(int size, int height, int seed = 0)
+	public VoxelGrid(int size, int height, int seed = 0, int originX = 0, int originZ = 0)
 	{
 		Size = size;
 		Height = height;
+		OriginX = originX;
+		OriginZ = originZ;
 		Heights = new short[size * size];
 		Top = new short[size * size];
 		Cap = new byte[size * size];
 		Sub = new byte[size * size];
+		Deep = new byte[size * size];
 
 		_tileW = (size >> TileShift) + 1;
 		_touched = new bool[_tileW * _tileW];
@@ -122,12 +132,37 @@ public sealed class VoxelGrid
 
 	/// <summary>Record the bare terrain of one column. Called once, by the terrain pass.</summary>
 	public void Describe(int x, int z, int top, byte cap, byte sub)
+		=> Describe(x, z, top, cap, sub, Palette.AIR);
+
+	/// <summary>Record a column whose profile owns the exposed deep/cliff material.</summary>
+	public void Describe(int x, int z, int top, byte cap, byte sub, byte deep)
 	{
 		int i = z * Size + x;
 		Top[i] = (short)top;
 		Cap[i] = cap;
 		Sub[i] = sub;
+		Deep[i] = deep;
 		if (top > Heights[i]) Heights[i] = (short)top;
+	}
+
+	/// <summary>
+	/// Replace a bare-terrain column before any sparse placed geometry exists in
+	/// its coarse tile. Authored stairs use this after a platform pass: raising
+	/// only would leave the upper platform underneath the lower stair treads and
+	/// turn a six-block procession into one abrupt ledge.
+	/// </summary>
+	public void RedescribeUnedited(int x, int z, int top, byte cap, byte sub, byte deep)
+	{
+		if (x < 0 || z < 0 || x >= Size || z >= Size) return;
+		if (_touched[Tile(x, z)])
+			throw new InvalidOperationException(
+				"bare terrain cannot be replaced after placed geometry touched its tile");
+		int i = z * Size + x;
+		Top[i] = (short)top;
+		Cap[i] = cap;
+		Sub[i] = sub;
+		Deep[i] = deep;
+		Heights[i] = (short)top;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -140,7 +175,9 @@ public sealed class VoxelGrid
 		// The substrate is one block, and never the bottom of the world: a column
 		// two blocks tall is a cap over stone, not a cap over soil over nothing.
 		if (y >= h - 2 && y >= 1) return Sub[i];
-		return _deep[((y & (DeepH - 1)) * DeepW + (z & (DeepW - 1))) * DeepW + (x & (DeepW - 1))];
+		if (Deep[i] != Palette.AIR) return Deep[i];
+		int gz = z + OriginZ, gx = x + OriginX;
+		return _deep[((y & (DeepH - 1)) * DeepW + (gz & (DeepW - 1))) * DeepW + (gx & (DeepW - 1))];
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -224,7 +261,12 @@ public sealed class VoxelGrid
 					if (y >= h) id = Palette.AIR;
 					else if (y == h - 1) id = Cap[i];
 					else if (y >= h - 2 && y >= 1) id = Sub[i];
-					else id = _deep[((y & (DeepH - 1)) * DeepW + (z & (DeepW - 1))) * DeepW + (x & (DeepW - 1))];
+					else if (Deep[i] != Palette.AIR) id = Deep[i];
+					else
+					{
+						int gz = z + OriginZ, gx = x + OriginX;
+						id = _deep[((y & (DeepH - 1)) * DeepW + (gz & (DeepW - 1))) * DeepW + (gx & (DeepW - 1))];
+					}
 					dst[row + lx] = id;
 				}
 			}

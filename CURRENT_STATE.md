@@ -49,10 +49,14 @@ aspirational belongs here, and anything listed must have been seen working.
   build profiles with relief wavelengths, surface roles, erosion response,
   vegetation/detail sets, atmosphere/shader profiles, road treatment and
   architecture palette bias.
-- `./tools/world-authoring.sh audit` validates both the production atlas/profile
-  contract and the review-map topology without generating terrain.
+- `./tools/world-authoring.sh audit` validates the production atlas/profile
+  contract, its registered rectangular production topology and the separate
+  review-map topology without generating terrain.
   `atlas-preview` writes an SVG of the registered elevation, hydrology and
-  categorical-region sources with the 16×12 sector grid and faint province guides.
+  categorical-region sources with the 16×12 sector grid and faint province
+  guides. `atlas-topology-preview` and `preview-atlas-domain` place permanent
+  domains, routes and site envelopes over those same sources and expose affected
+  sector addresses.
 - `continent/land.png` and `elevation.png` are exact-registration L0 blockouts at
   1,536×1,152 pixels and were accepted by the author on 27 August 2026. The six
   province envelopes are approved working allocation guides rather than physical
@@ -60,15 +64,37 @@ aspirational belongs here, and anything listed must have been seen working.
   image-generated drafts accepted by the author on 27 August 2026; culture,
   abandonment and wilderness remain `Planned`. The audit checks dimensions, PNG encoding, the
   exact region palette and land-mask agreement for water and region.
-- `AtlasSectorCompiler` version 3 compiles an arbitrary 768-block sector plus a
+- `AtlasSectorCompiler` version 4 compiles an arbitrary 768-block sector plus a
   24-block apron into a disposable `PTFLSEC2` artifact and PNG preview. Each cell
   carries terrain/bed height, optional absolute water surface, compiled land,
   authored water value, hydrology class, primary/secondary profiles and blend.
   It derives region transitions, floodplains, banks, oceans, enclosed lakes and
   high-altitude permanent-water cores in global coordinates. Sectors 0,0, 4,2,
   6,4, 8,8 and 15,11 rebuilt deterministically; every tested available east and
-  south neighbor matched all 39,168 overlap cells. This remains an authoring
-  artifact compiler, not playable voxel terrain, rendered water or a runtime window.
+  south neighbor matched all 39,168 overlap cells. Channel surfaces are held
+  below locally realised banks, including after profile relief.
+- The artifact reader rejects stale compiler versions, source fingerprints,
+  malformed metadata and invalid cell payloads. `review-sector` materialises one
+  sector plus apron into a local `VoxelGrid` at its global atlas origin and uses
+  the normal chunk mesher, ink, atmosphere, grade and water shader.
+  `capture-sector` writes deterministic near, wide, reverse and far views.
+  Mountain, confluence and drowned-south sectors were inspected in the renderer;
+  the legacy runtime hero capture was also checked after sharing its material
+  construction with the review path.
+- `review-domain` composes the first domain's nine ordinary sector artifacts
+  into a temporary 2,352-square window (2,304-block core plus outer apron).
+  `DomainPlanBlockout` then realises its exact route polylines, seven platforms
+  at Y106/108/112/116, four named terrain/collapse cutouts, three fitted stairs,
+  ten wall runs and thirty-nine measured landmarks. Of 185,979 current platform
+  cells, 68,675 retain their compiled terrain cap, 96,135 use made paving and
+  21,169 use reclaimed caps; two collapsed cutouts lower 11,820 cells by their
+  authored depths. Ragged/submerged terraces, courses, buttresses, colonnade
+  lintels, cutout rims and rubble are deterministic assistants inside authored
+  edge contracts. Platform and cutout reclamation values allow the biome grammar
+  to return only where the plan permits it. `AtlasDomainDressing` placed 852
+  biome-selected trees from a globally anchored lattice in the current
+  nine-sector review. Fixed captures exercise near, wide, reverse and far views
+  at both late morning and night through the ordinary day-cycle rig.
 - `content/chapter_01/map.json` currently defines:
   - the playable boundary and chapter spawn;
   - six elevation zones and six authored biome zones;
@@ -354,19 +380,24 @@ in §2. What remains is the layer above them, and it is the current effort. See
   2026-08 direction shift ([docs/ROADMAP.md](docs/ROADMAP.md) §3): the author
   judged them "very basic" against the references — sites must be multi-layered
   terrain with the landmarks integrated, one built to exact detail at a time.
-  What does NOT yet exist: authored L3 site plans or terracing from arbitrary
-  authored polygons.
+  The production-domain review now compiles authored L3 polygons and terracing
+  into a disposable runtime window. What does NOT yet exist is an accepted
+  reference-quality site, persisted per-sector structure/navigation artifacts,
+  production collision/player streaming, or final reclamation/detail.
 - **Canonical topology and its first tools exist.**
-  `content/chapter_01/world.json` is a versioned absolute-coordinate source for
-  domains, sites, entrances, graph nodes and routes. The first production-draft
-  southern domain has four named site envelopes and seven connected routes.
+  `content/chapter_01/topology.json` is the version 2 permanent 12,288×9,216
+  source for domains, sites, entrances, graph nodes and routes. Its first
+  southern domain has four named site envelopes, ten nodes and nine connected
+  route segments aligned to the accepted central-delta shelf, water and islands.
+  `content/chapter_01/world.json` remains a version 1 3,456-square runtime fixture.
   `src/World/CanonicalWorld.cs` performs a strict pre-generation audit;
-  `./tools/world-authoring.sh audit|preview` checks it or writes an SVG without
-  generating terrain. The in-game map overlays the authored domain and site
-  envelopes. Canonical runtime mode stamps only authored route polylines and
-  disables procedural settlements, significant landmarks and the sanctum
-  fixture. The draft deliberately remains below the 30–60-site target and has
-  no structure geometry yet. ([docs/MAP_PIPELINE.md](docs/MAP_PIPELINE.md))
+  the atlas audit also checks production extent and province references. SVG
+  previews show the topology over accepted macro layers and sector boundaries
+  without generating terrain. The in-game map and canonical runtime route stamps
+  still use only the smaller fixture. The production source deliberately remains
+  below the 30–60-site target. Its first domain has review geometry only; that
+  geometry is not yet part of the ordinary playable runtime.
+  ([docs/MAP_PIPELINE.md](docs/MAP_PIPELINE.md))
 - **The production atlas manifest, first macro blockouts and first sector compiler
   exist.** The selected colour, line and elevation maps are tracked under
   `world-new/map/`; atlas dimensions, sector grid, registered macro layers,
@@ -374,13 +405,26 @@ in §2. What remains is the layer above them, and it is the current effort. See
   previewable. Land, elevation, generated water and categorical region sources
   are accepted; culture, abandonment and wilderness remain planned. A
   deterministic compiler emits one disposable terrain/hydrology/profile sector
-  plus apron and verifies neighbor overlap. The current runtime still owns global
-  3,456-square fields; production route/site compilation, voxel-column and water-
-  mesh materialisation, and a windowed runtime have not been built.
+  plus apron and verifies neighbor overlap. A read-only production-sector window
+  now materialises its voxel columns and multi-height water for visual review.
+  The ordinary game still owns global 3,456-square fields; production player/
+  collision streaming and persistent route/site artifacts have not been built.
   ([docs/ATLAS.md](docs/ATLAS.md))
-- **Authored site composition is not built.** The topology says where a site is
-  and how it connects, but no L3 plan yet supplies its platform polygons,
-  levels, walls, stairs or major silhouette. ([docs/RUINS.md](docs/RUINS.md) §4)
+- **The first authored L3 composition source has a review compiler.**
+  `content/chapter_01/domains/shallows-gateway-domain.json` supplies seven
+  platform polygons, four named terrain/collapse cutouts, four absolute levels,
+  three stairs, ten walls, eight route sockets and thirty-nine measured landmark
+  placements for the connected southern domain. Its authored collapse depths
+  and platform/cutout reclamation densities control where the deterministic
+  assistants may lower, reclaim and plant made ground. `DomainPlanDefinition`
+  validates it; the SVG renders it over accepted terrain; and the domain review
+  realises the plan through the ordinary voxel renderer across sector seams.
+  Fixed day/night captures prove the large axis, levels, context and long-range
+  shadows exist. The stronger edge masonry, arches, colonnades, rubble and
+  reclamation make the district legible, but its ground detail and local ruin
+  variation remain below the target references. It is a developed blockout, not
+  an accepted production site.
+  ([docs/RUINS.md](docs/RUINS.md) §4)
 - **The story layer.** Regions with roles, domains, and site allocation by
   meaning rather than by fit. ([docs/WORLD.md](docs/WORLD.md))
 - Biome identities affect terrain, flora, ground detail, and airborne detail, but the

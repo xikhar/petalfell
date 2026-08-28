@@ -16,11 +16,21 @@ namespace Petalfell.World;
 public sealed class CanonicalWorldDefinition
 {
 	public int Version { get; set; } = 1;
+	/// <summary>
+	/// Version 1 review maps are square and use worldSize. Version 2 production
+	/// topology is rectangular and uses width/depth so its coordinates match the
+	/// atlas without an implicit scaling step.
+	/// </summary>
 	public int WorldSize { get; set; }
+	public int Width { get; set; }
+	public int Depth { get; set; }
 	public List<CanonicalDomain> Domains { get; set; } = new();
 	public List<CanonicalSite> Sites { get; set; } = new();
 	public List<CanonicalRouteNode> RouteNodes { get; set; } = new();
 	public List<CanonicalRoute> Routes { get; set; } = new();
+
+	[JsonIgnore] public int ExtentWidth => Version == 1 ? WorldSize : Width;
+	[JsonIgnore] public int ExtentDepth => Version == 1 ? WorldSize : Depth;
 
 	public static CanonicalWorldDefinition Load(string resourcePath)
 	{
@@ -31,8 +41,12 @@ public sealed class CanonicalWorldDefinition
 
 		var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 		options.Converters.Add(new JsonStringEnumConverter());
-		return JsonSerializer.Deserialize<CanonicalWorldDefinition>(file.GetAsText(), options)
-		       ?? throw new InvalidOperationException($"Canonical world '{resourcePath}' was empty.");
+		var world = JsonSerializer.Deserialize<CanonicalWorldDefinition>(file.GetAsText(), options)
+		            ?? throw new InvalidOperationException($"Canonical world '{resourcePath}' was empty.");
+		foreach (var domain in world.Domains)
+			if (!string.IsNullOrWhiteSpace(domain.PlanPath))
+				domain.Plan = DomainPlanDefinition.Load(domain.PlanPath);
+		return world;
 	}
 
 	/// <summary>
@@ -42,9 +56,29 @@ public sealed class CanonicalWorldDefinition
 	public WorldAuditReport Audit(MapDefinition map)
 	{
 		var report = new WorldAuditReport();
-		if (Version != 1) report.Error($"version must be 1, got {Version}");
+		if (Version != 1) report.Error($"version must be 1 for the review map, got {Version}");
 		if (WorldSize != map.DefaultWorldSize)
 			report.Error($"worldSize {WorldSize} does not match map defaultWorldSize {map.DefaultWorldSize}");
+		AuditInto(report, map.DefaultWorldSize, map.DefaultWorldSize, null, null);
+		return report;
+	}
+
+	public WorldAuditReport Audit(WorldAtlasDefinition atlas)
+	{
+		var report = new WorldAuditReport();
+		if (Version != 2) report.Error($"version must be 2 for production atlas topology, got {Version}");
+		if (Width != atlas.Width || Depth != atlas.Depth)
+			report.Error($"topology extent {Width}x{Depth} does not match atlas {atlas.Width}x{atlas.Depth}");
+		var regions = new HashSet<string>(atlas.Provinces.Select(p => p.Id), StringComparer.Ordinal);
+		AuditInto(report, atlas.Width, atlas.Depth, regions, atlas);
+		return report;
+	}
+
+	private void AuditInto(WorldAuditReport report, int extentWidth, int extentDepth,
+		HashSet<string> validRegionIds, WorldAtlasDefinition atlas)
+	{
+		if (extentWidth <= 0 || extentDepth <= 0)
+			report.Error($"topology extent must be positive, got {extentWidth}x{extentDepth}");
 		if (Domains.Count == 0) report.Error("at least one domain is required");
 		if (Sites.Count == 0) report.Error("at least one site is required");
 
@@ -60,17 +94,28 @@ public sealed class CanonicalWorldDefinition
 			return true;
 		}
 
-		bool Inside(BlockPoint p) => p != null && p.X >= 0 && p.Z >= 0 && p.X < WorldSize && p.Z < WorldSize;
+		bool Inside(BlockPoint p) => p != null && p.X >= 0 && p.Z >= 0 && p.X < extentWidth && p.Z < extentDepth;
 
 		foreach (var domain in Domains)
 		{
 			if (Id(domain.Id, "domain")) domains[domain.Id] = domain;
 			if (string.IsNullOrWhiteSpace(domain.DisplayName)) report.Error($"domain '{domain.Id}' displayName is required");
 			if (string.IsNullOrWhiteSpace(domain.RegionId)) report.Error($"domain '{domain.Id}' regionId is required");
+			else if (validRegionIds != null && !validRegionIds.Contains(domain.RegionId))
+				report.Error($"domain '{domain.Id}' references missing atlas region '{domain.RegionId}'");
 			if (string.IsNullOrWhiteSpace(domain.CultureId)) report.Error($"domain '{domain.Id}' cultureId is required");
 			if (domain.Boundary.Count < 3) report.Error($"domain '{domain.Id}' boundary needs at least three points");
 			foreach (var p in domain.Boundary)
 				if (!Inside(p)) report.Error($"domain '{domain.Id}' boundary point lies outside the world");
+			if (atlas != null)
+			{
+				if (string.IsNullOrWhiteSpace(domain.PlanPath))
+					report.Warning($"domain '{domain.Id}' has no L3 planPath");
+				else if (domain.Plan == null)
+					report.Error($"domain '{domain.Id}' plan '{domain.PlanPath}' did not load");
+				else
+					report.Include(domain.Plan.Audit(atlas, this, domain), $"domain plan '{domain.Id}'");
+			}
 		}
 
 		foreach (var site in Sites)
@@ -79,6 +124,10 @@ public sealed class CanonicalWorldDefinition
 			if (string.IsNullOrWhiteSpace(site.DisplayName)) report.Error($"site '{site.Id}' displayName is required");
 			if (!Inside(site.Centre)) report.Error($"site '{site.Id}' centre lies outside the world");
 			if (site.ExtentX <= 0 || site.ExtentZ <= 0) report.Error($"site '{site.Id}' extents must be positive");
+			else if (site.Centre != null &&
+			         (site.Centre.X - site.ExtentX / 2f < 0 || site.Centre.X + site.ExtentX / 2f >= extentWidth ||
+			          site.Centre.Z - site.ExtentZ / 2f < 0 || site.Centre.Z + site.ExtentZ / 2f >= extentDepth))
+				report.Error($"site '{site.Id}' envelope lies outside the world");
 			if (site.Age < 0f || site.Age > 1f) report.Error($"site '{site.Id}' age must be in 0..1");
 			if (!domains.ContainsKey(site.DomainId)) report.Error($"site '{site.Id}' references missing domain '{site.DomainId}'");
 			else if (site.Centre != null && !PointInPolygon(site.Centre, domains[site.DomainId].Boundary))
@@ -171,8 +220,7 @@ public sealed class CanonicalWorldDefinition
 			if (edges.TryGetValue(node.Id, out var links) && links.Count == 0)
 				report.Warning($"route node '{node.Id}' is unused");
 		if (Sites.Count < 30)
-			report.Warning($"topology is a production draft: {Sites.Count} sites authored, Chapter 1 target is 30–60");
-		return report;
+			report.Warning($"topology is incomplete: {Sites.Count} sites authored, Chapter 1 target is 30–60");
 	}
 
 	private static bool PointInPolygon(BlockPoint p, List<BlockPoint> polygon)
@@ -197,6 +245,12 @@ public sealed class WorldAuditReport
 	public bool Valid => Errors.Count == 0;
 	public void Error(string message) => Errors.Add(message);
 	public void Warning(string message) => Warnings.Add(message);
+
+	public void Include(WorldAuditReport child, string scope)
+	{
+		foreach (string error in child.Errors) Error($"{scope}: {error}");
+		foreach (string warning in child.Warnings) Warning($"{scope}: {warning}");
+	}
 
 	public string Format(string source)
 	{
@@ -225,6 +279,8 @@ public sealed class CanonicalDomain
 	/// <summary>Clockwise from world +Z; site plans use the same convention.</summary>
 	public float AxisDegrees { get; set; }
 	public List<BlockPoint> Boundary { get; set; } = new();
+	public string PlanPath { get; set; } = "";
+	[JsonIgnore] public DomainPlanDefinition Plan { get; internal set; }
 }
 
 public enum SiteTier { Mark, Precinct, District, GreatWork }

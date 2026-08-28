@@ -203,7 +203,7 @@ public static class Vegetation
 	/// tree stamped over and over. Core size, lobe count, lobe sizes, offsets
 	/// and which lobes take the paler leaf are all drawn per tree.
 	/// </summary>
-	private static void Tree(VoxelGrid grid, Rng rng, int x, int y, int z,
+	internal static void Tree(VoxelGrid grid, Rng rng, int x, int y, int z,
 		float scale, byte leaf)
 	{
 		int tw = scale >= 0.84f ? 2 : 1;

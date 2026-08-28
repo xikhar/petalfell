@@ -22,9 +22,12 @@ public static class WorldAuthoring
 		bool audit = false;
 		string preview = null;
 		string atlasPreview = null;
+		string atlasTopologyPreview = null;
 		string domainId = null;
+		string atlasDomainId = null;
 		string compileSector = null;
 		string verifySector = null;
+		string sampleAtlas = null;
 		string sectorOutput = null;
 		string sectorPreview = null;
 		int sectorApron = AtlasSectorCompiler.DefaultApron;
@@ -37,12 +40,18 @@ public static class WorldAuthoring
 			else if (args[i].StartsWith("--world-preview=")) preview = args[i][16..];
 			else if (args[i] == "--atlas-preview" && i + 1 < args.Length) atlasPreview = args[++i];
 			else if (args[i].StartsWith("--atlas-preview=")) atlasPreview = args[i][16..];
+			else if (args[i] == "--atlas-topology-preview" && i + 1 < args.Length) atlasTopologyPreview = args[++i];
+			else if (args[i].StartsWith("--atlas-topology-preview=")) atlasTopologyPreview = args[i][25..];
 			else if (args[i] == "--world-domain" && i + 1 < args.Length) domainId = args[++i];
 			else if (args[i].StartsWith("--world-domain=")) domainId = args[i][15..];
+			else if (args[i] == "--atlas-domain" && i + 1 < args.Length) atlasDomainId = args[++i];
+			else if (args[i].StartsWith("--atlas-domain=")) atlasDomainId = args[i][15..];
 			else if (args[i] == "--compile-sector" && i + 1 < args.Length) compileSector = args[++i];
 			else if (args[i].StartsWith("--compile-sector=")) compileSector = args[i][17..];
 			else if (args[i] == "--verify-sector" && i + 1 < args.Length) verifySector = args[++i];
 			else if (args[i].StartsWith("--verify-sector=")) verifySector = args[i][16..];
+			else if (args[i] == "--sample-atlas" && i + 1 < args.Length) sampleAtlas = args[++i];
+			else if (args[i].StartsWith("--sample-atlas=")) sampleAtlas = args[i][15..];
 			else if (args[i] == "--sector-output" && i + 1 < args.Length) sectorOutput = args[++i];
 			else if (args[i].StartsWith("--sector-output=")) sectorOutput = args[i][16..];
 			else if (args[i] == "--sector-preview" && i + 1 < args.Length) sectorPreview = args[++i];
@@ -53,7 +62,8 @@ public static class WorldAuthoring
 			else if (args[i].StartsWith("--map-definition=")) mapPath = args[i][17..];
 		}
 
-		if (!audit && preview == null && atlasPreview == null && compileSector == null && verifySector == null) return false;
+		if (!audit && preview == null && atlasPreview == null && atlasTopologyPreview == null &&
+		    compileSector == null && verifySector == null && sampleAtlas == null) return false;
 		int exit = 0;
 		try
 		{
@@ -66,15 +76,45 @@ public static class WorldAuthoring
 				         $"atlas {map.CanonicalAtlas.Width}x{map.CanonicalAtlas.Depth}x{map.CanonicalAtlas.Height}  " +
 				         $"sectors {map.CanonicalAtlas.Width / map.CanonicalAtlas.SectorSize}x{map.CanonicalAtlas.Depth / map.CanonicalAtlas.SectorSize}  " +
 				         $"provinces {map.CanonicalAtlas.Provinces.Count}  profiles {map.CanonicalAtlas.BiomeCatalog?.Profiles.Count ?? 0}");
+				if (map.CanonicalAtlas.Topology != null)
+				{
+					var topology = map.CanonicalAtlas.Topology;
+					GD.Print($"[atlas-topology] version {topology.Version}  extent {topology.ExtentWidth}x{topology.ExtentDepth}  " +
+					         $"domains {topology.Domains.Count}  sites {topology.Sites.Count}  " +
+					         $"nodes {topology.RouteNodes.Count}  routes {topology.Routes.Count}");
+					foreach (var domain in topology.Domains)
+						GD.Print($"[domain-sectors] {domain.Id}: {SectorCoverage(domain, map.CanonicalAtlas)}");
+				}
 				if (!atlasReport.Valid) exit = 2;
 				if (atlasReport.Valid && atlasPreview != null)
 				{
 					WriteAtlasSvg(map.CanonicalAtlas, atlasPreview);
 					GD.Print($"[atlas-preview] {ProjectSettings.GlobalizePath(atlasPreview)}");
 				}
-				if (atlasReport.Valid && (compileSector != null || verifySector != null))
+				if (atlasReport.Valid && atlasTopologyPreview != null)
+				{
+					WriteAtlasTopologySvg(map.CanonicalAtlas, atlasTopologyPreview, atlasDomainId);
+					GD.Print($"[atlas-topology-preview] {ProjectSettings.GlobalizePath(atlasTopologyPreview)}");
+				}
+				if (atlasReport.Valid && (compileSector != null || verifySector != null || sampleAtlas != null))
 				{
 					var compiler = new AtlasSectorCompiler(map.CanonicalAtlas, map.DefaultSeed, map.CanonicalAtlasPath);
+					if (sampleAtlas != null)
+					{
+						(int x, int z) = ParsePoint(sampleAtlas);
+						if (x < 0 || z < 0 || x >= map.CanonicalAtlas.Width || z >= map.CanonicalAtlas.Depth)
+							throw new InvalidOperationException($"atlas sample {x},{z} lies outside the atlas");
+						int sx = x / map.CanonicalAtlas.SectorSize, sz = z / map.CanonicalAtlas.SectorSize;
+						var data = compiler.Compile(sx, sz, sectorApron);
+						int localX = x - data.OriginX, localZ = z - data.OriginZ;
+						int index = localZ * data.Width + localX;
+						string primary = map.CanonicalAtlas.BiomeCatalog.Profiles[data.Profile[index]].Id;
+						string secondary = map.CanonicalAtlas.BiomeCatalog.Profiles[data.SecondaryProfile[index]].Id;
+						GD.Print($"[atlas-sample] {x},{z} sector {sx},{sz} height {data.Height[index]} " +
+						         $"water-surface {data.WaterSurface[index]} land {data.Land[index] != 0} " +
+						         $"hydrology {data.Hydrology[index]} water-value {data.Water[index]} " +
+						         $"profile {primary} secondary {secondary} weight {data.ProfileBlend[index] / 255f:0.000}");
+					}
 					if (compileSector != null)
 					{
 						(int sx, int sz) = ParseSector(compileSector);
@@ -105,7 +145,7 @@ public static class WorldAuthoring
 					}
 				}
 			}
-			else if (atlasPreview != null)
+			else if (atlasPreview != null || atlasTopologyPreview != null)
 				throw new InvalidOperationException($"Map '{mapPath}' has no canonicalAtlasPath.");
 			if (map.CanonicalWorld == null)
 			{
@@ -136,12 +176,34 @@ public static class WorldAuthoring
 		return true;
 	}
 
+	private static string SectorCoverage(CanonicalDomain domain, WorldAtlasDefinition atlas)
+	{
+		int minX = Math.Clamp(domain.Boundary.Min(p => p.X) / atlas.SectorSize, 0, atlas.Width / atlas.SectorSize - 1);
+		int maxX = Math.Clamp(domain.Boundary.Max(p => p.X) / atlas.SectorSize, 0, atlas.Width / atlas.SectorSize - 1);
+		int minZ = Math.Clamp(domain.Boundary.Min(p => p.Z) / atlas.SectorSize, 0, atlas.Depth / atlas.SectorSize - 1);
+		int maxZ = Math.Clamp(domain.Boundary.Max(p => p.Z) / atlas.SectorSize, 0, atlas.Depth / atlas.SectorSize - 1);
+		var addresses = new List<string>();
+		for (int z = minZ; z <= maxZ; z++)
+		for (int x = minX; x <= maxX; x++)
+			addresses.Add($"{x},{z}");
+		return string.Join(" ", addresses);
+	}
+
 	private static (int x, int z) ParseSector(string address)
 	{
 		string[] parts = address.Split(',');
 		if (parts.Length != 2 || !int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int x) ||
 		    !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int z))
 			throw new InvalidOperationException($"sector address '{address}' must be x,z");
+		return (x, z);
+	}
+
+	private static (int x, int z) ParsePoint(string address)
+	{
+		string[] parts = address.Split(',');
+		if (parts.Length != 2 || !int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int x) ||
+		    !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int z))
+			throw new InvalidOperationException($"atlas point '{address}' must be x,z");
 		return (x, z);
 	}
 
@@ -241,45 +303,99 @@ public static class WorldAuthoring
 
 	public static void WriteSvg(MapDefinition map, string outputPath, string domainId = null)
 	{
-		var world = map.CanonicalWorld ?? throw new InvalidOperationException("No canonical world loaded.");
-		const int canvas = 1400, pad = 70;
+		var world = map.CanonicalWorld ?? throw new InvalidOperationException("No canonical review world loaded.");
+		WriteTopologySvg(world, map.DisplayName, outputPath, domainId, null, map.Boundary);
+	}
+
+	public static void WriteAtlasTopologySvg(WorldAtlasDefinition atlas, string outputPath, string domainId = null)
+	{
+		var world = atlas.Topology ?? throw new InvalidOperationException(
+			$"Atlas '{atlas.Id}' has no registered production topology.");
+		WriteTopologySvg(world, atlas.DisplayName, outputPath, domainId, atlas, null);
+	}
+
+	private static void WriteTopologySvg(CanonicalWorldDefinition world, string displayName,
+		string outputPath, string domainId, WorldAtlasDefinition atlas, MapBoundary reviewBoundary)
+	{
+		const int canvasW = 1600, canvasH = 1260, pad = 60, header = 95;
 		CanonicalDomain focus = null;
-		int minX = 0, minZ = 0, maxX = world.WorldSize, maxZ = world.WorldSize;
+		int minX = 0, minZ = 0, maxX = world.ExtentWidth, maxZ = world.ExtentDepth;
 		if (!string.IsNullOrWhiteSpace(domainId))
 		{
 			focus = world.Domains.FirstOrDefault(d => d.Id == domainId)
 			        ?? throw new InvalidOperationException($"Unknown authored domain '{domainId}'.");
-			minX = Math.Max(0, focus.Boundary.Min(p => p.X) - 80);
-			minZ = Math.Max(0, focus.Boundary.Min(p => p.Z) - 80);
-			maxX = Math.Min(world.WorldSize, focus.Boundary.Max(p => p.X) + 80);
-			maxZ = Math.Min(world.WorldSize, focus.Boundary.Max(p => p.Z) + 80);
+			const int margin = 140;
+			minX = Math.Max(0, focus.Boundary.Min(p => p.X) - margin);
+			minZ = Math.Max(0, focus.Boundary.Min(p => p.Z) - margin);
+			maxX = Math.Min(world.ExtentWidth, focus.Boundary.Max(p => p.X) + margin);
+			maxZ = Math.Min(world.ExtentDepth, focus.Boundary.Max(p => p.Z) + margin);
 		}
-		float scale = Math.Min((canvas - pad * 2f) / (maxX - minX), (canvas - pad * 2f) / (maxZ - minZ));
-		float offsetX = (canvas - (maxX - minX) * scale) * 0.5f;
-		float offsetZ = (canvas - (maxZ - minZ) * scale) * 0.5f;
+
+		float scale = Math.Min((canvasW - pad * 2f) / (maxX - minX),
+			(canvasH - header - pad) / (float)(maxZ - minZ));
+		float mapW = (maxX - minX) * scale, mapH = (maxZ - minZ) * scale;
+		float left = (canvasW - mapW) * 0.5f, top = header + (canvasH - header - mapH) * 0.5f;
 		string F(float v) => v.ToString("0.##", CultureInfo.InvariantCulture);
-		float X(int x) => offsetX + (x - minX) * scale;
-		float Z(int z) => offsetZ + (z - minZ) * scale;
+		float X(int x) => left + (x - minX) * scale;
+		float Z(int z) => top + (z - minZ) * scale;
 		string Esc(string value) => (value ?? "").Replace("&", "&amp;").Replace("<", "&lt;")
 			.Replace(">", "&gt;").Replace("\"", "&quot;").Replace("'", "&apos;");
 		string Points(IEnumerable<BlockPoint> points) =>
 			string.Join(" ", points.Select(p => $"{F(X(p.X))},{F(Z(p.Z))}"));
 
-		var svg = new StringBuilder(64_000);
-		svg.AppendLine($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{canvas}\" height=\"{canvas}\" viewBox=\"0 0 {canvas} {canvas}\">");
+		var svg = new StringBuilder(4_000_000);
+		svg.AppendLine($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{canvasW}\" height=\"{canvasH}\" viewBox=\"0 0 {canvasW} {canvasH}\">");
 		svg.AppendLine("<rect width=\"100%\" height=\"100%\" fill=\"#191622\"/>");
-		svg.AppendLine("<style>text{font-family:Inter,system-ui,sans-serif}.label{paint-order:stroke;stroke:#191622;stroke-width:5px;stroke-linejoin:round}.small{font-size:12px;fill:#d8d0df}.site{font-size:14px;font-weight:650;fill:#fff7f1}.domain{font-size:15px;font-weight:700;fill:#d9c7ef;letter-spacing:.03em}</style>");
+		svg.AppendLine($"<defs><clipPath id=\"mapClip\"><rect x=\"{F(left)}\" y=\"{F(top)}\" width=\"{F(mapW)}\" height=\"{F(mapH)}\"/></clipPath><filter id=\"atlasTerrain\" color-interpolation-filters=\"sRGB\"><feColorMatrix type=\"matrix\" values=\".55 0 0 0 .10  .55 0 0 0 .16  .50 0 0 0 .24  0 0 0 1 0\"/></filter><filter id=\"atlasWater\" color-interpolation-filters=\"sRGB\"><feColorMatrix type=\"matrix\" values=\"0 0 0 0 .28  0 0 0 0 .62  0 0 0 0 .90  .2126 .7152 .0722 0 0\"/><feComponentTransfer><feFuncA type=\"gamma\" amplitude=\".88\" exponent=\"2.6\" offset=\"0\"/></feComponentTransfer></filter><filter id=\"atlasRegion\" color-interpolation-filters=\"sRGB\"><feColorMatrix type=\"matrix\" values=\"1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  .2126 .7152 .0722 0 0\"/><feComponentTransfer><feFuncA type=\"linear\" slope=\".5\"/></feComponentTransfer></filter></defs>");
+		svg.AppendLine("<style>text{font-family:Inter,system-ui,sans-serif}.label{paint-order:stroke;stroke:#191622;stroke-width:5px;stroke-linejoin:round}.small{font-size:12px;fill:#d8d0df}.site{font-size:14px;font-weight:650;fill:#fff7f1}.domain{font-size:15px;font-weight:700;fill:#ead8ff;letter-spacing:.03em}.sector{font-size:11px;fill:#fff;opacity:.62}</style>");
 
-		float bx = X((int)(map.Boundary.Centre.X * world.WorldSize));
-		float bz = Z((int)(map.Boundary.Centre.Z * world.WorldSize));
-		float brx = map.Boundary.RadiusX * world.WorldSize * scale;
-		float brz = map.Boundary.RadiusZ * world.WorldSize * scale;
-		svg.AppendLine($"<ellipse cx=\"{F(bx)}\" cy=\"{F(bz)}\" rx=\"{F(brx)}\" ry=\"{F(brz)}\" fill=\"#546789\" fill-opacity=\".28\" stroke=\"#8da0c8\" stroke-width=\"2\"/>");
+		if (atlas != null)
+		{
+			svg.AppendLine("<g clip-path=\"url(#mapClip)\">");
+			void Layer(AtlasLayerKind kind, string filter, float opacity)
+			{
+				var layer = atlas.SourceLayers.FirstOrDefault(l => l.Kind == kind &&
+					l.Status != AtlasLayerStatus.Planned && Godot.FileAccess.FileExists(l.Path));
+				if (layer == null) return;
+				string encoded = Convert.ToBase64String(File.ReadAllBytes(ProjectSettings.GlobalizePath(layer.Path)));
+				svg.AppendLine($"<image x=\"{F(X(0))}\" y=\"{F(Z(0))}\" width=\"{F(world.ExtentWidth * scale)}\" height=\"{F(world.ExtentDepth * scale)}\" preserveAspectRatio=\"none\" opacity=\"{F(opacity)}\" filter=\"url(#{filter})\" href=\"data:image/png;base64,{encoded}\"/>");
+			}
+			Layer(AtlasLayerKind.Elevation, "atlasTerrain", .88f);
+			Layer(AtlasLayerKind.Water, "atlasWater", 1f);
+			Layer(AtlasLayerKind.Region, "atlasRegion", 1f);
+			int firstSectorX = Math.Max(0, minX / atlas.SectorSize);
+			int lastSectorX = Math.Min(atlas.Width / atlas.SectorSize - 1, (maxX - 1) / atlas.SectorSize);
+			int firstSectorZ = Math.Max(0, minZ / atlas.SectorSize);
+			int lastSectorZ = Math.Min(atlas.Depth / atlas.SectorSize - 1, (maxZ - 1) / atlas.SectorSize);
+			for (int sx = firstSectorX; sx <= lastSectorX + 1; sx++)
+			{
+				float px = X(sx * atlas.SectorSize);
+				svg.AppendLine($"<line x1=\"{F(px)}\" y1=\"{F(top)}\" x2=\"{F(px)}\" y2=\"{F(top + mapH)}\" stroke=\"#fff\" stroke-opacity=\".25\" stroke-width=\"1\"/>");
+			}
+			for (int sz = firstSectorZ; sz <= lastSectorZ + 1; sz++)
+			{
+				float pz = Z(sz * atlas.SectorSize);
+				svg.AppendLine($"<line x1=\"{F(left)}\" y1=\"{F(pz)}\" x2=\"{F(left + mapW)}\" y2=\"{F(pz)}\" stroke=\"#fff\" stroke-opacity=\".25\" stroke-width=\"1\"/>");
+			}
+			if (focus != null)
+				for (int sz = firstSectorZ; sz <= lastSectorZ; sz++)
+				for (int sx = firstSectorX; sx <= lastSectorX; sx++)
+					svg.AppendLine($"<text class=\"sector label\" x=\"{F(X(sx * atlas.SectorSize) + 7)}\" y=\"{F(Z(sz * atlas.SectorSize) + 16)}\">{sx},{sz}</text>");
+			svg.AppendLine("</g>");
+		}
+		else if (reviewBoundary != null)
+		{
+			float bx = X((int)(reviewBoundary.Centre.X * world.ExtentWidth));
+			float bz = Z((int)(reviewBoundary.Centre.Z * world.ExtentDepth));
+			float brx = reviewBoundary.RadiusX * world.ExtentWidth * scale;
+			float brz = reviewBoundary.RadiusZ * world.ExtentDepth * scale;
+			svg.AppendLine($"<ellipse cx=\"{F(bx)}\" cy=\"{F(bz)}\" rx=\"{F(brx)}\" ry=\"{F(brz)}\" fill=\"#546789\" fill-opacity=\".28\" stroke=\"#8da0c8\" stroke-width=\"2\"/>");
+		}
 
 		var visibleDomains = focus == null ? world.Domains : new List<CanonicalDomain> { focus };
 		foreach (var domain in visibleDomains)
 		{
-			svg.AppendLine($"<polygon points=\"{Points(domain.Boundary)}\" fill=\"#9c7fc4\" fill-opacity=\".12\" stroke=\"#b99bdb\" stroke-width=\"3\" stroke-dasharray=\"10 6\"/>");
+			svg.AppendLine($"<polygon points=\"{Points(domain.Boundary)}\" fill=\"#9c7fc4\" fill-opacity=\".18\" stroke=\"#e0c2ff\" stroke-width=\"3\" stroke-dasharray=\"10 6\"/>");
 			float dx = domain.Boundary.Average(p => X(p.X));
 			float dz = domain.Boundary.Min(p => Z(p.Z)) - 10;
 			svg.AppendLine($"<text class=\"domain label\" x=\"{F(dx)}\" y=\"{F(dz)}\" text-anchor=\"middle\">{Esc(domain.DisplayName)}</text>");
@@ -289,26 +405,29 @@ public static class WorldAuthoring
 		{
 			RoadKind.Major => "#fff0dc",
 			RoadKind.Local or RoadKind.Street => "#e7bfc9",
-			RoadKind.Abandoned => "#bd8f9c",
-			_ => "#b78878",
+			RoadKind.Abandoned => "#d799ac",
+			_ => "#c7a08f",
 		};
-		var visibleSiteIds = new HashSet<string>((focus == null ? world.Sites : world.Sites.Where(s => s.DomainId == focus.Id)).Select(s => s.Id), StringComparer.Ordinal);
+		var visibleSiteIds = new HashSet<string>((focus == null ? world.Sites : world.Sites.Where(s => s.DomainId == focus.Id))
+			.Select(s => s.Id), StringComparer.Ordinal);
 		var visibleNodeIds = new HashSet<string>(world.RouteNodes.Where(n => focus == null ||
-			visibleSiteIds.Contains(n.SiteId) || (n.Point.X >= minX && n.Point.X <= maxX && n.Point.Z >= minZ && n.Point.Z <= maxZ)).Select(n => n.Id), StringComparer.Ordinal);
-		var visibleRoutes = world.Routes.Where(route => focus == null || visibleNodeIds.Contains(route.FromNodeId) || visibleNodeIds.Contains(route.ToNodeId)).ToList();
+			visibleSiteIds.Contains(n.SiteId) || (n.Point.X >= minX && n.Point.X <= maxX && n.Point.Z >= minZ && n.Point.Z <= maxZ))
+			.Select(n => n.Id), StringComparer.Ordinal);
+		var visibleRoutes = world.Routes.Where(route => focus == null || visibleNodeIds.Contains(route.FromNodeId) ||
+			visibleNodeIds.Contains(route.ToNodeId)).ToList();
 		foreach (var route in visibleRoutes)
 		{
 			float width = Math.Clamp(route.Width * scale, 1.5f, 8f);
 			svg.AppendLine($"<polyline points=\"{Points(route.Points)}\" fill=\"none\" stroke=\"#191622\" stroke-width=\"{F(width + 3f)}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>");
 			svg.AppendLine($"<polyline points=\"{Points(route.Points)}\" fill=\"none\" stroke=\"{RouteColour(route.Kind)}\" stroke-width=\"{F(width)}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>");
 		}
+		if (focus?.Plan != null)
+			AppendDomainPlan(svg, focus.Plan, X, Z, scale, F, Esc);
 
 		string SiteColour(SiteTier tier) => tier switch
 		{
-			SiteTier.GreatWork => "#ffe08a",
-			SiteTier.District => "#ffb9a6",
-			SiteTier.Precinct => "#d9b8ef",
-			_ => "#a9dbd4",
+			SiteTier.GreatWork => "#ffe08a", SiteTier.District => "#ffb9a6",
+			SiteTier.Precinct => "#d9b8ef", _ => "#a9dbd4",
 		};
 		var visibleSites = world.Sites.Where(site => focus == null || site.DomainId == focus.Id).ToList();
 		foreach (var site in visibleSites)
@@ -316,29 +435,122 @@ public static class WorldAuthoring
 			float cx = X(site.Centre.X), cz = Z(site.Centre.Z);
 			float w = Math.Max(8f, site.ExtentX * scale), h = Math.Max(8f, site.ExtentZ * scale);
 			string colour = SiteColour(site.Tier);
-			svg.AppendLine($"<rect x=\"{F(cx - w / 2)}\" y=\"{F(cz - h / 2)}\" width=\"{F(w)}\" height=\"{F(h)}\" rx=\"5\" fill=\"{colour}\" fill-opacity=\".18\" stroke=\"{colour}\" stroke-width=\"3\" transform=\"rotate({F(site.OrientationDegrees)} {F(cx)} {F(cz)})\"/>");
+			svg.AppendLine($"<rect x=\"{F(cx - w / 2)}\" y=\"{F(cz - h / 2)}\" width=\"{F(w)}\" height=\"{F(h)}\" rx=\"5\" fill=\"{colour}\" fill-opacity=\".22\" stroke=\"{colour}\" stroke-width=\"3\" transform=\"rotate({F(site.OrientationDegrees)} {F(cx)} {F(cz)})\"/>");
 			float length = Math.Max(12f, Math.Min(w, h) * .38f);
 			float rad = site.OrientationDegrees * MathF.PI / 180f;
 			svg.AppendLine($"<line x1=\"{F(cx)}\" y1=\"{F(cz)}\" x2=\"{F(cx + MathF.Sin(rad) * length)}\" y2=\"{F(cz + MathF.Cos(rad) * length)}\" stroke=\"{colour}\" stroke-width=\"3\"/>");
 			svg.AppendLine($"<circle cx=\"{F(cx)}\" cy=\"{F(cz)}\" r=\"5\" fill=\"{colour}\" stroke=\"#191622\" stroke-width=\"2\"/>");
 			if (focus != null || site.Tier is SiteTier.District or SiteTier.GreatWork)
 			{
-				svg.AppendLine($"<text class=\"site label\" x=\"{F(cx + 9)}\" y=\"{F(cz - 9)}\">{Esc(site.DisplayName)}</text>");
-				svg.AppendLine($"<text class=\"small label\" x=\"{F(cx + 9)}\" y=\"{F(cz + 7)}\">{Esc(site.Tier.ToString())} · {site.Centre.X},{site.Centre.Z}</text>");
+				float labelX = focus?.Plan == null ? cx + 9 : cx - w * .5f + 7;
+				float labelZ = focus?.Plan == null ? cz - 9 : cz - h * .5f + 17;
+				svg.AppendLine($"<text class=\"site label\" x=\"{F(labelX)}\" y=\"{F(labelZ)}\">{Esc(site.DisplayName)}</text>");
+				if (focus?.Plan == null)
+					svg.AppendLine($"<text class=\"small label\" x=\"{F(cx + 9)}\" y=\"{F(cz + 7)}\">{Esc(site.Tier.ToString())} · {site.Centre.X},{site.Centre.Z}</text>");
 			}
 		}
 
 		foreach (var node in world.RouteNodes.Where(n => visibleNodeIds.Contains(n.Id)))
 			svg.AppendLine($"<circle cx=\"{F(X(node.Point.X))}\" cy=\"{F(Z(node.Point.Z))}\" r=\"3\" fill=\"#fff\" stroke=\"#191622\" stroke-width=\"1.5\"/>");
 
-		string scope = focus == null ? "authored topology" : $"{focus.DisplayName} detail";
-		svg.AppendLine($"<text x=\"{pad}\" y=\"35\" fill=\"#fff7f1\" font-size=\"22\" font-weight=\"750\">{Esc(map.DisplayName)} — {Esc(scope)}</text>");
-		svg.AppendLine($"<text x=\"{pad}\" y=\"56\" fill=\"#bdb2c8\" font-size=\"13\">world {world.WorldSize} · version {world.Version} · {visibleDomains.Count} domains · {visibleSites.Count} sites · {visibleRoutes.Count} routes</text>");
+		svg.AppendLine($"<rect x=\"{F(left)}\" y=\"{F(top)}\" width=\"{F(mapW)}\" height=\"{F(mapH)}\" fill=\"none\" stroke=\"#fff7f1\" stroke-opacity=\".65\" stroke-width=\"2\"/>");
+		string scope = focus == null ? (atlas == null ? "review topology" : "production topology") : $"{focus.DisplayName} detail";
+		svg.AppendLine($"<text x=\"{pad}\" y=\"35\" fill=\"#fff7f1\" font-size=\"22\" font-weight=\"750\">{Esc(displayName)} — {Esc(scope)}</text>");
+		string detail = $"extent {world.ExtentWidth} × {world.ExtentDepth} · version {world.Version} · {visibleDomains.Count} domains · {visibleSites.Count} sites · {visibleRoutes.Count} routes";
+		if (focus != null && atlas != null) detail += $" · sectors {SectorCoverage(focus, atlas)}";
+		svg.AppendLine($"<text x=\"{pad}\" y=\"58\" fill=\"#bdb2c8\" font-size=\"13\">{Esc(detail)}</text>");
 		svg.AppendLine("</svg>");
 
 		string absolute = ProjectSettings.GlobalizePath(outputPath);
 		string dir = Path.GetDirectoryName(absolute);
 		if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 		File.WriteAllText(absolute, svg.ToString(), new UTF8Encoding(false));
+	}
+
+	private static void AppendDomainPlan(StringBuilder svg, DomainPlanDefinition plan,
+		Func<int, float> xMap, Func<int, float> zMap, float scale,
+		Func<float, string> format, Func<string, string> escape)
+	{
+		(float x, float z) At(PlanPoint local)
+		{
+			BlockPoint global = plan.ToGlobal(local);
+			return (xMap(global.X), zMap(global.Z));
+		}
+		string Points(IEnumerable<PlanPoint> points) => string.Join(" ", points.Select(point =>
+		{
+			(float x, float z) = At(point);
+			return $"{format(x)},{format(z)}";
+		}));
+		string PlatformColour(PlanPlatformRole role) => role switch
+		{
+			PlanPlatformRole.Slab => "#ffb9a6",
+			PlanPlatformRole.Deck => "#d8bbed",
+			PlanPlatformRole.Court => "#f2cfaa",
+			PlanPlatformRole.Causeway => "#8fd7ee",
+			PlanPlatformRole.Terrace => "#b8d6a2",
+			_ => "#d8d1c8",
+		};
+
+		foreach (var platform in plan.Platforms)
+		{
+			string colour = PlatformColour(platform.Role);
+			svg.AppendLine($"<polygon points=\"{Points(platform.Polygon)}\" fill=\"{colour}\" fill-opacity=\".42\" stroke=\"{colour}\" stroke-width=\"3\" stroke-linejoin=\"round\"/>");
+			float cx = platform.Polygon.Average(p => At(p).x);
+			float cz = platform.Polygon.Average(p => At(p).z);
+			svg.AppendLine($"<text class=\"small label\" x=\"{format(cx)}\" y=\"{format(cz)}\" text-anchor=\"middle\">{platform.Role} · Y{platform.SurfaceY}</text>");
+			foreach (var cutout in platform.Cutouts)
+				svg.AppendLine($"<polygon points=\"{Points(cutout.Polygon)}\" fill=\"#191622\" fill-opacity=\".34\" stroke=\"#fff7f1\" stroke-width=\"2\" stroke-dasharray=\"5 4\"/>");
+		}
+
+		foreach (var stair in plan.Stairs)
+		{
+			(float x1, float z1) = At(stair.From);
+			(float x2, float z2) = At(stair.To);
+			float width = Math.Clamp(stair.Width * scale, 5f, 13f);
+			svg.AppendLine($"<line x1=\"{format(x1)}\" y1=\"{format(z1)}\" x2=\"{format(x2)}\" y2=\"{format(z2)}\" stroke=\"#191622\" stroke-width=\"{format(width + 4)}\" stroke-linecap=\"butt\"/>");
+			svg.AppendLine($"<line x1=\"{format(x1)}\" y1=\"{format(z1)}\" x2=\"{format(x2)}\" y2=\"{format(z2)}\" stroke=\"#fff0dc\" stroke-width=\"{format(width)}\" stroke-dasharray=\"3 3\"/>");
+		}
+
+		foreach (var wall in plan.Walls)
+		{
+			string dash = wall.State switch
+			{
+				PlanWallState.Trace => " stroke-dasharray=\"3 5\"",
+				PlanWallState.Stub => " stroke-dasharray=\"9 5\"",
+				PlanWallState.Broken => " stroke-dasharray=\"16 6\"",
+				_ => "",
+			};
+			float width = Math.Clamp(2f + wall.Height * .12f, 2.5f, 7f);
+			svg.AppendLine($"<polyline points=\"{Points(wall.Points)}\" fill=\"none\" stroke=\"#f7e9dc\" stroke-width=\"{format(width)}\" stroke-linejoin=\"round\"{dash}/>");
+		}
+
+		foreach (var socket in plan.RouteSockets)
+		{
+			(float x, float z) = At(socket.Point);
+			svg.AppendLine($"<rect x=\"{format(x - 5)}\" y=\"{format(z - 5)}\" width=\"10\" height=\"10\" fill=\"#ffe08a\" stroke=\"#191622\" stroke-width=\"2\" transform=\"rotate(45 {format(x)} {format(z)})\"/>");
+		}
+
+		foreach (var landmark in plan.Landmarks)
+		{
+			(float x, float z) = At(landmark.Point);
+			float radius = Math.Clamp(4f + Math.Max(landmark.Height, landmark.Span) * scale * .08f, 6f, 12f);
+			string colour = landmark.Kind switch
+			{
+				PlanLandmarkKind.Arch => "#ff9f8c",
+				PlanLandmarkKind.Pylon => "#ffe08a",
+				PlanLandmarkKind.Colonnade => "#d9b8ef",
+				PlanLandmarkKind.FallenColumn => "#b7cfd4",
+				_ => "#a9dbd4",
+			};
+			svg.AppendLine($"<circle cx=\"{format(x)}\" cy=\"{format(z)}\" r=\"{format(radius)}\" fill=\"{colour}\" stroke=\"#191622\" stroke-width=\"2\"/>");
+			if (landmark.Kind is PlanLandmarkKind.Emblem or PlanLandmarkKind.Basin) continue;
+			string measure = landmark.Height > 0 ? $"H{landmark.Height}" : landmark.Length > 0 ? $"L{landmark.Length}" : $"S{landmark.Span}";
+			if (landmark.Count > 1) measure = $"{landmark.Count}×{measure}";
+			(float ox, float oz) = (xMap(plan.Origin.X), zMap(plan.Origin.Z));
+			float outwardX = MathF.Abs(x - ox) < 3f ? 1f : MathF.Sign(x - ox);
+			float outwardZ = MathF.Abs(z - oz) < 3f ? -1f : MathF.Sign(z - oz);
+			string anchor = outwardX < 0 ? "end" : "start";
+			svg.AppendLine($"<text class=\"small label\" x=\"{format(x + outwardX * (radius + 4))}\" y=\"{format(z + outwardZ * (radius + 3))}\" text-anchor=\"{anchor}\">{escape(landmark.Kind.ToString())} · {measure}</text>");
+		}
 	}
 }
