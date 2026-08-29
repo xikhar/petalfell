@@ -155,6 +155,38 @@ public sealed class AtlasSectorWindow
 		return new Vector3(x + 0.5f, Grid.HeightAt(x, z) + 1.2f, z + 0.5f);
 	}
 
+	public (float bed, float surface) WaterAt(int localX, int localZ)
+	{
+		if (localX < 0 || localZ < 0 || localX >= _data.Width || localZ >= _data.Depth)
+			return (0f, 0f);
+		int index = localZ * _data.Width + localX;
+		return (_data.Height[index], _data.WaterSurface[index]);
+	}
+
+	/// <summary>
+	/// Capsule spawn on dry land near an authored coordinate. Review cameras can
+	/// sit over water; the traveller cannot.
+	/// </summary>
+	public Vector3 FindLandSpawn(int globalX, int globalZ, int streamRadius)
+	{
+		Vector3 focus = FocusAtGlobal(globalX, globalZ, streamRadius);
+		int originX = (int)focus.X, originZ = (int)focus.Z;
+		for (int radius = 0; radius <= 48; radius += 3)
+		for (int dz = -radius; dz <= radius; dz += 3)
+		for (int dx = -radius; dx <= radius; dx += 3)
+		{
+			if (Math.Abs(dx) != radius && Math.Abs(dz) != radius && radius > 0) continue;
+			int x = originX + dx, z = originZ + dz;
+			if (x < 4 || z < 4 || x >= _data.Width - 4 || z >= _data.Depth - 4) continue;
+			int index = z * _data.Width + x;
+			if (_data.Land[index] == 0 || _data.WaterSurface[index] > 0) continue;
+			int ground = Grid.HeightAt(x, z);
+			if (ground <= _data.SeaLevel) continue;
+			return new Vector3(x + 0.5f, ground + 0.2f, z + 0.5f);
+		}
+		return new Vector3(originX + 0.5f, Grid.HeightAt(originX, originZ) + 0.2f, originZ + 0.5f);
+	}
+
 	/// <summary>Greedily merge equal-height water cells into the actual runtime surface.</summary>
 	public MeshInstance3D BuildWater(ShaderMaterial material)
 	{

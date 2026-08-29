@@ -230,6 +230,11 @@ Run the game:
 godot-mono --path .
 ```
 
+Default play loads the production atlas window for `shallows-gateway-domain`
+with collision and the traveller. `--legacy-world` boots the 3,456-square
+fixture. `--play-atlas` and `--play-atlas-domain <id>` select the same path
+explicitly.
+
 Audit the authored world topology without generating terrain, or write its SVG
 preview:
 
@@ -247,6 +252,8 @@ preview:
 ./tools/world-authoring.sh capture-sector 8,8
 ./tools/world-authoring.sh review-domain shallows-gateway-domain
 ./tools/world-authoring.sh capture-domain shallows-gateway-domain
+./tools/world-authoring.sh play-atlas
+./tools/world-authoring.sh play-domain shallows-gateway-domain
 ```
 
 The atlas and production-topology previews default under `../shots/`; the domain
@@ -259,18 +266,19 @@ compile writes its disposable `.pfs` artifact under
 sector twice and compares every overlapping apron cell with its east and south
 neighbours. A topology warning means the authored production draft is incomplete;
 an error means IDs, coordinates or connections are invalid.
-`review-sector` opens the compiled terrain at its true atlas coordinates; use
-W/A/S/D to pan, Q/E to orbit and the wheel to zoom. `capture-sector` runs the
-fixed near, wide, reverse and far views and exits. Both rebuild a missing or
-stale derived artifact automatically; neither edits an authored source layer.
+`review-sector` opens the compiled terrain at its true atlas coordinates with
+walkable collision; use WASD to walk, Space to jump, Q/E to orbit and the wheel
+to zoom. `capture-sector` runs the fixed near, wide, reverse and far views and
+exits. Both rebuild a missing or stale derived artifact automatically; neither
+edits an authored source layer.
 `review-domain` and `capture-domain` compose only the sectors intersecting one
 audited domain, realise its L2 routes and L3 plan into a disposable blockout,
 and add biome-driven wilderness dressing within the plan's authored reclamation
-limits. The domain capture writes fixed near, wide, reverse and far views in
-both late-morning and night light through the ordinary `DayCycle`; its extended
-shadow and fog distances are review framing, not a second art pipeline. The
-mosaic and geometry remain derived review data; they never rewrite
-`topology.json`, a domain plan or an L0/L1 image.
+limits. The traveller spawns on compiled ground. The domain capture writes fixed
+near, wide, reverse and far views in both late-morning and night light through
+the ordinary `DayCycle`; its extended shadow and fog distances are review
+framing, not a second art pipeline. The mosaic and geometry remain derived
+review data; they never rewrite `topology.json`, a domain plan or an L0/L1 image.
 
 Compile without exporting:
 

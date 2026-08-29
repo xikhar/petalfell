@@ -363,27 +363,39 @@ earthwork technique. `src/World/Sanctum.cs` is the review fixture that exposed
 the failure of one isolated monument on generic terrain; canonical mode disables
 it because it chooses its own summit.
 
-**Authored and realised as a review blockout:** the first southern domain's
-versioned L3 plan fixes seven platform polygons at four absolute levels, three
-stairs, ten wall runs, eight graph-bound route sockets and thirty-nine silhouette
-placements. Four named platform cutouts preserve terrain or expose a collapse;
-collapsed cutout depth and platform/cutout reclamation density are authored, not
-decay chosen by the compiler. The strict audit enforces domain/site bounds,
-socket identity, reference paths and the scale table. The domain review composes
-its nine terrain sectors, fits the authored levels and routes, repeats only named
-ranges, frays named edges and derives terraces, coping, buttresses, cutout rims,
-rubble and surviving colonnade lintels within those contracts. The biome-driven
-grove pass supplies surrounding scale and enters made ground only where its
-authored reclamation value permits. Fixed late-morning and night views run
-through the ordinary game lighting rather than a presentation-only material rig.
+**Authored and realised as a walkable blockout:** the first southern domain's
+versioned L3 plan fixes twenty-five platform polygons at Y102/104/105/106/108/110/114/124/144, eight
+stairs (notched into the high slab, one tread per block), nine wall runs, eight graph-bound route sockets and sixty-seven silhouette
+placements, including a through-opening `Gate` with a hillside-through slot and a second Gate in a waterfront cleft that opens west to the bay, reached by a drowned 104 masonry spur.
+Five named platform cutouts preserve hillside courts, a waterfront gate cleft, or expose one drowned-court collapse;
+collapsed cutout depth
+and platform/cutout reclamation density are authored, not decay chosen by the
+compiler. The strict audit enforces domain/site bounds, socket identity,
+reference paths and the scale table. The domain window composes its nine terrain
+sectors, fits the authored levels and routes, repeats only named ranges, frays
+named edges and derives terraces, coping, buttresses, cutout rims, rubble,
+coherent wall gaps and surviving colonnade lintels within those
+contracts. The biome-driven grove pass supplies surrounding scale and enters made
+ground only where its authored reclamation value permits. Fixed late-morning and
+night views run through the ordinary game lighting rather than a presentation-only
+material rig. The traveller walks the compiled collision.
 
 **Not accepted:** the fixed day/night captures read as a real district-scale
 axis rather than a small fixture, and the denser edges and silhouette remain
-legible at 1,000 units. Court-scale ground detail, localized wall failure, glyph
-treatment and L4 variation are still materially thinner than `reference-2`,
-`reference-5` and `reference-9`, and the structure geometry is not persisted
-into per-sector artifacts. A working compiler and a beautiful review frame are
-evidence of composition and scale, not evidence that the production site matches
-the reference at walking distance.
+legible at 900 units. The 124/144 massif is a cliff around the slot rather than
+a 280-wide palace, and the causeway is a Y102 land spine with drowned paving patches in the authored shallows. The 144
+crown is two overlay lips plus a north satellite, not a mesa or a connecting bar. Fallen columns are drums with gaps, standing shafts
+carry a crystal core, the 144 crown wraps a through-slot at the 124 gate floor
+with the grand stair notched into that face and an empty through-slot,
+raised plates are tan/olive plateaus with a paving stain, the 104 mid-shelf is a 6-deep pad at the 124 toe,
+revetment rims carry a sand
+banding course, and the grove pass plants 1,653 trees on the nine-sector
+window, but court-scale glyphs,
+localized wall failure and L4 variation are still thinner than `reference-2`,
+`reference-5` and `reference-9`, and the structure geometry is not persisted into per-sector
+artifacts. Late-morning review mean colour now tracks `reference-1`; that is not
+the same as an accepted walking-distance match. A working compiler and a
+beautiful review frame are evidence of composition and scale, not evidence that
+the production site matches the reference at walking distance.
 
 See [ROADMAP.md](ROADMAP.md) for order and slice status.

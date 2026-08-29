@@ -252,19 +252,24 @@ public static class Vegetation
 		// the tree reads as a lollipop.
 		int coreW = Math.Max(2, (int)MathF.Round(2.2f + scale * 2.2f));
 		int coreD = Math.Max(2, coreW - rng.RangeInt(0, 1));
-		int coreH = scale >= 0.5f ? 2 : 1;
+		int coreH = scale >= 0.84f ? 3 : scale >= 0.5f ? 2 : 1;
 		boxes.Add((0, 0, 0, coreW, coreH, coreD));
 		Fill(0, 0, 0, coreW, coreH, coreD, leaf);
 
-		int lobes = (scale >= 0.6f ? 5 : 3) + rng.RangeInt(0, 3);
+		int lobes = (scale >= 0.6f ? 6 : 3) + rng.RangeInt(0, 3);
 		for (int k = 0; k < lobes; k++)
 		{
 			// Anchoring on the most recent boxes as often as the core is what
 			// makes a crown sprawl and bud rather than radiate from one centre.
 			var anchor = boxes[rng.Chance(0.45f) ? 0 : rng.RangeInt(0, boxes.Count - 1)];
-			int sx = 2 + rng.RangeInt(0, 1);
-			int sz = 2 + rng.RangeInt(0, 1);
-			int sy = rng.Chance(0.42f) ? 2 : 1;
+			// High-scale groves have to read at domain distance. Two-block lobes
+			// vanished into the fog at 300 units and the shallows looked leafless.
+			int lobe = Math.Max(2, (int)MathF.Round(1.2f + scale * 2.4f));
+			int grow = scale >= 1f ? 2 : 1;
+			int sx = Math.Min(lobe + rng.RangeInt(0, 1), anchor.sx + grow);
+			int sz = Math.Min(Math.Max(2, lobe - rng.RangeInt(0, 1)), anchor.sz + grow);
+			int sy = Math.Min(scale >= 0.78f && rng.Chance(0.4f) ? 3 : rng.Chance(0.42f) ? 2 : 1,
+				anchor.sy + 1);
 
 			var wx = Window(anchor.ox, anchor.sx, sx);
 			var wy = Window(anchor.oy, anchor.sy, sy);

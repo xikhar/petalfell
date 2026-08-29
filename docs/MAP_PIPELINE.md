@@ -288,10 +288,10 @@ production coordinates. The strict atlas audit now validates the permanent
 the topology preview draws domains, site envelopes, routes and affected sector
 addresses directly over the accepted elevation, water and region sources. The
 first southern gateway domain is permanently placed at the central delta
-threshold. Its first L3 domain plan fixes seven platform polygons at Y106/108/
-112/116, four named platform cutouts, three stairs, ten connective wall runs,
-eight exact route sockets and thirty-nine scale-checked silhouette placements.
-The terrain-backed domain preview shows those records over the accepted delta
+threshold. Its first L3 domain plan fixes twenty-five platform polygons at Y102/104/105/106/108/110/114/124/144, five named platform cutouts, eight stairs, nine connective wall runs,
+eight exact route sockets and sixty-seven scale-checked silhouette placements.
+The census and what the captures actually show live in
+[CURRENT_STATE.md](../CURRENT_STATE.md). The terrain-backed domain preview shows those records over the accepted delta
 shelf and water. A review compiler now composes the nine affected sector
 artifacts, realises the exact L2/L3 records as terrain-backed voxel geometry and
 applies globally deterministic paving-edge, reclamation and biome-vegetation
@@ -312,9 +312,10 @@ terrain, ink, atmosphere, grade and water paths without allocating the
 continent.
 Canonical runtime mode no longer runs the procedural
 settlement/significant-landmark searches or the summit-seeking sanctum fixture.
-Culture, abandonment, the authored wilderness density source, player traversal
-of production sectors, the remaining 26–56 site envelopes and continent-scale
-road graph, persistent per-sector structure/navigation output, reference-grade
-realisation of the first L3 plan, and all later domain plans remain unbuilt. See
+Culture, abandonment, the authored wilderness density source, whole-atlas
+streaming, the remaining 26–56 site envelopes and continent-scale road graph,
+persistent per-sector structure/navigation output, reference-grade realisation
+of the first L3 plan, and all later domain plans remain unbuilt. Default play
+does walk a local production-sector window of the first domain. See
 [ROADMAP.md](ROADMAP.md) §3
 and [CURRENT_STATE.md](../CURRENT_STATE.md) §8.

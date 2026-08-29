@@ -208,6 +208,8 @@ public sealed class DomainPlanDefinition
 				report.Error($"column '{landmark.Id}' height {landmark.Height} must be 15–30"); break;
 			case PlanLandmarkKind.Arch when !Range(landmark.Height, 12, 30) || !Range(landmark.Span, 8, 16):
 				report.Error($"arch '{landmark.Id}' must be 12–30 high with an 8–16 span"); break;
+			case PlanLandmarkKind.Gate when !Range(landmark.Height, 18, 32) || !Range(landmark.Span, 10, 18):
+				report.Error($"gate '{landmark.Id}' must be 18–32 high with a 10–18 opening"); break;
 			case PlanLandmarkKind.Pylon when !Range(landmark.Height, 15, 25):
 				report.Error($"pylon '{landmark.Id}' height {landmark.Height} must be 15–25"); break;
 			case PlanLandmarkKind.FallenColumn when !Range(landmark.Length, 10, 30):
@@ -287,7 +289,7 @@ public enum PlanEdgeTreatment { Revetment, PrecinctWall, Ragged, Submerged, None
 public enum PlanCutoutRole { Terrain, Collapsed }
 public enum PlanStairRole { Grand, Side, Water }
 public enum PlanWallState { Standing, Broken, Stub, Trace }
-public enum PlanLandmarkKind { Column, FallenColumn, Arch, Pylon, Colonnade, Emblem, Basin }
+public enum PlanLandmarkKind { Column, FallenColumn, Arch, Gate, Pylon, Colonnade, Emblem, Basin }
 public enum PlanLandmarkState { Standing, Broken, Stump, Fallen, Toppled, Buried }
 
 public sealed class PlanPlatform

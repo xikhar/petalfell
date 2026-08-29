@@ -57,6 +57,9 @@ public partial class Controller : CharacterBody3D
 	/// <summary>An automatic hop cannot physically last longer than this.</summary>
 	private const float AutoJumpMax = 0.9f;
 	private Terrain _terrain;
+	private System.Func<int, int, (float bed, float surface)> _waterAt;
+	private float _swimSurface = Palette.WaterLevel;
+	private bool _bodyInstalled;
 
 	/// <summary>World-space destination from click-to-move, or null.</summary>
 	public System.Collections.Generic.List<Vector3> Route;
@@ -65,6 +68,23 @@ public partial class Controller : CharacterBody3D
 	public void Setup(Terrain terrain)
 	{
 		_terrain = terrain;
+		InstallBody();
+	}
+
+	/// <summary>
+	/// Atlas play uses a local voxel window and per-cell water surfaces. Position
+	/// is in that window's coordinates; the query must use the same space.
+	/// </summary>
+	public void Setup(System.Func<int, int, (float bed, float surface)> waterAt)
+	{
+		_waterAt = waterAt ?? throw new System.ArgumentNullException(nameof(waterAt));
+		InstallBody();
+	}
+
+	private void InstallBody()
+	{
+		if (_bodyInstalled) return;
+		_bodyInstalled = true;
 		// The traveller is a slim capsule: wide enough not to slip through a
 		// diagonal gap between trunks, narrow enough to walk a stair cut three
 		// columns wide.
@@ -255,12 +275,22 @@ public partial class Controller : CharacterBody3D
 		// Keyed on the depth of the bed beneath you, never on your own height in
 		// the water. Testing your own Y is a feedback loop: buoyancy lifts you
 		// past the threshold, you stop swimming, gravity drops you back under.
-		int x = Mathf.FloorToInt(GlobalPosition.X);
-		int z = Mathf.FloorToInt(GlobalPosition.Z);
-		float bed = _terrain != null && x >= 0 && z >= 0 && x < _terrain.Size && z < _terrain.Size
+		int x = Mathf.FloorToInt(Position.X);
+		int z = Mathf.FloorToInt(Position.Z);
+		if (_waterAt != null)
+		{
+			(float bed, float surface) = _waterAt(x, z);
+			_swimSurface = surface;
+			float atlasDepth = surface - bed;
+			Swimming = surface > 0.5f && atlasDepth > SwimDepth && Position.Y < surface + 0.35f;
+			return;
+		}
+
+		float terrainBed = _terrain != null && x >= 0 && z >= 0 && x < _terrain.Size && z < _terrain.Size
 			? _terrain.Level[z * _terrain.Size + x] : 0f;
-		float depth = Palette.WaterLevel - bed;
-		Swimming = depth > SwimDepth && GlobalPosition.Y < Palette.WaterLevel + 0.35f;
+		_swimSurface = Palette.WaterLevel;
+		float depth = Palette.WaterLevel - terrainBed;
+		Swimming = depth > SwimDepth && Position.Y < Palette.WaterLevel + 0.35f;
 	}
 
 	private void GroundStep(ref Vector3 vel, Vector3 wish, float dt)
@@ -367,7 +397,7 @@ public partial class Controller : CharacterBody3D
 		_autoJumpAge = 0f;
 		// The traveller floats rather than sinks: water deeper than a stride is
 		// common, and the surface is where the scene is.
-		float target = Palette.WaterLevel - 0.85f;
+		float target = _swimSurface - 0.85f;
 		float error = target - GlobalPosition.Y;
 		vel.Y += Mathf.Clamp(error, -1f, 1f) * Buoyancy * dt;
 		vel.Y -= vel.Y * WaterDrag * dt;

@@ -9,7 +9,7 @@
 > [docs/ROADMAP.md](docs/ROADMAP.md). Everything below is the substrate that work
 > builds on.
 
-Last updated: 28 August 2026
+Last updated: 29 August 2026
 
 This document records what is present in the Godot project today. It is a factual
 snapshot, not a design target or implementation guide. Keep it that way: nothing
@@ -32,9 +32,10 @@ aspirational belongs here, and anything listed must have been seen working.
   voxel storage became derived rather than dense; see §2. This is now a review
   fixture, not the production-map footprint.
 - The authored production atlas contract is **12,288×9,216×192 blocks**, divided
-  into sixteen by twelve 768-block sectors, with sea level at 40. Its first land
-  and elevation blockouts and authoring-time sector compiler exist; the playable
-  runtime still does not allocate production terrain.
+  into sixteen by twelve 768-block sectors, with sea level at 40. Default play
+  loads a local window of compiled sectors (the southern gateway domain) with
+  collision and the traveller; it does not allocate continent-wide arrays.
+  `--legacy-world` boots the 3,456-square review fixture.
 - The project builds cleanly with `dotnet build`, with no warnings.
 
 ## 2. Map and world generation
@@ -78,23 +79,51 @@ aspirational belongs here, and anything listed must have been seen working.
   sector plus apron into a local `VoxelGrid` at its global atlas origin and uses
   the normal chunk mesher, ink, atmosphere, grade and water shader.
   `capture-sector` writes deterministic near, wide, reverse and far views.
-  Mountain, confluence and drowned-south sectors were inspected in the renderer;
-  the legacy runtime hero capture was also checked after sharing its material
-  construction with the review path.
+  Default `godot-mono --path .` and `review-domain` spawn the traveller on compiled
+  collision at true atlas coordinates.   Representative Cold Shelf (4,2), Scarp
+  (3,5), Waist (7,5), Bloom Reach (12,5), Fen (3,9) and Shallows (8,8) windows have been walked
+  and captured; biome profiles produce distinct relief, water fraction and grove
+  density. The 3,456-square runtime remains available as `--legacy-world`.
 - `review-domain` composes the first domain's nine ordinary sector artifacts
   into a temporary 2,352-square window (2,304-block core plus outer apron).
-  `DomainPlanBlockout` then realises its exact route polylines, seven platforms
-  at Y106/108/112/116, four named terrain/collapse cutouts, three fitted stairs,
-  ten wall runs and thirty-nine measured landmarks. Of 185,979 current platform
-  cells, 68,675 retain their compiled terrain cap, 96,135 use made paving and
-  21,169 use reclaimed caps; two collapsed cutouts lower 11,820 cells by their
-  authored depths. Ragged/submerged terraces, courses, buttresses, colonnade
-  lintels, cutout rims and rubble are deterministic assistants inside authored
-  edge contracts. Platform and cutout reclamation values allow the biome grammar
-  to return only where the plan permits it. `AtlasDomainDressing` placed 852
-  biome-selected trees from a globally anchored lattice in the current
-  nine-sector review. Fixed captures exercise near, wide, reverse and far views
-  at both late morning and night through the ordinary day-cycle rig.
+  `DomainPlanBlockout` then realises its exact route polylines, twenty-five platforms
+  at Y102/104/105/106/108/110/114/124/144, five named terrain/collapse cutouts, eight fitted stairs,
+  nine wall runs and sixty-seven measured landmarks including a through-opening
+  `Gate` (span 18) at the grand-stair head, seated between two thin 144 overlay lips so the opening
+  is a slot in the massif. Of 138,954 current platform cells, 103,943 retain a terrain or forced-grass
+  cap, 24,795 use made paving or warm-stone courts and 10,216 use reclaimed caps; the remaining collapsed
+  drowned-court cutout lowers 5,319 cells by its authored depth. A 6-deep 114 west terrace at plan z=78–84
+  (plus a 4-deep east hug) steps the 124 south so that drop is two ~10-block masonry slabs with a tan shelf, rather than one 20-block palisade.
+  The approach dais is a precinct-scale pale-masonry outer ring at Y105 (~82 across) with a raised Y110 inner court, a south
+  notch stair, a gapped 3-high trace ring, an inscribed Standing pylon on the emblem, four buried
+  basins on the outer ring, and an east lobe that seats the Broken side-shrine arch. A ragged
+  pale-masonry stain (STONE_PALE/PATH with a rubble meander) covers atlas grass in a disk
+  around plan (0,−8), cut off north of plan z=16 so it is half-burial of the shrine rather than
+  a 104 runway toward the gate. Domain near
+  looks at that dais (plan 0,−6, 118 units, pitch 42) so refs 6/7/8/10 are the walking-distance subject and the 124
+  is a misted cliff behind them (south face at plan z=84, gate at z=88), not a second precinct in the same frame. The 114 east cheek
+  is a short hug against the 124, not a 25-block wing; the 124 east return is an axis-aligned pier stub.
+  The 144 crown is two overlay terrace lips behind the lintel (plan z=92–96; 72 and 112 cells) plus a
+  north landing for the crown stair (72 cells, same polygon as the west lip), not a mesa or a connecting bar; the 124 court is a
+  slot spine (south z=84, north z=140) with an 8-wide stair finger only — the north plateau frays except the
+  gate slot around the opening, so it is a tan landform rather than an 18-wide masonry rib — a Y106 east ruin pad at z=100, a planar ~30-wide south face at plan z=84 whose cap is land except the through-slot floor, two 124 hinterland hills whose jagged south edges meet that face a few blocks behind z=84 (west to plan x≈86, east to x≈−88; sheer masonry, not ramped bleachers, and not a second planar south wall at z=84), and a 124 east bank whose south face is a planar east–west waterfront cliff at plan z=−148 with an OpensSouth cleft (20-wide south mouth at the Gate, west arm to the 102 bay) and a 114 shelf the full width of that face (the same 10-block cheek that breaks the gate palisade), a 114 east-face shelf toward the water, a 114 mid terrace that is a wide south shelf behind the near camera (x to −36) then a thin west-edge ledge to plan z=90 so the 520-unit frame sees 102→114→124 beside the cliff, and a 108 revetment hillside west of that ledge that ramps into the 102 plain; the 104 forecourt is a ~28-wide
+  processional strip, and the causeway is a Y102 land spine with an eastern lobe of
+  paving patches in the authored shallows (atlas water at ~6540,6740). Atlas samples put natural
+  ground at ~102 around the gate, so the approach ribbon ramps its outer band into
+  that hillside instead of standing as a 10-block canal lock; drowned-causeway rims stay masonry.
+  124/144 Deep is one masonry — a per-column moss-stone mix inks a vertical
+  between every material change. Slot and stair footprints stay intact. Ragged/submerged terraces, courses,
+  buttresses, colonnade lintels, cutout rims, rubble,
+  drum fallen-columns and coherent
+  wall gaps are deterministic assistants inside authored edge contracts. Platform
+  and cutout reclamation values allow the biome grammar to return only where the
+  plan permits it. `AtlasDomainDressing` placed 1,653 biome-selected trees from a
+  globally anchored lattice in the current nine-sector review, with blossom on the
+  hillsides beside the massif and sparse blossom on the 124 hinterland plateaus, not on the 124 wing
+  south lips, the 114 cheeks, or the drowned east lobe. Fixed captures
+  exercise near, wide, reverse and far views at both late morning and night
+  through the ordinary day-cycle rig. The traveller is present in those frames
+  at playable scale.
 - `content/chapter_01/map.json` currently defines:
   - the playable boundary and chapter spawn;
   - six elevation zones and six authored biome zones;
@@ -380,10 +409,10 @@ in §2. What remains is the layer above them, and it is the current effort. See
   2026-08 direction shift ([docs/ROADMAP.md](docs/ROADMAP.md) §3): the author
   judged them "very basic" against the references — sites must be multi-layered
   terrain with the landmarks integrated, one built to exact detail at a time.
-  The production-domain review now compiles authored L3 polygons and terracing
-  into a disposable runtime window. What does NOT yet exist is an accepted
-  reference-quality site, persisted per-sector structure/navigation artifacts,
-  production collision/player streaming, or final reclamation/detail.
+  The production-domain window now compiles authored L3 polygons and terracing
+  into playable collision at true atlas coordinates. What does NOT yet exist is
+  an accepted reference-quality site, persisted per-sector structure/navigation
+  artifacts, whole-atlas streaming, or final L4 reclamation/detail.
 - **Canonical topology and its first tools exist.**
   `content/chapter_01/topology.json` is the version 2 permanent 12,288×9,216
   source for domains, sites, entrances, graph nodes and routes. Its first
@@ -395,8 +424,8 @@ in §2. What remains is the layer above them, and it is the current effort. See
   previews show the topology over accepted macro layers and sector boundaries
   without generating terrain. The in-game map and canonical runtime route stamps
   still use only the smaller fixture. The production source deliberately remains
-  below the 30–60-site target. Its first domain has review geometry only; that
-  geometry is not yet part of the ordinary playable runtime.
+  below the 30–60-site target. Its first domain is the default playable window;
+  the remaining continent is not streamed.
   ([docs/MAP_PIPELINE.md](docs/MAP_PIPELINE.md))
 - **The production atlas manifest, first macro blockouts and first sector compiler
   exist.** The selected colour, line and elevation maps are tracked under
@@ -406,24 +435,83 @@ in §2. What remains is the layer above them, and it is the current effort. See
   are accepted; culture, abandonment and wilderness remain planned. A
   deterministic compiler emits one disposable terrain/hydrology/profile sector
   plus apron and verifies neighbor overlap. A read-only production-sector window
-  now materialises its voxel columns and multi-height water for visual review.
-  The ordinary game still owns global 3,456-square fields; production player/
-  collision streaming and persistent route/site artifacts have not been built.
+  now materialises its voxel columns and multi-height water, with collision and
+  the traveller, for the local domain window. The ordinary 3,456-square fields
+  remain behind `--legacy-world`. Whole-atlas streaming and persistent route/site
+  artifacts have not been built.
   ([docs/ATLAS.md](docs/ATLAS.md))
 - **The first authored L3 composition source has a review compiler.**
-  `content/chapter_01/domains/shallows-gateway-domain.json` supplies seven
-  platform polygons, four named terrain/collapse cutouts, four absolute levels,
-  three stairs, ten walls, eight route sockets and thirty-nine measured landmark
-  placements for the connected southern domain. Its authored collapse depths
-  and platform/cutout reclamation densities control where the deterministic
-  assistants may lower, reclaim and plant made ground. `DomainPlanDefinition`
-  validates it; the SVG renders it over accepted terrain; and the domain review
-  realises the plan through the ordinary voxel renderer across sector seams.
-  Fixed day/night captures prove the large axis, levels, context and long-range
-  shadows exist. The stronger edge masonry, arches, colonnades, rubble and
-  reclamation make the district legible, but its ground detail and local ruin
-  variation remain below the target references. It is a developed blockout, not
-  an accepted production site.
+  `content/chapter_01/domains/shallows-gateway-domain.json` supplies twenty-five
+  platform polygons (including a mid-shelf slab at the same 104 as the forecourt, a precinct-scale pale-masonry approach dais with a raised Y110 inner court at the traveller spawn so the near frame holds the shrine, Broken columns and fallen drum, three 114 Massif cheeks against the 124 south face, a narrow 124 slot spine with a west stair finger, two 124 hinterland hills pulled south to the slot as jagged sheer slabs, a 124 east bank with a planar south face at plan z=−148 over the shallows, fused north into the east hill, a 114 east-face shelf (gate-east-face) stepping that bank down toward the water, a 114 mid terrace (gate-east-mid) that is a wide south shelf behind the near camera then a thin west-edge ledge to plan z=90, and a 108 grass hillside (gate-east-rise) west of that ledge, a Y106 east ruin pad, three 144 masses, and   a Y114 east scarp that shelves the 124 waterfront with a channel notch (plan z=−150 to −206) aligned to an OpensSouth terrain cleft in that face — a 20-wide south mouth at the Gate plus a west arm to the 102 bay — and a Y104 masonry spur (`causeway-gate-pier`, 700 cells) through that channel so a drowned processional meets the Gate floor, so a through-opening `Gate` (span 18, height 20 from the 104 cleft floor to the 124 cap) sits in the cliff rather than as an arch on the shelf), five named
+  cutouts (two hillside terrain courts on the 124 plateau, one drowned-court collapse, one lower-precinct terrain bay, one waterfront gate cleft),
+  eight absolute levels, eight stairs (a 105→110 dais notch, a 104→124 processional notch, a 104→124 side
+  notch at plan x=20, a 114→124 waterfront notch into the east-bank south face, a 114→124 east-face notch into that same south face from the water, a 104→124 cleft notch up the north wall of that opening, a 124→144 cheek stair behind the inland gate along plan z=94, and the lower-precinct
+  flight), nine wall runs (precinct links with posted stelae, a 6-high Broken trace on the 114 waterfront shelf, wing stubs behind the gate, lower-precinct and stela runs, and a gapped 3-high trace ring around the approach dais), eight route sockets and
+  sixty-seven measured landmark placements including a through-opening `Gate` at
+  the grand-stair head and a second through-opening `Gate` in a 104 cleft of the east-bank south face, a Stump pylon and fallen drum in that cleft, Stump pylons on the 124 cheeks beside the opening, a buried emblem on the inner dais, an inscribed Standing pylon
+  on that emblem, four buried basins on the outer ring, a Broken arch beside
+  that dais, and Standing/Broken/Stump columns around the court. Stairs are bitten into the high slab one tread per
+  block; they no longer lerp a free-standing ramp across the 104 court. Kit sits
+  on the column under its centre, not on the neighbouring terrace. The 124/144 massif is a cliff around the slot with
+  two 144 overlay lips plus a north crown satellite rather than a connecting bar; the 104
+  forecourt is a ~28-wide processional strip; the causeway is a Y102 land spine with
+  an eastern lobe of paving patches in the authored shallows and a Y114 masonry
+  scarp standing in that water (atlas samples at 6540,6740 are height 102, water surface 105).
+  Camera-facing revetment aprons are skipped so
+  downhill of a terrace is hillside, not a second wall. Mid-shelf and upper-court
+  outlines are jagged rather than rectangular slabs. The 124 court is a slot plus
+  north plateau (plan z=140) so the aerial cap can read as land; 124/144 camera faces keep one masonry Deep (the cliff and the gate
+  are the same stone) — grass Deep on a 12-block drop inks as a ribbed palisade,
+  and pulling the slab away only revealed the atlas scarp. Massif stair treads
+  (high slab ≥120) keep land caps so the overhead near frame is a tan notch;
+  masonry stays on the riser Deep. A processional route stamp used to overwrite
+  those treads and the 104 mid-shelf with STONE_PALE. 144 drops
+  keep mossed masonry at the opening and grow over on the outer lobes. Camera-facing revetment
+  lips ramp into the hillside rather than excavating pits. The 124 south edge is a
+  hillside bay around the slot, not a 52-wide plinth, and the grand stair is notched through that face.
+  A 6-deep 114 west terrace steps that bay so the camera-facing drop is two masonry slabs
+  rather than one 20-block palisade; living Deep and hillside ramps stay on the
+  104/108 courts. The 144 crown is two overlay lips beside the lintel plus a north satellite for the crown stair rather than a
+  connected bar; processional
+  columns stay at the 124 gate floor so overlay lintel and masonry cheeks read
+  as a hole in the cliff rather than a U on a terrace. The grand stair notches
+  that face through to the opening; roof access is a side stair off the axis.
+  Standing columns, pylons and arch piers carry a crystal core behind a
+  camera-facing groove; inscribed stelae keep a solid face and paint a
+  greek-key in rubble so the motif reads at 118 units (STONE on STONE_PALE
+  vanished; two-row bars filled the face into a panel, one-gap-per-row read as stairs). Other
+  pylons recess the sparse meander one block so ink has something to draw. The gate opening is empty
+  through (span 18, height 20 flush with the 144 cap, one-block jamb and lintel) with crystal on the inner jambs only, so the
+  camera still sees landscape through the slot. Fallen columns
+  are drums with gaps and a displaced capital, not flat bars on the cap.
+  Precinct-link walls stand 8–9 as Broken runs with short stelae posted only on those
+  links, and their collapse hem leaves 2-high stumps rather than a clean missing run. Grove traces along the causeway were removed; authored water pylons are
+  the drowned posts. Surviving paving carries a meander inlay, rubble on the approach dais and on the ragged pale stain around it. Shallow water uses the shader's
+  lilac stops (`0x9b8ad4`) so the basin belongs to the same stone as the cliffs.
+  Authored collapse depths and platform/cutout reclamation densities
+  control where the deterministic assistants may lower, reclaim and plant made
+  ground. `DomainPlanDefinition` validates it; the SVG renders it over accepted
+  terrain; and the domain window realises the plan through the ordinary voxel
+  renderer across sector seams with walkable collision. Fixed late-morning and
+  night captures (near/wide/reverse/far) exist under `../shots/atlas-domain-goal/`.
+  Atlas samples put drowned water at 6540,6740 — about 280 south and 140 east of
+  the gate. Near looks at the approach dais (plan 0,−6; yaw 23, 118 units, pitch 42) so
+  walking-distance kit is the subject; the 124 south face sits at plan z=84 (gate z=88) so that
+  massif is haze, not a second precinct. Wide 520 and far 700 keep the same yaw and look at the drowned 104 spur into the waterfront cleft (plan −122,−168 and −122,−180) so that opening is the subject (reference-1/2) and the inland massif is hinterland haze; FogBegin stays 1.40× distance. The SW-corner look-at (plan −70,−72) held the E–W cliff, the pool and the inland gate as two monuments 230 apart. Look-at on the waterfront face (plan −38,−154) made the pool the subject and fogged the gate; look-at on the slot (plan −28,24) looked along the N–S west face as a curtain wall; (−90,−20) sat on the ridge. 720u with the look-at on the pool midpoint put a 22-block cliff ~1° into the fog ramp. Raised plates keep the
+  tan/olive plateau of reference-1/10; masonry lives on the vertical faces, the
+  gate overlay and a broken paving stain. The 104 mid-shelf is a 6-deep pad at the 124
+  toe (z=76–82), not a runway behind the dais. Revetment rims carry a sand banding course.
+  Court rubble is a few warm stones rather than a lavender cube
+  carpet; the grove pass plants 1,653 trees on this window and the chunk
+  streamer builds the ordinary ground-detail mesh (tufts, petals, lichen) on
+  atlas columns. Domain play streams radius 8 (same as the ordinary game);
+  capture still primes the wider review radius. Domain night review uses the existing 0.83 twilight key
+  (near mean RGB 112,71,186 against late-morning 205,177,210, vs `reference-5`'s
+  122,84,188). Late-morning *near* review retints sky/fog toward `reference-8`
+  (205,183,238); wide/far keep the `reference-1` morning retint (175,147,196). Play day is unchanged. Atlas
+  samples around the gate are uniformly height ~102, so the 124 is additive architecture
+  on a flat plain. The site is a developed walkable blockout, not an accepted production match for
+  `world-new/reference-1`…`reference-11`.
   ([docs/RUINS.md](docs/RUINS.md) §4)
 - **The story layer.** Regions with roles, domains, and site allocation by
   meaning rather than by fit. ([docs/WORLD.md](docs/WORLD.md))

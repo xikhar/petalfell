@@ -446,6 +446,27 @@ public static class RuinKit
 		_ => false,
 	};
 
+	/// <summary>
+	/// Walking-distance stele face: a 5-wide running meander.
+	/// Two-row bars filled the slab into one dark panel; one-gap-per-row read as
+	/// stairs. Alternate centre-gap and end-gap bars, with single-cell posts
+	/// on the in-between rows, so the key turns (reference-8) instead of
+	/// hanging as two sparse stripes.
+	/// </summary>
+	internal static bool SteleInscription(int u, int v, int width, int band)
+	{
+		if (width < 3 || band < 4) return Meander(u, v);
+		if ((uint)u >= (uint)width || (uint)v >= (uint)band) return false;
+		return (v % 4) switch
+		{
+			0 => u == 0 || u == width - 1,
+			1 => u != width / 2,
+			2 => u == width / 2,
+			3 => u != 0 && u != width - 1,
+			_ => false,
+		};
+	}
+
 	internal static void Pylon(Terrain t, int x, int z, int height)
 	{
 		const int w = 3, d = 2;

@@ -635,4 +635,118 @@ public static class GroundDetail
 
 		return f.Empty ? null : f.Build();
 	}
+
+	/// <summary>
+	/// Atlas-window ground detail. Same tufts, flowers and pebbles as play, read
+	/// from a compiled VoxelGrid because the review path has no Terrain graph.
+	/// Wet reeds stay on the legacy lake; atlas water is a separate mesh.
+	/// </summary>
+	public static ArrayMesh Build(VoxelGrid grid, int ci, int ck)
+	{
+		if (grid == null) return null;
+		_meadow ??= new Noise2D(Seed + 71);
+		_flowers ??= new Noise2D(Seed + 72);
+
+		int cs = ChunkMesher.ChunkSize;
+		int S = grid.Size;
+		int x0 = ci * cs, z0 = ck * cs;
+		int x1 = Math.Min(S, x0 + cs), z1 = Math.Min(S, z0 + cs);
+
+		var f = new Field();
+
+		for (int z = z0; z < z1; z++)
+		for (int x = x0; x < x1; x++)
+		{
+			int i = z * S + x;
+			int h = grid.Heights[i];
+			if (h <= 1) continue;
+			byte cap = grid.At(x, h - 1, z);
+			if (grid.At(x, h, z) != Palette.AIR) continue;
+			if (!Palette.IsSolid(cap)) continue;
+
+			float y = h;
+			float fx = x + 0.5f, fz = z + 0.5f;
+			var rng = new Draw(x, z, 0x5EED);
+
+			bool grassy = Palette.IsGrassSurface(cap) || cap is Palette.MOSS or Palette.BLOSSOM_DRIFT;
+			bool sandy = cap == Palette.SAND;
+			bool stony = cap is Palette.STONE or Palette.STONE_PALE or Palette.STONE_WARM
+				or Palette.RUBBLE or Palette.MOSS_STONE or Palette.PAVING;
+
+			if (grassy)
+			{
+				var block = Palette.Get(cap);
+				var dark = TuftBase;
+				var lite = new Color(block.Top.R * 1.08f, block.Top.G * 1.08f, block.Top.B * 1.08f);
+				float lush = _meadow.Fbm01(x * 0.045f, z * 0.045f, 3);
+				if (rng.Chance(0.018f + lush * 0.055f))
+				{
+					int n = rng.Int(1, 3);
+					for (int k = 0; k < n; k++)
+					{
+						f.Tuft(fx + rng.Range(-0.32f, 0.32f), y - 0.03f, fz + rng.Range(-0.32f, 0.32f),
+							rng.Range(0.16f, 0.30f), rng.Range(0.26f, 0.52f),
+							dark, lite, rng.Next() * 6.28f,
+							rng.Range(-0.14f, 0.14f), rng.Range(-0.14f, 0.14f));
+					}
+				}
+
+				float ff = _flowers.Fbm01(x * 0.028f, z * 0.028f, 3);
+				if (ff > 0.66f && rng.Chance((ff - 0.66f) * 0.30f))
+				{
+					var col = rng.Pick(FlowerTops);
+					int n = rng.Int(1, 3);
+					for (int k = 0; k < n; k++)
+					{
+						float ox = rng.Range(-0.30f, 0.30f), oz = rng.Range(-0.30f, 0.30f);
+						float sh = rng.Range(0.24f, 0.42f);
+						f.Tuft(fx + ox, y - 0.03f, fz + oz, 0.07f, sh, dark, dark, 0f, 0f, 0f, 0.6f);
+						f.Box(fx + ox, y + sh - 0.04f, fz + oz, 0.20f, 0.16f, 0.20f,
+							col, 0.9f, rng.Next() * 6.28f);
+					}
+				}
+
+				if (rng.Chance(0.0055f))
+				{
+					f.Box(fx + rng.Range(-0.25f, 0.25f), y - 0.05f, fz + rng.Range(-0.25f, 0.25f),
+						rng.Range(0.24f, 0.46f), rng.Range(0.14f, 0.28f), rng.Range(0.24f, 0.46f),
+						rng.Pick(PebbleTops));
+				}
+
+				if (rng.Chance(0.007f))
+				{
+					f.Fleck(fx + rng.Range(-0.36f, 0.36f), y + 0.02f,
+						fz + rng.Range(-0.36f, 0.36f), rng.Range(0.10f, 0.18f),
+						rng.Range(0.045f, 0.075f), rng.Next() * Mathf.Pi,
+						rng.Pick(Palette.FallenLeafColors));
+				}
+				if (rng.Chance(0.006f))
+				{
+					f.Fleck(fx + rng.Range(-0.36f, 0.36f), y + 0.022f,
+						fz + rng.Range(-0.36f, 0.36f), rng.Range(0.08f, 0.14f),
+						rng.Range(0.04f, 0.07f), rng.Next() * Mathf.Pi,
+						rng.Pick(Palette.PetalColors));
+				}
+				continue;
+			}
+
+			if (sandy && rng.Chance(0.004f))
+			{
+				f.Box(fx + rng.Range(-0.25f, 0.25f), y - 0.05f, fz + rng.Range(-0.25f, 0.25f),
+					rng.Range(0.22f, 0.40f), rng.Range(0.12f, 0.24f), rng.Range(0.22f, 0.40f),
+					rng.Pick(PebbleTops));
+				continue;
+			}
+
+			if (stony && rng.Chance(0.012f))
+			{
+				f.Box(fx + rng.Range(-0.25f, 0.25f), y - 0.06f, fz + rng.Range(-0.25f, 0.25f),
+					rng.Range(0.22f, 0.40f), rng.Range(0.10f, 0.20f), rng.Range(0.22f, 0.40f),
+					Lichen);
+			}
+		}
+
+		Sprigs(f, ci, ck);
+		return f.Empty ? null : f.Build();
+	}
 }

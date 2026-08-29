@@ -68,6 +68,16 @@ case "$command_name" in
 		if [[ $# -gt 0 ]]; then args+=(--review-focus "$1"); fi
 		exec godot-mono --path "$project_dir" -- "${args[@]}"
 		;;
+	play-atlas)
+		exec godot-mono --path "$project_dir" -- --play-atlas
+		;;
+	play-domain)
+		domain_id="${2:?usage: $0 play-domain <domain-id> [global-focus-x,z]}"
+		shift 2
+		args=(--play-atlas-domain "$domain_id")
+		if [[ $# -gt 0 ]]; then args+=(--review-focus "$1"); fi
+		exec godot-mono --path "$project_dir" -- "${args[@]}"
+		;;
 	capture-domain)
 		domain_id="${2:?usage: $0 capture-domain <domain-id> [output] [global-focus-x,z]}"
 		domain_shots="${3:-res://../shots/atlas-domain-${domain_id}}"
@@ -76,7 +86,7 @@ case "$command_name" in
 		exec godot-mono --path "$project_dir" --fullscreen -- "${args[@]}"
 		;;
   *)
-	echo "usage: $0 audit | preview [output] | preview-domain <domain-id> [output] | atlas-preview [output] | atlas-topology-preview [output] | preview-atlas-domain <domain-id> [output] | sample-atlas <global-x,z> | compile-sector <x,z> [artifact] [preview] | verify-sector <x,z> | review-sector <x,z> [global-focus] | capture-sector <x,z> [output] [global-focus] | review-domain <domain-id> [global-focus] | capture-domain <domain-id> [output] [global-focus]" >&2
+	echo "usage: $0 audit | preview [output] | preview-domain <domain-id> [output] | atlas-preview [output] | atlas-topology-preview [output] | preview-atlas-domain <domain-id> [output] | sample-atlas <global-x,z> | compile-sector <x,z> [artifact] [preview] | verify-sector <x,z> | review-sector <x,z> [global-focus] | capture-sector <x,z> [output] [global-focus] | review-domain <domain-id> [global-focus] | capture-domain <domain-id> [output] [global-focus] | play-atlas | play-domain <domain-id>" >&2
     exit 64
     ;;
 esac

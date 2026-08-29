@@ -354,6 +354,74 @@ public partial class DayCycle : Node
 	{
 		NightDarkness = Mathf.Clamp(amount, 0f, 2.5f);
 		Apply();
+		MarkApplied();
+	}
+
+	/// <summary>
+	/// After Apply, retint sky/fog toward reference-5. Play midnight is unchanged;
+	/// this is only called from domain capture.
+	/// </summary>
+	public void TintReviewTwilight()
+	{
+		if (_sky != null)
+		{
+			_sky.SetShaderParameter("zenith", Palette.ReviewTwilightZenith);
+			_sky.SetShaderParameter("horizon", Palette.ReviewTwilightHorizon);
+			_sky.SetShaderParameter("ground", Palette.ReviewTwilightGround);
+			_sky.SetShaderParameter("night", 0.22f);
+		}
+		if (_env != null)
+		{
+			_env.FogLightColor = Palette.ReviewTwilightFog;
+			_env.AmbientLightColor = Palette.ReviewTwilightHorizon;
+		}
+		RenderingServer.GlobalShaderParameterSet(NightParam, 0.22f);
+		MarkApplied();
+	}
+
+	/// <summary>
+	/// After Apply, retint sky/fog toward reference-1. Play late-morning is
+	/// unchanged; this is only called from domain capture.
+	/// </summary>
+	public void TintReviewMorning()
+	{
+		if (_sky != null)
+		{
+			_sky.SetShaderParameter("zenith", Palette.ReviewMorningZenith);
+			_sky.SetShaderParameter("horizon", Palette.ReviewMorningHorizon);
+			_sky.SetShaderParameter("ground", Palette.ReviewMorningGround);
+			_sky.SetShaderParameter("night", 0.04f);
+		}
+		if (_env != null)
+		{
+			_env.FogLightColor = Palette.ReviewMorningFog;
+			_env.AmbientLightColor = Palette.ReviewMorningHorizon;
+		}
+		RenderingServer.GlobalShaderParameterSet(NightParam, 0.04f);
+		MarkApplied();
+	}
+
+	/// <summary>
+	/// After Apply, retint sky/fog toward reference-6/8. Play late-morning and
+	/// wide/far review stay on TintReviewMorning; this is only called from
+	/// domain near-day capture.
+	/// </summary>
+	public void TintReviewShrine()
+	{
+		if (_sky != null)
+		{
+			_sky.SetShaderParameter("zenith", Palette.ReviewShrineZenith);
+			_sky.SetShaderParameter("horizon", Palette.ReviewShrineHorizon);
+			_sky.SetShaderParameter("ground", Palette.ReviewShrineGround);
+			_sky.SetShaderParameter("night", 0.03f);
+		}
+		if (_env != null)
+		{
+			_env.FogLightColor = Palette.ReviewShrineFog;
+			_env.AmbientLightColor = Palette.ReviewShrineHorizon;
+		}
+		RenderingServer.GlobalShaderParameterSet(NightParam, 0.03f);
+		MarkApplied();
 	}
 
 	/// <summary>Clear-sky baseline. Cloud softness is applied independently on top.</summary>
@@ -361,6 +429,19 @@ public partial class DayCycle : Node
 	{
 		ShadowSoftness = Mathf.Clamp(amount, 0.5f, 6f);
 		Apply();
+		MarkApplied();
+	}
+
+	/// <summary>
+	/// Review lighting writes key/fill energy after Apply. Without this, the next
+	/// _Process sees a stale quantum and Apply() wipes those overrides — which is
+	/// why domain night captures stayed at the moon keyframe even after the
+	/// darkness/ambient boosts.
+	/// </summary>
+	private void MarkApplied()
+	{
+		_applied = Mathf.Floor(TimeOfDay / Quantum);
+		_appliedCloud = Mathf.FloorToInt(ComputeCloudCover() * 48f);
 	}
 
 	/// <summary>Immediately rolls a new weather pattern for the developer overlay.</summary>

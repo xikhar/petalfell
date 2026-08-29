@@ -47,9 +47,12 @@ public static class Palette
 	public static readonly Color FillColor = C(0xd8cdf2);
 
 	/* ---------------- water ---------------- */
-	public static readonly Color WaterShoal = C(0xb9bcf2);
-	public static readonly Color WaterShallow = C(0x7076e2);
-	public static readonly Color WaterDeep = C(0x3a3ea6);
+	// These hexes match the water shader's authored source_color defaults.
+	// 0x7076e2 / 0x3a3ea6 pulled the basin toward primary blue; world-new and
+	// the shader comments want lilac stone's neighbour, not a cyan river.
+	public static readonly Color WaterShoal = C(0xcfc2e6);
+	public static readonly Color WaterShallow = C(0x9b8ad4);
+	public static readonly Color WaterDeep = C(0x5b4f9e);
 	public static readonly Color WaterWarm = C(0xe3c4c9);
 	public static readonly Color WaterSheen = C(0xe8e2f5);
 	public static readonly Color WaterEdge = C(0x5c5378);
@@ -195,6 +198,35 @@ public static class Palette
 		new SkyState(0.76f, 0x6a63b4, 0xe8ab96, 0x8f6f92, 0xffc8a4, 0.56f, 0xb4aeda, 0.38f, 0xd8b2ae, 0.64f, 0.46f, 0.66f, 0.24f),
 		new SkyState(0.83f, 0x35326a, 0x6b4a7c, 0x38335c, 0xbb9edd, 0.38f, 0xaea6da, 0.42f, 0x584878, 0.48f, 0.92f, 0.44f, 0.52f),
 	};
+
+	/// <summary>
+	/// Domain night *review* only. Reference-5 is a high-key lavender dusk; play
+	/// midnight (Day at 0.00) stays the stage-moon blue.
+	/// </summary>
+	public static readonly Color ReviewTwilightZenith = C(0x4a3a88);
+	public static readonly Color ReviewTwilightHorizon = C(0xb8a0dc);
+	public static readonly Color ReviewTwilightGround = C(0x584878);
+	public static readonly Color ReviewTwilightFog = C(0xb0a0d8);
+
+	/// <summary>
+	/// Domain day *review* only. Time 0.36 is the right sun angle for long
+	/// shadows, but its sky key still carries the 0.33 peach horizon, so late-
+	/// morning frames washed pinker and brighter than reference-1. Play day is
+	/// unchanged.
+	/// </summary>
+	public static readonly Color ReviewMorningZenith = C(0xa89ed0);
+	public static readonly Color ReviewMorningHorizon = C(0xd4c8e8);
+	public static readonly Color ReviewMorningGround = C(0xb8b0d0);
+	public static readonly Color ReviewMorningFog = C(0xcac2e4);
+
+	/// <summary>
+	/// Domain *near* day review only (refs 6/8). Wide/far keep ReviewMorning so
+	/// the landscape still reads tan-topped (ref-1). Play day is unchanged.
+	/// </summary>
+	public static readonly Color ReviewShrineZenith = C(0xc8b8e8);
+	public static readonly Color ReviewShrineHorizon = C(0xe8dcf8);
+	public static readonly Color ReviewShrineGround = C(0xd4c8e8);
+	public static readonly Color ReviewShrineFog = C(0xddd0f0);
 
 	/* ---------------- petals ---------------- */
 	public static readonly Color[] PetalColors =
@@ -457,7 +489,9 @@ public static class Palette
 		Def(LEAF_ROSE, 0xf3c0cd, 0xedb5c3, 0xdca2b1, pattern: PatternLeaf);
 
 		Def(LANTERN, 0xffdcb8, 0xffd2a8, 0xf6c79e, emissive: 0.75f);
-		Def(CRYSTAL, 0xdfd0f7, 0xd2c0f1, 0xc2aee5, emissive: 0.42f);
+		// Saturated enough that a shrine door stays lilac through bloom. Paler
+		// values, or a thick emissive volume, lifted to white.
+		Def(CRYSTAL, 0x9b78d8, 0x8e6ccc, 0x7c5cb8, emissive: 0.40f);
 		Def(WINDOW, 0xffe6bc, 0xffdcac, 0xf3cb9c, emissive: 0.62f);
 		// Falling water is voxels, not a second transparent pass: a pale,
 		// faintly luminous column that catches the bloom and reads as spray.

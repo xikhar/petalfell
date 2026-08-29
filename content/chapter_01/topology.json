@@ -45,8 +45,8 @@
       "archetype": "Causeway",
       "status": "Planned",
       "centre": { "x": 6400, "z": 6880 },
-      "extentX": 280,
-      "extentZ": 360,
+      "extentX": 440,
+      "extentZ": 460,
       "orientationDegrees": 180,
       "age": 0.92,
       "entrances": [
@@ -153,11 +153,11 @@
       "kind": "Major",
       "fromNodeId": "causeway-south",
       "toNodeId": "causeway-north",
-      "width": 12,
+      "width": 5,
       "construction": "masonry-causeway",
       "points": [
         { "x": 6400, "z": 7060 },
-        { "x": 6400, "z": 6880 },
+        { "x": 6480, "z": 6880 },
         { "x": 6400, "z": 6700 }
       ]
     },
@@ -167,7 +167,7 @@
       "kind": "Major",
       "fromNodeId": "causeway-north",
       "toNodeId": "gate-south",
-      "width": 10,
+      "width": 5,
       "construction": "processional-paving",
       "points": [
         { "x": 6400, "z": 6700 },
@@ -180,7 +180,7 @@
       "kind": "Major",
       "fromNodeId": "gate-south",
       "toNodeId": "gate-north",
-      "width": 12,
+      "width": 6,
       "construction": "terraced-paving",
       "points": [
         { "x": 6400, "z": 6660 },

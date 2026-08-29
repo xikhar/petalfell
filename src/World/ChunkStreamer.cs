@@ -59,18 +59,20 @@ public partial class ChunkStreamer : Node3D
 
 	/// <summary>
 	/// Review a compiled atlas window without constructing the legacy whole-map
-	/// Terrain graph. Ground detail and gameplay collision are deliberately absent
-	/// until their production compilers exist; the voxel surface and ink are the
-	/// same meshes used by the game.
+	/// Terrain graph. Collision and ground-detail meshes use the same shaders as
+	/// play; the voxel surface and ink are the same meshes used by the game.
 	/// </summary>
 	public void Setup(VoxelGrid grid, ShaderMaterial voxel, ShaderMaterial inkLight,
-		ShaderMaterial inkDark, bool buildCollision = false)
+		ShaderMaterial inkDark, bool buildCollision = false,
+		ShaderMaterial detail = null, ShaderMaterial waterDetail = null)
 	{
 		_grid = grid;
 		_voxelMat = voxel;
 		_inkLight = inkLight;
 		_inkDark = inkDark;
 		_buildCollision = buildCollision;
+		_detailMat = detail;
+		_waterDetailMat = waterDetail;
 	}
 
 	private static long Key(int ci, int ck) => ((long)(ci + 4096) << 20) | (uint)(ck + 4096);
@@ -188,7 +190,9 @@ public partial class ChunkStreamer : Node3D
 		// Ground detail. Tufts, flowers and pebbles are what make a shelf read as
 		// made rather than as fill, and one merged mesh per chunk makes them the
 		// cheapest life in the world.
-		var detail = _terrain == null ? null : GroundDetail.Build(_terrain, ci, ck);
+		var detail = _terrain != null ? GroundDetail.Build(_terrain, ci, ck)
+			: _detailMat != null ? GroundDetail.Build(_grid, ci, ck)
+			: null;
 		if (detail != null)
 		{
 			root.AddChild(new MeshInstance3D

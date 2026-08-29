@@ -366,13 +366,13 @@ Mountain, confluence and drowned-south windows have been inspected in the game;
 the legacy 3,456-square runtime also passed its fixed hero capture after the
 shared material construction was extracted.
 
-Culture, abandonment and wilderness images remain planned. The ordinary game
-still builds the 3,456-square review world with whole-map arrays. The production
-window remains a review surface with no player, collision or multi-elevation
-planar reflections. A temporary domain mode composes nine normal sector
-artifacts, realises the first plan's routes and structures, and adds preliminary
-globally anchored biome trees; it does not enlarge or replace the sector
-artifact format. Persistent route/site/plan output and the accepted wilderness
+Culture, abandonment and wilderness images remain planned. Default play loads a
+local window of compiled sectors with collision and the traveller;
+`--legacy-world` still boots the 3,456-square review fixture. The production
+window still has no multi-elevation planar reflections. A domain mode composes
+nine normal sector artifacts, realises the first plan's routes and structures,
+and adds globally anchored biome trees; it does not enlarge or replace the
+sector artifact format. Persistent route/site/plan output and the accepted wilderness
 density source do not yet exist. `sample-atlas <x,z>` compiles one
 addressed source point on demand so authored absolute platform levels can be
 chosen against the actual deterministic terrain rather than the grayscale map.
