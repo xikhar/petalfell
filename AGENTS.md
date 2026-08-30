@@ -63,9 +63,10 @@ whole current effort:
    whole 16 × 12 atlas. Compiler 27 reached that whole-atlas mechanical gate and
    remains available through `--compiled-atlas`; retain its evidence for the later
    integration gate, but do not use it as the inner visual iteration loop.
-2. **Preserve Bloom Grove Court and reconstruct `reference-1.png` next.** The
-   existing `reference-10` transcription remains at its permanent Bloom Reach
-   location while the supplied bridge, cliff and monumental gate are measured
+2. **Preserve the production reference sites and reconstruct `reference-1.png`
+   next.** The existing `reference-10` transcription and the new
+   `reference-12` Fallen Colossus remain at their permanent Bloom Reach
+   locations while the supplied bridge, cliff and monumental gate are measured
    from `reference-1.png` plus the supplied top view and built at a compatible
    permanent atlas location. Do not invent a substitute composition.
 3. **Finish traversal review across the accepted atlas.** The map-guided old
@@ -87,7 +88,7 @@ it does not authorize procedural placement or unstable coordinates.
 
 ## The reference images
 
-`world-new/reference-1.png` … `reference-11.png` are the target for everything
+`world-new/reference-1.png` … `reference-12.png` are the target for everything
 architectural. **Look at them. Do not work from the summaries.** They are cited
 throughout the documents by number, and they are tracked in the repository so
 that instruction stays honest on a fresh clone.
@@ -176,11 +177,19 @@ compatible permanent location and connection; L3/L4 transcribe one named
 wall, arch, terrace, break, rubble mass and tree exclusion is authored in the
 site's own voxel blueprint. A low-level voxel write or rectangular fill is only
 storage shorthand; no architectural generator may stamp a reusable column,
-portal, stair or tower into a reconstruction. `reference-10.png` in Bloom Reach
-is the preserved first transcription and remains unaccepted as a whole. The next
-active structural source is the much larger `reference-1.png` bridge/cliff/gate
-site, after production terrain is complete; starting it no longer waits for a
-whole-site acceptance decision on Bloom.
+portal, stair, tower, figure or sculpture into a reconstruction.
+`reference-10.png` in Bloom Reach is the preserved first transcription and
+remains unaccepted as a whole. `reference-12.png` is the permanent Fallen
+Colossus transcription: its flat clearing, broken stone court, four-block
+three-course leg plinth, five detached foundations and eight fixed 2×2 pillars
+stay in the voxel blueprint, while the continuous legs and fallen
+crowned head are the author's two Meshy GLBs, deterministically cleaned and
+pivoted by `tools/prepare_meshy_fallen_colossus.py`. Runtime replaces their baked
+source materials with Petalfell stone, adds a sculpture silhouette pass and owns
+invisible compound collision. The supplied debris/pillar GLB is deliberately not
+placed in the current blockout. The low-level mesh vocabulary may be reused; the
+statue composition may not. The next large structural source remains
+`reference-1.png`.
 
 **Normal startup is the fast map-guided full-atlas terrain runtime.**
 The old 3,456-square circular map remains `--legacy-world`; the historical compiled

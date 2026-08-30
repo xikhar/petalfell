@@ -132,6 +132,15 @@ handoff or reference-parity ink is complete.
 > permanent coordinates; `Planned`/`Blockout` sites remain isolated in review
 > tools until deliberately promoted.
 
+> **Fine sculpture decision (author, 2026-08-31).** Monumental figures and
+> carved forms cannot be approximated by a few large axis-aligned voxel fills.
+> Keep terrain contact, streaming and conservative collision in the site-owned
+> voxel blueprint, but author continuous anatomy, facial planes, crowns, bevels
+> and diagonal damage as reproducible Blender-built meshes. This is low-level
+> geometry vocabulary, not permission for a reusable statue generator.
+> `reference-12.png` establishes the first permanent Fallen Colossus application
+> at `(10600,4600)`.
+
 Each slice below leaves an artifact that the next one consumes.
 
 ### Slice A — canonical source and authoring tools ✅ built
@@ -318,6 +327,17 @@ collision/playability review, and author acceptance remain open. The author's
 structural reference must wait for Bloom's whole-site acceptance.
 
 ### Slice F — `reference-1` bridge, cliff and gate reconstruction
+
+The production baseline also contains the author-requested `reference-12.png`
+Fallen Colossus at `(10600,4600)`. Its current fast integration uses the
+author's cleaned Meshy leg and head GLBs only, over a strict site-owned broken
+stone court, four-block central plinth, five detached foundations and eight 2×2
+pillars. Their baked source materials and image
+floor meshes are removed; Petalfell stone, silhouette ink and compound collision
+are attached in every production window. The v21 locked capture has been
+inspected, but live traversal, complete rotational fidelity and author acceptance
+remain open. This targeted site does not replace the next large `reference-1`
+district slice.
 
 After Slice D passes, choose a compatible permanent cliff-and-water location and
 author the second site from `world-new/reference-1.png` plus its supplied top

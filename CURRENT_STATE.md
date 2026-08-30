@@ -542,6 +542,24 @@ in §2. What remains is the layer above them, and it is the current effort. See
   rotation/reflection, the locked camera, vertical courses, site definition,
   voxel builder, collision and rendered fidelity remain open, so the canonical
   site status is honestly `Planned`.
+- **Reference 12 is built as a permanent production-site hybrid.**
+  `fallen-colossus` is registered at `(10600,4600)` in a dedicated Bloom Reach
+  domain. Its current strict plan places four sculpture projections on a flat
+  clearing, two broken stone-court footprints, a four-block three-course leg
+  plinth, five detached two-course foundations and eight spread-out 2×2 pillars;
+  it deliberately omits the earlier beam, rubble and tree meshes. The
+  checked v21 production capture reports 5,194 authored surface writes and 416
+  site voxels in eight fixed-section pillars.
+  `tools/prepare_meshy_fallen_colossus.py` removes the
+  calibration cube, image-floor geometry and baked materials from the author's
+  `meshy/head.glb` and `meshy/legs.glb`, then writes bottom-centred site assets.
+  Normal startup, map reload and walking handoff attach those assets with the
+  world-space Petalfell stone shader, inverted-hull plum outline and invisible
+  compound box collision. The v21 locked capture was inspected for the requested
+  scale, material replacement, reduced 0.009-unit silhouette ink, forward-facing
+  leg yaw, four-block central plinth, five detached two-course foundations and
+  eight spread-out 2×2 pillars;
+  traversal, all-angle fidelity and author acceptance remain open.
 - **The first explicit reference transcription is an active Blockout under
   reconstruction; author acceptance remains open.** `bloom-grove-court` owns a
   strict source-facing v2 ground plan and unique voxel builder at atlas

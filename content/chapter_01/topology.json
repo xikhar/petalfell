@@ -30,6 +30,20 @@
         { "x": 10280, "z": 5080 },
         { "x": 9320, "z": 5080 }
       ]
+    },
+    {
+      "id": "bloom-fallen-colossus-domain",
+      "displayName": "Fallen Colossus Field",
+      "regionId": "bloom-reach",
+      "cultureId": "old-eastern",
+      "axisDegrees": 0,
+      "planPath": "",
+      "boundary": [
+        { "x": 10200, "z": 4200 },
+        { "x": 11000, "z": 4200 },
+        { "x": 11000, "z": 5000 },
+        { "x": 10200, "z": 5000 }
+      ]
     }
   ],
   "sites": [
@@ -68,6 +82,23 @@
       "planPath": "res://content/chapter_01/sites/bloom-grove-court-reference-10.json",
       "entrances": [],
       "sightlineSiteIds": []
+    },
+    {
+      "id": "fallen-colossus",
+      "displayName": "Fallen Colossus",
+      "domainId": "bloom-fallen-colossus-domain",
+      "tier": "Precinct",
+      "archetype": "Unexplained",
+      "status": "Production",
+      "centre": { "x": 10600, "z": 4600 },
+      "extentX": 176,
+      "extentZ": 136,
+      "orientationDegrees": 0,
+      "age": 0.94,
+      "requiresRoute": false,
+      "planPath": "res://content/chapter_01/sites/fallen-colossus-reference-12.json",
+      "entrances": [],
+      "sightlineSiteIds": ["bloom-grove-court"]
     }
   ],
   "routeNodes": [

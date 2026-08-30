@@ -14,6 +14,8 @@ public static class ReferenceSiteBuilder
 	{
 		Reference10GroveCourt.BuilderId => Reference10GroveCourt.Build(window, site,
 			verticalOffset),
+		Reference12FallenColossus.BuilderId => Reference12FallenColossus.Build(window,
+			site, verticalOffset),
 		Reference1ShallowsGateCauseway.BuilderId =>
 			verticalOffset == 0
 				? Reference1ShallowsGateCauseway.Build(window, site)

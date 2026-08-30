@@ -43,6 +43,32 @@ public static class WorldMaterials
 	public static ShaderMaterial CreateDetail() =>
 		new() { Shader = GD.Load<Shader>("res://shaders/detail.gdshader") };
 
+	public static ShaderMaterial CreateSculptureStone(Color colour,
+		float weathering = 0.62f, float mossMix = 0f)
+	{
+		var material = new ShaderMaterial
+		{
+			Shader = GD.Load<Shader>("res://shaders/sculpture.gdshader"),
+		};
+		material.SetShaderParameter("base_colour", colour);
+		material.SetShaderParameter("weathering", weathering);
+		material.SetShaderParameter("moss_mix", mossMix);
+		material.SetShaderParameter("moss_colour", Palette.Get(Palette.MOSS_STONE).Top);
+		return material;
+	}
+
+	public static ShaderMaterial CreateSculptureOutline(float width = 0.009f)
+	{
+		var material = new ShaderMaterial
+		{
+			Shader = GD.Load<Shader>("res://shaders/sculpture_outline.gdshader"),
+			RenderPriority = 1,
+		};
+		material.SetShaderParameter("ink_colour", Palette.InkDark);
+		material.SetShaderParameter("outline_width", width);
+		return material;
+	}
+
 	public static ShaderMaterial CreateWaterDetail() =>
 		new() { Shader = GD.Load<Shader>("res://shaders/waterdetail.gdshader") };
 

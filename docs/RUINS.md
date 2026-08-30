@@ -491,6 +491,20 @@ Whole-site author acceptance remains open, but the
 author's 30 August 2026 terrain-first decision pauses further Bloom iteration and
 removes the former gate on starting a second structural reference.
 
+**Fallen Colossus:** `reference-12.png` is registered permanently in Bloom Reach
+at `(10600,4600)`. The first all-integer head/leg pass was rejected: a sculpted
+face and fallen crown cannot be expressed as a few huge axis-aligned fills. The
+current fast blockout isolates the author's separately generated Meshy head and
+leg assets, removes their image-floor geometry and baked source materials, and
+places them over a site-owned flat stone court with a four-block three-course
+leg plinth, five detached two-course foundations and eight fixed 2×2 pillars.
+Petalfell's world-space stone shader, plum silhouette pass and compound invisible
+collision are applied at runtime. The extra Meshy debris/pillar export and the
+earlier generated rubble/tree clutter is intentionally absent. This is the
+settled external-sculpture integration direction, not proof that the current
+visual match is finished; current evidence and gaps live in the
+[Fallen Colossus knowledge ledger](../building-knowledge/sites/fallen-colossus.md).
+
 **Next transcription after production terrain:** `reference-1.png`, together
 with the supplied top view of the same place, owns the very large bridge,
 water/chasm, cliff shelves and monumental gate composition. Its permanent atlas

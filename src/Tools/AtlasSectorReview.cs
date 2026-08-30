@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using Godot;
 using Petalfell.Core;
 using Petalfell.Player;
@@ -329,6 +330,15 @@ public partial class AtlasSectorReview : Node3D
 				_playableSectorSpan = 2;
 				Vector2I centre = _requestedFocus ??
 					new Vector2I(_referenceSite.Origin.X, _referenceSite.Origin.Z);
+				CanonicalSite focusedSite = map.CanonicalAtlas.Topology.Sites.FirstOrDefault(candidate =>
+					candidate.RunsInProduction &&
+					candidate.ReferencePlan?.ContainsGlobal(centre.X, centre.Y) == true);
+				if (focusedSite != null)
+				{
+					_site = focusedSite;
+					_siteId = focusedSite.Id;
+					_referenceSite = focusedSite.ReferencePlan;
+				}
 				AtlasMosaicBounds bounds = AtlasRuntimeHandoff.WindowAround(map.CanonicalAtlas,
 					centre.X, centre.Y, _playableSectorSpan);
 				directPrepared = ProductionTerrainWindow.Build(map, map.DefaultSeed, bounds,
@@ -377,11 +387,14 @@ public partial class AtlasSectorReview : Node3D
 				? DomainPlanBlockout.Compile(_window, map.CanonicalAtlas.Topology, _domain)
 				: null;
 			ReferenceSiteStatistics? siteBuild = _directTerrain
-				? directPrepared.SiteBuilds.Count > 0
-					? directPrepared.SiteBuilds[0].Statistics : null
+				? directPrepared.SiteBuilds
+					.Where(build => build.SiteId == _referenceSite.SiteId)
+					.Select(build => (ReferenceSiteStatistics?)build.Statistics)
+					.FirstOrDefault()
 				: IsSite
-				? ReferenceSiteBuilder.Build(_window, _referenceSite)
-				: null;
+					? ReferenceSiteBuilder.Build(_window, _referenceSite,
+						ReviewSiteVerticalOffset(_window, _referenceSite))
+					: null;
 			AtlasWildernessDressingStatistics wilderness = _directTerrain
 				? directPrepared.Wilderness
 				: IsDomain
@@ -413,6 +426,11 @@ public partial class AtlasSectorReview : Node3D
 			GroundDetail.Seed = map.DefaultSeed;
 			_streamer.Setup(_window, _voxelMaterial, ink.Light, ink.Dark,
 				_detailMaterial, _waterDetailMaterial, buildCollision: _playable);
+			if (directPrepared != null)
+				AttachFineSiteGeometry(_content, _window, directPrepared.SiteBuilds);
+			else if (siteBuild is ReferenceSiteStatistics builtSite)
+				AttachFineSiteGeometry(_content, _window,
+					new[] { new AtlasReferenceSiteBuild(_referenceSite.SiteId, builtSite) });
 
 			_waterMaterial = WorldMaterials.CreateWater(data.SeaLevel,
 				surfaceFromMesh: true, reflectionAvailable: false);
@@ -647,8 +665,13 @@ public partial class AtlasSectorReview : Node3D
 	private void BuildProductionTraveller()
 	{
 		BlockPoint authored = _referenceSite.ToGlobal(_referenceSite.PlayerSpawn);
-		int globalX = _requestedFocus?.X ?? authored.X;
-		int globalZ = _requestedFocus?.Y ?? authored.Z;
+		// A direct atlas focus chooses the window, but when it names a production
+		// site the traveller still belongs at that site's authored review spawn.
+		// Spawning on the requested centre put Reference 12's player on a statue leg.
+		bool focusedAuthoredSite = _requestedFocus.HasValue &&
+			_referenceSite.ContainsGlobal(_requestedFocus.Value.X, _requestedFocus.Value.Y);
+		int globalX = focusedAuthoredSite ? authored.X : _requestedFocus?.X ?? authored.X;
+		int globalZ = focusedAuthoredSite ? authored.Z : _requestedFocus?.Y ?? authored.Z;
 		if (!AtlasRuntimeHandoff.TryResolveLanding(_window, globalX, globalZ,
 		    out AtlasRuntimeLanding landing, out string rejection))
 			throw new InvalidOperationException(
@@ -1238,6 +1261,7 @@ public partial class AtlasSectorReview : Node3D
 		nextContent.AddChild(nextStreamer);
 		nextStreamer.Setup(nextWindow, _voxelMaterial, _inkLight, _inkDark,
 			_detailMaterial, _waterDetailMaterial, buildCollision: true);
+		AttachFineSiteGeometry(nextContent, nextWindow, prepared.SiteBuilds);
 		MeshInstance3D water = nextWindow.BuildWater(_waterMaterial);
 		if (water != null) nextContent.AddChild(water);
 		Vector3 nextLocal = exactGlobalPosition - nextWindow.GlobalOrigin;
@@ -1472,6 +1496,7 @@ public partial class AtlasSectorReview : Node3D
 		nextContent.AddChild(nextStreamer);
 		nextStreamer.Setup(nextWindow, _voxelMaterial, _inkLight, _inkDark,
 			_detailMaterial, _waterDetailMaterial, buildCollision: true);
+		AttachFineSiteGeometry(nextContent, nextWindow, prepared.SiteBuilds);
 		MeshInstance3D water = nextWindow.BuildWater(_waterMaterial);
 		if (water != null) nextContent.AddChild(water);
 		var localLanding = new Vector3(landing.LocalX + .5f, landing.SurfaceY + .2f,
@@ -1495,6 +1520,41 @@ public partial class AtlasSectorReview : Node3D
 		_focusLocal = localLanding;
 		FinishHandoff(requestedGlobal, landing, requestedRejection, resolution,
 			prepared.Bounds, prepared.Wilderness, prepared.SiteBuilds, fallbackAddress);
+	}
+
+	private void AttachFineSiteGeometry(Node3D parent, AtlasSectorWindow window,
+		IReadOnlyList<AtlasReferenceSiteBuild> builds)
+	{
+		if (parent == null || window == null || builds == null || _atlas?.Topology == null)
+			return;
+		foreach (AtlasReferenceSiteBuild build in builds)
+		{
+			if (build.SiteId != Reference12SculptureDetail.SiteId) continue;
+			ReferenceSiteDefinition site = _atlas.Topology.Sites
+				.FirstOrDefault(candidate => candidate.Id == build.SiteId)?.ReferencePlan;
+			Node3D detail = Reference12SculptureDetail.Build(window, site,
+				_inkLight, _inkDark);
+			if (detail != null) parent.AddChild(detail);
+		}
+	}
+
+	private static int ReviewSiteVerticalOffset(AtlasSectorWindow window,
+		ReferenceSiteDefinition site)
+	{
+		// The review tool composes current atlas terrain, whose accepted elevation
+		// can move independently of a reference's local Y datum. Production already
+		// translates supported site blueprints onto that ground; applying the same
+		// rule here prevents a valid monument being buried after a terrain rebuild.
+		if (window == null || site == null ||
+		    site.BuilderId == Reference1ShallowsGateCauseway.BuilderId) return 0;
+		int localX = site.Origin.X - window.Data.OriginX;
+		int localZ = site.Origin.Z - window.Data.OriginZ;
+		ReferenceGroundPlanTerrain datum = ReferenceSiteGroundPlan.Load(site).Terrain
+			.FirstOrDefault(shape => shape.WriteMode == "preserve-atlas" &&
+				shape.SurfaceY.HasValue);
+		if (datum?.SurfaceY == null || localX < 0 || localZ < 0 ||
+		    localX >= window.Grid.Size || localZ >= window.Grid.Size) return 0;
+		return window.Grid.Top[localZ * window.Grid.Size + localX] - datum.SurfaceY.Value;
 	}
 
 	private void PlacePlayerInCurrentWindow(Vector3 requestedGlobal,

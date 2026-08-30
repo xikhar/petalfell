@@ -1,0 +1,112 @@
+{
+  "version": 2,
+  "siteId": "fallen-colossus",
+  "referencePath": "res://world-new/reference-12.png",
+  "basis": "Meshy sculpture integration blockout for Reference 12. The player fixes scale. A flat, broken stone court supports only the two separated trunkless legs and fallen crowned head; surrounding generated meshes and source-baked materials are deliberately excluded while ordinary Bloom terrain remains untouched outside the clearing.",
+  "coordinateContract": {
+    "origin": { "x": 0, "z": 0 },
+    "playerSpawn": { "x": -25, "z": 22 },
+    "plotView": "source-facing",
+    "oneCellIsOneVoxel": true,
+    "runtimePlanScale": 1,
+    "runtimeMirrorX": false,
+    "sourceViewYawDegrees": 0,
+    "sourceViewPitchDegrees": 35.26439
+  },
+  "terrain": [
+    {
+      "id": "surrounding-meadow",
+      "role": "ordinary-bloom-terrain",
+      "surfaceY": 40,
+      "material": "natural",
+      "writeMode": "preserve-atlas",
+      "polygon": [[-48,-34],[-38,-42],[-12,-40],[8,-42],[34,-37],[48,-24],[46,2],[48,27],[31,42],[3,39],[-20,42],[-43,31],[-48,8]]
+    },
+    {
+      "id": "flat-clearing",
+      "role": "site-clearing",
+      "surfaceY": 40,
+      "material": "natural",
+      "writeMode": "author-surface",
+      "polygon": [[-34,-23],[-18,-31],[9,-30],[30,-25],[44,-10],[44,28],[29,35],[4,33],[-22,35],[-39,22],[-40,-3]]
+    },
+    {
+      "id": "central-stone-floor",
+      "role": "leg-stone-court",
+      "surfaceY": 40,
+      "material": "warm-stone",
+      "writeMode": "author-surface",
+      "polygon": [[-24,-18],[14,-19],[22,-12],[23,13],[15,22],[-18,22],[-26,13],[-27,-9]]
+    },
+    {
+      "id": "central-plinth-lower",
+      "role": "leg-plinth-lower-course",
+      "surfaceY": 42,
+      "material": "worn-paving",
+      "writeMode": "author-surface",
+      "polygon": [[-18,-13],[14,-13],[18,-8],[18,11],[13,15],[-15,15],[-19,10],[-19,-8]]
+    },
+    {
+      "id": "central-plinth-upper",
+      "role": "leg-plinth-upper-course",
+      "surfaceY": 44,
+      "material": "warm-stone",
+      "writeMode": "author-surface",
+      "polygon": [[-13,-9],[11,-9],[14,-5],[14,7],[10,11],[-11,11],[-14,7],[-14,-6]]
+    },
+    {
+      "id": "fallen-head-stone-bed",
+      "role": "head-stone-court",
+      "surfaceY": 40,
+      "material": "warm-stone",
+      "writeMode": "author-surface",
+      "polygon": [[13,3],[34,5],[42,13],[41,29],[31,34],[13,30],[8,21],[9,9]]
+    },
+    { "id": "west-foundation", "role": "detached-foundation-lower", "surfaceY": 41, "material": "warm-stone", "writeMode": "author-surface", "footprint": [-38,-15,-25,18] },
+    { "id": "west-foundation-spine", "role": "detached-foundation-upper", "surfaceY": 42, "material": "worn-paving", "writeMode": "author-surface", "footprint": [-34,-11,-28,14] },
+    { "id": "north-foundation", "role": "detached-foundation-lower", "surfaceY": 41, "material": "warm-stone", "writeMode": "author-surface", "footprint": [-24,-29,22,-18] },
+    { "id": "north-foundation-spine", "role": "detached-foundation-upper", "surfaceY": 42, "material": "worn-paving", "writeMode": "author-surface", "footprint": [-18,-25,16,-21] },
+    { "id": "southwest-foundation", "role": "detached-foundation-lower", "surfaceY": 41, "material": "warm-stone", "writeMode": "author-surface", "footprint": [-33,21,-15,33] },
+    { "id": "southwest-foundation-spine", "role": "detached-foundation-upper", "surfaceY": 42, "material": "worn-paving", "writeMode": "author-surface", "footprint": [-28,24,-20,30] },
+    { "id": "south-foundation", "role": "detached-foundation-lower", "surfaceY": 41, "material": "warm-stone", "writeMode": "author-surface", "footprint": [-10,23,14,35] },
+    { "id": "south-foundation-spine", "role": "detached-foundation-upper", "surfaceY": 42, "material": "worn-paving", "writeMode": "author-surface", "footprint": [-5,26,9,31] },
+    { "id": "east-foundation", "role": "detached-foundation-lower", "surfaceY": 41, "material": "warm-stone", "writeMode": "author-surface", "footprint": [43,-10,49,26] },
+    { "id": "east-foundation-spine", "role": "detached-foundation-upper", "surfaceY": 42, "material": "worn-paving", "writeMode": "author-surface", "footprint": [44,-5,47,22] },
+    { "id": "central-edge-nw", "role": "broken-stone-court-edge", "surfaceY": 41, "material": "worn-paving", "writeMode": "author-surface", "footprint": [-23,-18,-10,-17] },
+    { "id": "central-edge-ne", "role": "broken-stone-court-edge", "surfaceY": 41, "material": "worn-paving", "writeMode": "author-surface", "footprint": [-4,-19,12,-18] },
+    { "id": "central-edge-west", "role": "broken-stone-court-edge", "surfaceY": 41, "material": "worn-paving", "writeMode": "author-surface", "footprint": [-26,-10,-25,4] },
+    { "id": "central-edge-sw", "role": "broken-stone-court-edge", "surfaceY": 41, "material": "worn-paving", "writeMode": "author-surface", "footprint": [-22,20,-8,21] },
+    { "id": "central-edge-se", "role": "broken-stone-court-edge", "surfaceY": 41, "material": "worn-paving", "writeMode": "author-surface", "footprint": [3,21,13,22] },
+    { "id": "central-edge-east-north", "role": "broken-stone-court-edge", "surfaceY": 41, "material": "worn-paving", "writeMode": "author-surface", "footprint": [21,-11,22,3] },
+    { "id": "head-edge-north", "role": "broken-stone-court-edge", "surfaceY": 41, "material": "worn-paving", "writeMode": "author-surface", "footprint": [18,5,29,6] },
+    { "id": "head-edge-ne", "role": "broken-stone-court-edge", "surfaceY": 41, "material": "worn-paving", "writeMode": "author-surface", "footprint": [35,8,38,9] },
+    { "id": "head-edge-east", "role": "broken-stone-court-edge", "surfaceY": 41, "material": "worn-paving", "writeMode": "author-surface", "footprint": [39,13,41,20] },
+    { "id": "head-edge-se", "role": "broken-stone-court-edge", "surfaceY": 41, "material": "worn-paving", "writeMode": "author-surface", "footprint": [32,29,37,31] },
+    { "id": "head-edge-south", "role": "broken-stone-court-edge", "surfaceY": 41, "material": "worn-paving", "writeMode": "author-surface", "footprint": [18,30,27,32] },
+    { "id": "head-edge-west", "role": "broken-stone-court-edge", "surfaceY": 41, "material": "worn-paving", "writeMode": "author-surface", "footprint": [9,12,10,19] }
+  ],
+  "surfacePatches": [],
+  "structures": [
+    { "id": "left-severed-leg", "kind": "site-specific-colossus-leg", "supportTerrain": "central-plinth-upper", "baseY": 44, "height": 19, "footprint": [-8,-5,-1,7] },
+    { "id": "right-severed-leg", "kind": "site-specific-colossus-leg", "supportTerrain": "central-plinth-upper", "baseY": 44, "height": 20, "footprint": [2,-5,9,7] },
+    { "id": "fallen-head-core", "kind": "site-specific-fallen-head", "supportTerrain": "fallen-head-stone-bed", "baseY": 40, "height": 9, "footprints": [[19,10,31,25],[17,13,34,22],[23,23,27,28]] },
+    { "id": "fallen-crown", "kind": "site-specific-fallen-crown", "supportTerrain": "fallen-head-stone-bed", "baseY": 40, "height": 12, "footprints": [[17,8,34,13],[16,11,18,22],[32,11,35,22]] },
+    { "id": "west-north-pillar", "kind": "site-specific-square-pillar", "supportTerrain": "west-foundation-spine", "baseY": 42, "height": 15, "footprint": [-33,-9,-32,-8] },
+    { "id": "west-south-pillar", "kind": "site-specific-square-pillar", "supportTerrain": "west-foundation-spine", "baseY": 42, "height": 11, "footprint": [-31,10,-30,11] },
+    { "id": "north-west-pillar", "kind": "site-specific-square-pillar", "supportTerrain": "north-foundation-spine", "baseY": 42, "height": 13, "footprint": [-14,-24,-13,-23] },
+    { "id": "north-east-pillar", "kind": "site-specific-square-pillar", "supportTerrain": "north-foundation-spine", "baseY": 42, "height": 17, "footprint": [10,-24,11,-23] },
+    { "id": "southwest-pillar", "kind": "site-specific-square-pillar", "supportTerrain": "southwest-foundation-spine", "baseY": 42, "height": 12, "footprint": [-26,26,-25,27] },
+    { "id": "south-pillar", "kind": "site-specific-square-pillar", "supportTerrain": "south-foundation-spine", "baseY": 42, "height": 10, "footprint": [4,28,5,29] },
+    { "id": "east-north-pillar", "kind": "site-specific-square-pillar", "supportTerrain": "east-foundation-spine", "baseY": 42, "height": 14, "footprint": [45,-3,46,-2] },
+    { "id": "east-south-pillar", "kind": "site-specific-square-pillar", "supportTerrain": "east-foundation-spine", "baseY": 42, "height": 12, "footprint": [45,18,46,19] }
+  ],
+  "surroundingTrees": [],
+  "acceptanceRules": {
+    "isolatedSurvivorMaximumFootprint": [3,3],
+    "thinWallMaximumWidth": 2,
+    "thickerMassesMustBeConnected": true,
+    "eachStairMustTouchBothNamedTerrains": true,
+    "significantGeometryMustAppearInThisPlan": true,
+    "generatorMayNotMoveOrAddStructures": true
+  }
+}
