@@ -180,15 +180,17 @@ storage shorthand; no architectural generator may stamp a reusable column,
 portal, stair, tower, figure or sculpture into a reconstruction.
 `reference-10.png` in Bloom Reach is the preserved first transcription and
 remains unaccepted as a whole. `reference-12.png` is the permanent Fallen
-Colossus transcription: its flat clearing, broken stone court, four-block
-three-course leg plinth, five detached foundations and eight fixed 2×2 pillars
-stay in the voxel blueprint, while the continuous legs and fallen
+Colossus transcription: its broad irregular precinct has seventeen site-owned
+terrain records, six exact stairs, four broken foundation traces, four rubble
+fields and eight fixed 2×2 pillars around an enlarged central leg plinth. The
+continuous legs and fallen
 crowned head are the author's two Meshy GLBs, deterministically cleaned and
 pivoted by `tools/prepare_meshy_fallen_colossus.py`. Runtime replaces their baked
 source materials with Petalfell stone, adds a sculpture silhouette pass and owns
-invisible compound collision. The supplied debris/pillar GLB is deliberately not
-placed in the current blockout. The low-level mesh vocabulary may be reused; the
-statue composition may not. The next large structural source remains
+invisible compound collision; the legs are currently 1.5× their first imported
+review scale and face forward. The supplied debris/pillar GLB is deliberately
+not placed in the current blockout. The low-level mesh vocabulary may be reused;
+the statue composition may not. The next large structural source remains
 `reference-1.png`.
 
 **Normal startup is the fast map-guided full-atlas terrain runtime.**

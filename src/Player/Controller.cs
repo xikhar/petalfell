@@ -27,6 +27,7 @@ public partial class Controller : CharacterBody3D
 
 	public const float Gravity = 58f;
 	public const float MaxSpeed = 13.5f;
+	public const float SlowWalkSpeed = 5.4f;
 	public const float Accel = 118f;
 	public const float AirAccel = 46f;
 	public const float Friction = 14.5f;
@@ -344,8 +345,10 @@ public partial class Controller : CharacterBody3D
 		}
 		else if (wish.LengthSquared() > 0.0001f)
 		{
+			float speedLimit = grounded && Input.IsActionPressed("slow_walk")
+				? SlowWalkSpeed : MaxSpeed;
 			flat += wish * accel * dt;
-			if (flat.Length() > MaxSpeed) flat = flat.Normalized() * MaxSpeed;
+			if (flat.Length() > speedLimit) flat = flat.Normalized() * speedLimit;
 		}
 		else
 		{

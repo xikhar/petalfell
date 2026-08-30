@@ -331,12 +331,16 @@ structural reference must wait for Bloom's whole-site acceptance.
 The production baseline also contains the author-requested `reference-12.png`
 Fallen Colossus at `(10600,4600)`. Its current fast integration uses the
 author's cleaned Meshy leg and head GLBs only, over a strict site-owned broken
-stone court, four-block central plinth, five detached foundations and eight 2×2
-pillars. Their baked source materials and image
+stone precinct. Its seventeen terrain records, six stairs, four broken
+foundation traces, four exact rubble fields, sixteen surface-patch groups and
+eight 2×2 pillars spread across four detached partial three-level slab stacks
+and an enlarged central plinth, with atlas terrain retained between them. The
+legs use 1.5× their first imported review scale and matching collision while the
+head remains unchanged. Their baked source materials and image
 floor meshes are removed; Petalfell stone, silhouette ink and compound collision
-are attached in every production window. The v21 locked capture has been
-inspected, but live traversal, complete rotational fidelity and author acceptance
-remain open. This targeted site does not replace the next large `reference-1`
+are attached in every production window. The v25 locked and far captures have
+been inspected, but live traversal, complete rotational fidelity and author
+acceptance remain open. This targeted site does not replace the next large `reference-1`
 district slice.
 
 After Slice D passes, choose a compatible permanent cliff-and-water location and

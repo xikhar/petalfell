@@ -7,8 +7,9 @@ namespace Petalfell.World.Sites;
 
 /// <summary>
 /// Site-owned terrain blockout for the author's Reference 12 Meshy sculptures:
-/// a flat clearing, broken stone courts and a three-course leg plinth. Visible
-/// sculpture and collision attach separately in Reference12SculptureDetail.
+/// a broad field of detached worn slabs around a three-course leg plinth and
+/// low fallen-head court. Visible sculpture and collision attach separately in
+/// Reference12SculptureDetail.
 /// </summary>
 public static class Reference12FallenColossus
 {
@@ -75,13 +76,25 @@ public static class Reference12FallenColossus
 			WriteNamed("south-pillar", () => WritePillar("south-pillar", 5));
 			WriteNamed("east-north-pillar", () => WritePillar("east-north-pillar", 6));
 			WriteNamed("east-south-pillar", () => WritePillar("east-south-pillar", 7));
-			// The current fast review intentionally isolates the two Meshy sculpture
-			// subjects on one flat meadow. The fuller reference plan remains authored,
-			// but its beam, survivors, rubble and trees are not realised in this pass.
+			WriteNamed("west-broken-foundation", () =>
+				WriteBrokenFoundation("west-broken-foundation", 0));
+			WriteNamed("north-broken-foundation", () =>
+				WriteBrokenFoundation("north-broken-foundation", 1));
+			WriteNamed("south-east-broken-foundation", () =>
+				WriteBrokenFoundation("south-east-broken-foundation", 2));
+			WriteNamed("east-broken-foundation", () =>
+				WriteBrokenFoundation("east-broken-foundation", 3));
+			WriteNamed("west-rubble", () => WriteRubble("west-rubble", 0));
+			WriteNamed("north-rubble", () => WriteRubble("north-rubble", 1));
+			WriteNamed("south-east-rubble", () => WriteRubble("south-east-rubble", 2));
+			WriteNamed("east-rubble", () => WriteRubble("east-rubble", 3));
 		}
 
 		private void WriteTerrain()
 		{
+			// Like Reference 10, terrain is a painter's stack: broad lower islands are
+			// written first and their narrower remnants later. Unpainted gaps retain
+			// the atlas terrain, so the precinct never becomes one clean presentation pad.
 			foreach (ReferenceGroundPlanTerrain terrain in _plan.Terrain)
 			{
 				if (terrain.WriteMode == "preserve-atlas") continue;
@@ -90,6 +103,19 @@ public static class Reference12FallenColossus
 				foreach (ReferenceGroundPlanCell cell in terrain.EffectiveCells)
 					TerrainSurface(cell.X, cell.Z, surfaceY, TerrainMaterial(terrain.Material,
 						cell.X, cell.Z));
+			}
+
+			foreach (ReferenceGroundPlanStructure stair in _plan.Structures)
+			{
+				if (stair.Kind != "stair") continue;
+				foreach (ReferenceGroundPlanTread tread in stair.Treads)
+				{
+					int topY = tread.TopY ?? throw new InvalidOperationException(
+						$"Stair '{stair.Id}' has an unaudited tread height.");
+					for (int z = tread.Footprint[1]; z <= tread.Footprint[3]; z++)
+					for (int x = tread.Footprint[0]; x <= tread.Footprint[2]; x++)
+						TerrainSurface(x, z, topY, Palette.PAVING);
+				}
 			}
 		}
 
@@ -100,8 +126,15 @@ public static class Reference12FallenColossus
 				ReferenceGroundPlanTerrain owner = _plan.GetTerrain(patch.TerrainId);
 				int surfaceY = owner.SurfaceY ??
 					throw new InvalidOperationException($"Surface owner '{owner.Id}' needs surfaceY.");
-				byte material = patch.Material.Contains("moss", StringComparison.Ordinal)
-					? Palette.MOSS_STONE : Palette.STONE_WARM;
+				byte material = patch.Material switch
+				{
+					"worn-paving" => Palette.PAVING,
+					"warm-paving" => Palette.STONE_WARM,
+					"cool-paving" => Palette.STONE,
+					"moss-paving" => Palette.MOSS_STONE,
+					_ => throw new InvalidOperationException(
+						$"Reference 12 has no surface material '{patch.Material}'.")
+				};
 				foreach (ReferenceGroundPlanCell cell in patch.EffectiveCells)
 					RepaintSurface(cell.X, cell.Z, surfaceY, material);
 			}
@@ -132,6 +165,46 @@ public static class Reference12FallenColossus
 					: course == height - 2 && variant % 2 == 0
 						? Palette.MOSS_STONE : Palette.STONE_PALE;
 				Put(cell.X, y, cell.Z, material);
+			}
+		}
+
+		private void WriteBrokenFoundation(string id, int variant)
+		{
+			ReferenceGroundPlanStructure foundation = _plan.GetStructure(id);
+			int baseY = foundation.BaseY ?? throw new InvalidOperationException(
+				$"Foundation '{id}' needs baseY.");
+			foreach (ReferenceGroundPlanCell cell in foundation.ProjectionCells)
+			{
+				// Every trace has one continuous structural root. The second and third
+				// courses break in long site-specific runs, avoiding both loose cubes and
+				// the pristine extruded bars from the previous pass.
+				Put(cell.X, baseY, cell.Z,
+					((cell.X + cell.Z + variant * 3) & 7) < 2
+						? Palette.STONE_WARM : Palette.STONE);
+				int run = Math.Abs(cell.X * (variant + 3) + cell.Z * (variant + 5));
+				if (run % 11 is not (0 or 1))
+					Put(cell.X, baseY + 1, cell.Z,
+						run % 9 == 2 ? Palette.MOSS_STONE : Palette.STONE_PALE);
+				if (run % 17 is 5 or 6 or 7)
+					Put(cell.X, baseY + 2, cell.Z, Palette.STONE_WARM);
+			}
+		}
+
+		private void WriteRubble(string id, int variant)
+		{
+			ReferenceGroundPlanStructure rubble = _plan.GetStructure(id);
+			int baseY = rubble.BaseY ?? throw new InvalidOperationException(
+				$"Rubble '{id}' needs baseY.");
+			int index = 0;
+			foreach (ReferenceGroundPlanCell cell in rubble.ProjectionCells
+			         .OrderBy(cell => cell.Z).ThenBy(cell => cell.X))
+			{
+				int courses = 1 + Math.Abs(cell.X * 5 + cell.Z * 7 + variant) % 3;
+				for (int y = 0; y < courses; y++)
+					Put(cell.X, baseY + y, cell.Z,
+						(index + y) % 5 == 0 ? Palette.MOSS_STONE
+						: (index + y) % 3 == 0 ? Palette.STONE_WARM : Palette.RUBBLE);
+				index++;
 			}
 		}
 

@@ -55,6 +55,17 @@ public static class AtlasWildernessDressing
 		{
 			int x = candidate.GlobalX - window.Data.OriginX;
 			int z = candidate.GlobalZ - window.Data.OriginZ;
+			if (candidate.Kind == CandidateKind.Tree)
+			{
+				float density = exclusion.TreeDensityAt(candidate.GlobalX, candidate.GlobalZ);
+				var thinning = new Rng(CandidateSeed(candidate.ShapeSeed,
+					"atlas:site-tree-thinning", candidate.CellX, candidate.CellZ));
+				if (!thinning.Chance(density))
+				{
+					excluded++;
+					continue;
+				}
+			}
 			int footprint = candidate.Kind == CandidateKind.Tree
 				? TreeFootprintRadius : candidate.Boulder.RadiusMax + 2;
 			if (exclusion.Intersects(candidate.GlobalX - footprint,
@@ -342,6 +353,7 @@ public static class AtlasWildernessDressing
 	{
 		public static readonly AtlasWildernessExclusion None = new EmptyExclusion();
 		protected abstract bool Contains(int globalX, int globalZ);
+		public virtual float TreeDensityAt(int globalX, int globalZ) => 1f;
 
 		public bool Intersects(int minX, int minZ, int maxX, int maxZ)
 		{
@@ -364,6 +376,8 @@ public static class AtlasWildernessDressing
 			_site = site ?? throw new ArgumentNullException(nameof(site));
 		protected override bool Contains(int globalX, int globalZ) =>
 			_site.ContainsGlobal(globalX, globalZ);
+		public override float TreeDensityAt(int globalX, int globalZ) =>
+			_site.SurroundingTreeDensityAtGlobal(globalX, globalZ);
 	}
 
 	private sealed class ReferenceSitesExclusion : AtlasWildernessExclusion
@@ -376,6 +390,15 @@ public static class AtlasWildernessDressing
 			foreach (ReferenceSiteDefinition site in _sites)
 				if (site.ContainsGlobal(globalX, globalZ)) return true;
 			return false;
+		}
+
+		public override float TreeDensityAt(int globalX, int globalZ)
+		{
+			float density = 1f;
+			foreach (ReferenceSiteDefinition site in _sites)
+				density = MathF.Min(density,
+					site.SurroundingTreeDensityAtGlobal(globalX, globalZ));
+			return density;
 		}
 	}
 

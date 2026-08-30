@@ -496,8 +496,13 @@ at `(10600,4600)`. The first all-integer head/leg pass was rejected: a sculpted
 face and fallen crown cannot be expressed as a few huge axis-aligned fills. The
 current fast blockout isolates the author's separately generated Meshy head and
 leg assets, removes their image-floor geometry and baked source materials, and
-places them over a site-owned flat stone court with a four-block three-course
-leg plinth, five detached two-course foundations and eight fixed 2×2 pillars.
+places them over a broad site-owned ruin field. Seventeen terrain records retain
+ordinary atlas ground between four detached lower/upper/crown stacks and the
+enlarged central three-course plinth; six exact stairs, four broken foundation
+traces, four rubble fields, sixteen worn surface-patch groups and eight fixed
+2×2 pillars give the precinct its authored rhythm. The legs use 1.5× their first
+imported review scale and matching compound collision; the head stays at its
+established scale and central relationship.
 Petalfell's world-space stone shader, plum silhouette pass and compound invisible
 collision are applied at runtime. The extra Meshy debris/pillar export and the
 earlier generated rubble/tree clutter is intentionally absent. This is the

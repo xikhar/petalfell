@@ -31,16 +31,16 @@ public static class Reference12SculptureDetail
 		root.Rotation = new Vector3(0f, Mathf.DegToRad(site.AxisDegrees), 0f);
 
 		// Meshy normalises each generation independently. The measured scales below
-		// return the generated subjects to the unchanged player/reference relation;
-		// the common -45 degree turn registers Meshy's image-facing diagonal with
-		// the locked source camera at yaw zero.
+		// restore the player/reference relation: the head keeps its image-facing
+		// diagonal, while the author's later correction makes the forward-facing legs
+		// 1.5 times their first imported review scale without moving their footing.
 		ShaderMaterial stone = WorldMaterials.CreateSculptureStone(
 			Palette.Get(Palette.STONE_PALE).Top, 0.78f, 0.10f);
 		stone.NextPass = WorldMaterials.CreateSculptureOutline();
 		root.AddChild(Place(HeadPath, "FallenHead", new Vector3(25f, 40f, 19f),
 			13f, -45f, stone));
 		root.AddChild(Place(LegsPath, "TrunklessLegs", new Vector3(0f, 44f, 0f),
-			13f, 0f, stone));
+			19.5f, 0f, stone));
 		root.AddChild(BuildCollision());
 		return root;
 	}
@@ -48,10 +48,10 @@ public static class Reference12SculptureDetail
 	private static StaticBody3D BuildCollision()
 	{
 		var body = new StaticBody3D { Name = "FallenColossusCollision" };
-		AddBox(body, "LeftLegCollision", new Vector3(-5f, 54f, 0f),
-			new Vector3(8f, 20f, 10f), 0f);
-		AddBox(body, "RightLegCollision", new Vector3(5f, 54f, 0f),
-			new Vector3(8f, 20f, 10f), 0f);
+		AddBox(body, "LeftLegCollision", new Vector3(-7.5f, 59f, 0f),
+			new Vector3(12f, 30f, 15f), 0f);
+		AddBox(body, "RightLegCollision", new Vector3(7.5f, 59f, 0f),
+			new Vector3(12f, 30f, 15f), 0f);
 		AddBox(body, "HeadCollision", new Vector3(25f, 48f, 19f),
 			new Vector3(23f, 16f, 21f), -45f);
 		return body;

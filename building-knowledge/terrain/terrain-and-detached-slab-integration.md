@@ -5,8 +5,9 @@
   `observed/source-measured` and `mechanically verified`; the corrected occupied
   footprint and unchanged channels are `visually reviewed` across the complete
   v13 capture matrix, but whole-site fidelity is not `author-accepted`
-- **Scope:** `site-specific` to Reference 10; the authored-site/ordinary-atlas
-  ownership boundary is `general`
+- **Scope:** `site-specific` evidence for References 10 and 12; the
+  authored-site/ordinary-atlas ownership boundary and partial-stack rule are
+  `general`
 - **Last verified:** 2026-08-30 mechanically and across all 19 v13 raw captures
   plus four derived comparisons
 - **Supersedes:** concentric/jagged terrain rings and one monolithic stamped pad
@@ -34,6 +35,7 @@ four tiers in a part—not from nested rings around the whole site.
 | The east upper split reads as three same-height slabs with lower-terrain channels at source z=-10..-9 and z=17..20; no wall, rubble, or paving bridges either channel, and reverse views show no floating back | `visually reviewed` | site-specific | All 19 raw captures and four derived comparisons in `/home/shikhar/godot/shots/reference-10-plan-v13-full/`, inspected 2026-08-30 | Collision/playability and whole-site fidelity remain open |
 | Reference 10 can spread across an already-correct slab by extending sparse paving and low site-owned ruins without moving the terrain edge | `mechanically verified` | site-specific | Current Reference 10 plan/builder: pre-widening central slab polygon restored; occupied footprint reaches only source x=40 through a broken low L return and two interior remnants; plan/world/build/diff checks pass, 2026-08-30 | Candidate for broader reuse; the appropriate amount and placement remain source- and site-specific |
 | The corrected occupied spread reads on the intended right side without an overextended terrain silhouette and stays modest at far range | `visually reviewed` | site-specific | Complete v13 matrix above, inspected at all four rotations and distances plus locked day/night and top, 2026-08-30 | The overall reference match and author acceptance remain open |
+| A precinct roughly three times the occupied ground scale can retain the same grammar by separating four broad orthogonal lower/upper islands, adding only small third-layer fragments, and leaving atlas corridors between them | `visually reviewed` | Reference 12 site-specific | `/home/shikhar/godot/shots/reference-12-v25-legs-1_5x/site_far_r0.png`, inspected 2026-08-31; exact 17-terrain-record plan audit | Current Reference 12 placement is not author-accepted and remains cleaner than the source |
 
 ## Procedure
 
@@ -60,6 +62,11 @@ four tiers in a part—not from nested rings around the whole site.
    seams attached to the land instead of producing pale boxes with grass tiles.
 9. Place exact rubble, walls, trees, and paving only after the slab topology and
    stair connections survive source-facing and runtime-facing plan review.
+10. At a much larger precinct, resist scaling one nested outline. Place several
+    orthogonal lower/upper islands across the full footprint, keep atlas ground
+    as real channels, and add the third layer only as a smaller broken fragment
+    on part of each island. Scale is expressed by spacing and hierarchy, not by
+    turning every contour into a complete ring.
 
 ## Checks
 

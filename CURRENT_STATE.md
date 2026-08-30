@@ -319,7 +319,8 @@ aspirational belongs here, and anything listed must have been seen working.
 
 ### Direct traversal
 
-- Camera-relative WASD and arrow-key movement.
+- Camera-relative WASD and arrow-key movement. Holding Shift limits grounded
+  travel to a deliberate 5.4-block-per-second walk without changing normal speed.
 - Acceleration, friction, air control, coyote time, jump buffering, variable manual
   jump height, terminal velocity, and capsule collision.
 - Swimming activates in sufficiently deep water, with buoyancy, drag, surface
@@ -544,22 +545,29 @@ in §2. What remains is the layer above them, and it is the current effort. See
   site status is honestly `Planned`.
 - **Reference 12 is built as a permanent production-site hybrid.**
   `fallen-colossus` is registered at `(10600,4600)` in a dedicated Bloom Reach
-  domain. Its current strict plan places four sculpture projections on a flat
-  clearing, two broken stone-court footprints, a four-block three-course leg
-  plinth, five detached two-course foundations and eight spread-out 2×2 pillars;
-  it deliberately omits the earlier beam, rubble and tree meshes. The
-  checked v21 production capture reports 5,194 authored surface writes and 416
-  site voxels in eight fixed-section pillars.
+  domain. Its current strict plan places four sculpture projections in a broad
+  orthogonal ruined precinct: seventeen terrain records form ordinary-atlas
+  channels, four detached lower/upper/crown stacks and a substantially enlarged
+  central three-course leg plinth; six exact stairs, four site-owned broken
+  foundation traces, four exact rubble fields and eight spread-out 2×2 pillars
+  occupy those levels. Sixteen non-overlapping surface-patch groups provide the
+  broad warm/cool/moss/worn breakup; the discarded Meshy ground/debris remains
+  absent.
   `tools/prepare_meshy_fallen_colossus.py` removes the
   calibration cube, image-floor geometry and baked materials from the author's
   `meshy/head.glb` and `meshy/legs.glb`, then writes bottom-centred site assets.
   Normal startup, map reload and walking handoff attach those assets with the
   world-space Petalfell stone shader, inverted-hull plum outline and invisible
-  compound box collision. The v21 locked capture was inspected for the requested
-  scale, material replacement, reduced 0.009-unit silhouette ink, forward-facing
-  leg yaw, four-block central plinth, five detached two-course foundations and
-  eight spread-out 2×2 pillars;
+  compound box collision. The legs now use 1.5× their first imported review
+  scale, matching 1.5× compound collision, while the head remains unchanged.
+  The v25 locked and far captures were inspected for that scale, material
+  replacement, reduced 0.009-unit silhouette ink, forward-facing leg yaw,
+  enlarged support terrain, orthogonal partial slab stacks, surface wear and the
+  spread outer pillar/foundation rhythm;
   traversal, all-angle fidelity and author acceptance remain open.
+  Its authored registration also thins ordinary biome trees to 22% immediately
+  outside the precinct and smoothly returns to ordinary Bloom density over 140
+  blocks; boulders and vegetation elsewhere remain unchanged.
 - **The first explicit reference transcription is an active Blockout under
   reconstruction; author acceptance remains open.** `bloom-grove-court` owns a
   strict source-facing v2 ground plan and unique voxel builder at atlas

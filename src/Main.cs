@@ -1020,6 +1020,7 @@ public partial class Main : Node3D
 		Bind("move_back", Key.S, Key.Down);
 		Bind("move_left", Key.A, Key.Left);
 		Bind("move_right", Key.D, Key.Right);
+		Bind("slow_walk", Key.Shift);
 		Bind("jump", Key.Space);
 		Bind("loadout_1", Key.Key1);
 		Bind("loadout_2", Key.Key2);

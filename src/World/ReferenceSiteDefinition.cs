@@ -2,6 +2,7 @@ using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Godot;
+using Petalfell.Core;
 
 namespace Petalfell.World;
 
@@ -26,6 +27,13 @@ public sealed class ReferenceSiteDefinition
 	/// while retaining the measured plan as the coordinate authority.
 	/// </summary>
 	public int RuntimePlanScale { get; set; } = 1;
+	/// <summary>
+	/// Optional tree-only breathing room outside the strict reconstruction footprint.
+	/// The site still owns no wilderness placement: this only thins otherwise valid
+	/// biome candidates and eases back to ordinary density at the stated radius.
+	/// </summary>
+	public int SurroundingTreeThinningRadius { get; set; }
+	public float SurroundingTreeDensity { get; set; } = 1f;
 	/// <summary>
 	/// Optional absolute Top-Y datum for a source plan whose measured vertical
 	/// courses are stored relative to one architectural threshold. Keeping it in
@@ -70,6 +78,11 @@ public sealed class ReferenceSiteDefinition
 			report.Error("axisDegrees does not match the canonical site orientation");
 		if (RuntimePlanScale < 1 || RuntimePlanScale > 7 || RuntimePlanScale % 2 == 0)
 			report.Error($"runtimePlanScale {RuntimePlanScale} must be an odd integer from 1 through 7");
+		if (SurroundingTreeThinningRadius < 0 || SurroundingTreeThinningRadius > 512)
+			report.Error($"surroundingTreeThinningRadius {SurroundingTreeThinningRadius} must be in 0-512");
+		if (!float.IsFinite(SurroundingTreeDensity) || SurroundingTreeDensity < 0f ||
+		    SurroundingTreeDensity > 1f)
+			report.Error($"surroundingTreeDensity {SurroundingTreeDensity} must be finite and in 0-1");
 		if (VerticalDatumY is int datum && (datum < 1 || datum >= atlas.Height))
 			report.Error($"verticalDatumY {datum} lies outside the atlas height");
 		if (FootprintMin == null || FootprintMax == null ||
@@ -114,13 +127,36 @@ public sealed class ReferenceSiteDefinition
 
 	public bool ContainsGlobal(int x, int z)
 	{
-		float radians = AxisDegrees * MathF.PI / 180f;
-		float cos = MathF.Cos(radians), sin = MathF.Sin(radians);
-		float dx = x - Origin.X, dz = z - Origin.Z;
-		float localX = dx * cos - dz * sin;
-		float localZ = dx * sin + dz * cos;
+		(float localX, float localZ) = ToLocalRuntime(x, z);
 		return localX >= RuntimeFootprintMin.X && localX <= RuntimeFootprintMax.X &&
 		       localZ >= RuntimeFootprintMin.Z && localZ <= RuntimeFootprintMax.Z;
+	}
+
+	/// <summary>
+	/// Tree density at an atlas point outside this site's exact footprint. A
+	/// smooth rectangular-distance falloff avoids replacing the site's authored
+	/// boundary with a second visible vegetation boundary.
+	/// </summary>
+	public float SurroundingTreeDensityAtGlobal(int x, int z)
+	{
+		if (SurroundingTreeThinningRadius <= 0 || SurroundingTreeDensity >= 1f)
+			return 1f;
+		(float localX, float localZ) = ToLocalRuntime(x, z);
+		PlanPoint min = RuntimeFootprintMin, max = RuntimeFootprintMax;
+		float dx = MathF.Max(MathF.Max(min.X - localX, 0f), localX - max.X);
+		float dz = MathF.Max(MathF.Max(min.Z - localZ, 0f), localZ - max.Z);
+		float distance = MathF.Sqrt(dx * dx + dz * dz);
+		if (distance >= SurroundingTreeThinningRadius) return 1f;
+		return Rng.Lerp(SurroundingTreeDensity, 1f,
+			Rng.Smoothstep(0f, SurroundingTreeThinningRadius, distance));
+	}
+
+	private (float x, float z) ToLocalRuntime(int globalX, int globalZ)
+	{
+		float radians = AxisDegrees * MathF.PI / 180f;
+		float cos = MathF.Cos(radians), sin = MathF.Sin(radians);
+		float dx = globalX - Origin.X, dz = globalZ - Origin.Z;
+		return (dx * cos - dz * sin, dx * sin + dz * cos);
 	}
 
 	[JsonIgnore]

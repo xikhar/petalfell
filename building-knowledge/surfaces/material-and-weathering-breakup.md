@@ -3,8 +3,9 @@
 - **Lifecycle:** `active`
 - **Evidence summary:** the material path and production-snow pattern/detail
   ownership are `mechanically verified`; Reference 10's current placement is
-  `visually reviewed` but not `author-accepted`; the changed snow result has not
-  yet been visually reviewed
+  `visually reviewed` but not `author-accepted`; Reference 12's broad authored
+  ground wear is `visually reviewed` at locked/far scale; the changed snow result
+  has not yet been visually reviewed
 - **Scope:** existing voxel material path is `general`; exact palette placement
   is `site-specific`
 - **Last verified:** 2026-08-30 mechanically for the production-snow path;
@@ -35,6 +36,7 @@ damage, moss islands, or architectural courses.
 | Fine pattern is world-space and fades from 40 to 130 world units, so far-read breakup must be authored at block scale | `mechanically verified` | general/tool-specific | `voxel.gdshader` pattern projection and fade uniforms | Runtime grade/fog/light can alter perceived contrast |
 | Production snow separates fading close crust from a persistent low-frequency world-XZ drift, and physical traces/stones are admitted by broad deterministic fields rather than an atlas-wide per-cell scatter | `mechanically verified` | tool-specific | `Palette.PatternSnow`, the bounded 30–90 m snow branch in `voxel.gdshader`, and the 72/96-block fields plus support test in `GroundDetail.BuildAtlas`; `dotnet build --no-restore`, `git diff --check`, and headless Godot editor import passed 2026-08-30 | No current capture has been inspected for contrast, trace density, edge popping, or shimmer; these values remain visually provisional |
 | Explicit paving islands and vertical stone accents remain visible across Reference 10 review distances | `visually reviewed` | site-specific | v11 close/play/wide/far day matrix and `reference_match_night.png` inspected 2026-08-30 | Current result is cleaner and less nuanced than the source; not accepted |
+| Sixteen exact warm/cool/moss/worn groups remain legible across Reference 12's expanded central and outer slab field without moving any terrain edge | `visually reviewed` | Reference 12 site-specific | `/home/shikhar/godot/shots/reference-12-v25-legs-1_5x/reference_match_day.png` and `site_far_r0.png`, inspected 2026-08-31 | The current contrast is restrained and whole-site material parity remains open |
 
 ## Procedure
 

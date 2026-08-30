@@ -6,6 +6,8 @@
   "groundPlanPath": "res://content/chapter_01/sites/fallen-colossus-reference-12-plan.json",
   "origin": { "x": 10600, "z": 4600 },
   "axisDegrees": 0,
+  "surroundingTreeThinningRadius": 140,
+  "surroundingTreeDensity": 0.22,
   "footprintMin": { "x": -80, "z": -60 },
   "footprintMax": { "x": 80, "z": 60 },
   "playerSpawn": { "x": -25, "z": 22 },

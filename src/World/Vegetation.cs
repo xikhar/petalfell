@@ -98,10 +98,25 @@ public static class Vegetation
 
 			int i = z * S + x;
 			if (terrain.Land[i] == 0) continue;
+			float siteTreeDensity = 1f;
 			if (terrain.Plan.AtlasGuide != null &&
-			    terrain.Plan.Definition.CanonicalAtlas?.Topology?.Sites.Exists(site =>
-				    site.RunsInProduction && site.ReferencePlan?.ContainsGlobal(grid.OriginX + x,
-					    grid.OriginZ + z) == true) == true) continue;
+			    terrain.Plan.Definition.CanonicalAtlas?.Topology != null)
+			{
+				int globalX = grid.OriginX + x, globalZ = grid.OriginZ + z;
+				foreach (CanonicalSite site in terrain.Plan.Definition.CanonicalAtlas.Topology.Sites)
+				{
+					ReferenceSiteDefinition reference = site.ReferencePlan;
+					if (!site.RunsInProduction || reference == null) continue;
+					if (reference.ContainsGlobal(globalX, globalZ))
+					{
+						siteTreeDensity = 0f;
+						break;
+					}
+					siteTreeDensity = MathF.Min(siteTreeDensity,
+						reference.SurroundingTreeDensityAtGlobal(globalX, globalZ));
+				}
+				if (siteTreeDensity <= 0f) continue;
+			}
 			if (terrain.Plan.AtlasGuide == null &&
 			    terrain.Plan.Definition.ReservesNaturalDetail(x / (float)S, z / (float)S, 5f / S)) continue;
 			// The kit yard (a review fixture) keeps its sightlines clear.
@@ -172,7 +187,7 @@ public static class Vegetation
 			float gx = terrain.Grid.OriginX + x, gz = terrain.Grid.OriginZ + z;
 			float dens = nGrove.Fbm01(gx * 0.035f, gz * 0.035f, 3);
 			dens = MathF.Min(dens, 0.55f) * flora.Density;
-			if (!rng.Chance(dens * 0.36f)) continue;
+			if (!rng.Chance(dens * 0.36f * siteTreeDensity)) continue;
 
 			float scale = rng.Range(flora.ScaleLo, flora.ScaleHi);
 			// Hue varies only *within* the biome's palette, so neighbouring

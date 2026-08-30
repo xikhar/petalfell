@@ -3,12 +3,12 @@
 - **Lifecycle:** `active`
 - **Evidence summary:** author-supplied GLB cleanup, bottom-centred placement,
   baked-material replacement, world-space stone, inverted-hull silhouette ink
-  and compound collision are `mechanically verified`; the Reference 12 v21
+  and compound collision are `mechanically verified`; the Reference 12 v25
   application is `visually reviewed`; broader reference-family use remains a
   `candidate`
 - **Scope:** `site-specific` evidence for Reference 12; candidate low-level
   method for future statuary, collapsed diagonals and carved monumental forms
-- **Last verified:** 2026-08-31 with passing build/audit and inspected v21 capture
+- **Last verified:** 2026-08-31 with passing build/audit and inspected v25 locked/far captures
 - **Supersedes:** the rejected all-integer sculpture and the provisional
   hand-authored fractional-cuboid Blender sculpture
 - **Superseded by:** none
@@ -52,7 +52,7 @@ part dimensions, transforms, damage and silhouette.
 |---|---|---|---|---|
 | Fine geometry is attached in initial production play and both map/walking window replacements | `mechanically verified` | tool-specific | `Reference12SculptureDetail.cs`, `AtlasSectorReview.AttachFineSiteGeometry`, passing `dotnet build --no-restore`, 2026-08-31 | Live player-controlled handoff still needs review |
 | Meshy calibration cubes, low image-floor components and baked materials are absent from the normalized head/legs assets | `mechanically verified` | import-specific | `tools/prepare_meshy_fallen_colossus.py`; head source `2abd6a29…`, legs source `0820092a…`; successful Godot reimport, 2026-08-31 | A differently generated asset needs new measured cutoffs |
-| Petalfell stone and a 0.009-unit silhouette outline preserve the imported facial/crown and anatomical leg geometry over a massive site-owned voxel foundation; the legs face the source-forward axis at yaw 0 | `visually reviewed` | site-specific | `/home/shikhar/godot/shots/reference-12-v21-meshy/reference_match_day.png`, inspected at original size 2026-08-31 | Night response and hidden rotations still need author review |
+| Petalfell stone and a 0.009-unit silhouette outline preserve the imported facial/crown and anatomical leg geometry over a massive site-owned voxel foundation; the legs face the source-forward axis at yaw 0 and use 1.5× their first imported review scale with matching collision | `visually reviewed` | site-specific | `/home/shikhar/godot/shots/reference-12-v25-legs-1_5x/reference_match_day.png` and `site_far_r0.png`, inspected at original size 2026-08-31 | Night response, hidden rotations and live collision still need author review |
 | Hybrid sculpture is suitable for every future reference | `candidate` | reference-family | Reference 12 proves one statuary case | Needs a second distinct reference and collision/play review |
 
 ## Checks
@@ -78,6 +78,9 @@ part dimensions, transforms, damage and silhouette.
   introduced rectangular bases. The normalizer strips both; runtime owns stone.
 - **Meshy debris/pillars around the subjects:** explicitly removed from the
   current blockout at the author's request. The unused source is not placed.
+- **Uniform 2× leg scaling:** rendered in v24 but corrected by the author before
+  acceptance. The current legs and compound collision are 1.5×; the enlarged
+  voxel support remains because it reads as intentional monument footing.
 
 ## Update triggers
 
