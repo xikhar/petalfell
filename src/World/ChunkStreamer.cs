@@ -30,6 +30,7 @@ public partial class ChunkStreamer : Node3D
 
 	private VoxelGrid _grid;
 	private Terrain _terrain;
+	private AtlasSectorWindow _atlasWindow;
 	private ShaderMaterial _voxelMat;
 	private ShaderMaterial _inkLight;
 	private ShaderMaterial _inkDark;
@@ -48,8 +49,8 @@ public partial class ChunkStreamer : Node3D
 	public void Setup(Terrain terrain, ShaderMaterial voxel, ShaderMaterial inkLight,
 		ShaderMaterial inkDark, ShaderMaterial detail, ShaderMaterial waterDetail)
 	{
-		_terrain = terrain;
 		Setup(terrain.Grid, voxel, inkLight, inkDark, buildCollision: true);
+		_terrain = terrain;
 		_voxelMat = voxel;
 		_inkLight = inkLight;
 		_inkDark = inkDark;
@@ -58,19 +59,35 @@ public partial class ChunkStreamer : Node3D
 	}
 
 	/// <summary>
-	/// Review a compiled atlas window without constructing the legacy whole-map
-	/// Terrain graph. Ground detail and gameplay collision are deliberately absent
-	/// until their production compilers exist; the voxel surface and ink are the
-	/// same meshes used by the game.
+	/// Review a compiled voxel window without constructing the legacy whole-map
+	/// Terrain graph. Call the atlas overload when the compiled source fields are
+	/// available and should drive biome ground detail.
 	/// </summary>
 	public void Setup(VoxelGrid grid, ShaderMaterial voxel, ShaderMaterial inkLight,
 		ShaderMaterial inkDark, bool buildCollision = false)
 	{
 		_grid = grid;
+		_terrain = null;
+		_atlasWindow = null;
 		_voxelMat = voxel;
 		_inkLight = inkLight;
 		_inkDark = inkDark;
 		_buildCollision = buildCollision;
+	}
+
+	/// <summary>
+	/// Stream a production atlas window through the ordinary voxel, ink and
+	/// detail materials. The atlas remains the source of biome and water intent;
+	/// no legacy continent-sized Terrain allocation is introduced.
+	/// </summary>
+	public void Setup(AtlasSectorWindow window, ShaderMaterial voxel, ShaderMaterial inkLight,
+		ShaderMaterial inkDark, ShaderMaterial detail, ShaderMaterial waterDetail,
+		bool buildCollision = false)
+	{
+		Setup(window.Grid, voxel, inkLight, inkDark, buildCollision);
+		_atlasWindow = window;
+		_detailMat = detail;
+		_waterDetailMat = waterDetail;
 	}
 
 	private static long Key(int ci, int ck) => ((long)(ci + 4096) << 20) | (uint)(ck + 4096);
@@ -188,7 +205,9 @@ public partial class ChunkStreamer : Node3D
 		// Ground detail. Tufts, flowers and pebbles are what make a shelf read as
 		// made rather than as fill, and one merged mesh per chunk makes them the
 		// cheapest life in the world.
-		var detail = _terrain == null ? null : GroundDetail.Build(_terrain, ci, ck);
+		var detail = _terrain != null
+			? GroundDetail.Build(_terrain, ci, ck)
+			: _atlasWindow != null ? GroundDetail.BuildAtlas(_atlasWindow, ci, ck) : null;
 		if (detail != null)
 		{
 			root.AddChild(new MeshInstance3D
@@ -199,7 +218,9 @@ public partial class ChunkStreamer : Node3D
 			});
 		}
 
-		var floating = _terrain == null ? null : GroundDetail.BuildWater(_terrain, ci, ck);
+		var floating = _terrain != null
+			? GroundDetail.BuildWater(_terrain, ci, ck)
+			: _atlasWindow != null ? GroundDetail.BuildAtlasWater(_atlasWindow, ci, ck) : null;
 		if (floating != null)
 		{
 			root.AddChild(new MeshInstance3D

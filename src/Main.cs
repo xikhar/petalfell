@@ -71,7 +71,11 @@ public partial class Main : Node3D
 		// not been registered fails to compile.
 		DayCycle.RegisterGlobals();
 		SetupInput();
-		if (Tools.AtlasSectorReview.TryRun(this, MapDefinitionPath))
+		// The production atlas is now the game, not an authoring side path. During
+		// the first reconstruction milestone it starts at the one site under visual
+		// acceptance; --legacy-world keeps the retired 3,456 fixture available only
+		// for low-level regression checks.
+		if (Tools.AtlasSectorReview.TryRun(this, MapDefinitionPath, "bloom-grove-court"))
 		{
 			_authoringMode = true;
 			return;

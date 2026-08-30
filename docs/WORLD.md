@@ -260,8 +260,9 @@ what its regional bias should be.
 ## 6. How sites are allocated
 
 This is the seam between this document and the rest of the project. **The story
-layer decides which kind of site goes where and how old and how large it is. It
-does not decide how any of them are built.**
+layer assigns each supplied reference reconstruction to compatible atlas terrain
+and connects it to the journey graph. It does not redesign, combine or resize the
+visible composition independently of that source image.**
 
 The allocation rule is the gradient of §2 expressed as parameters:
 
@@ -270,7 +271,7 @@ The allocation rule is the gradient of §2 expressed as parameters:
 | **Scale** | Largest in the south, smallest in the north. |
 | **Age** | Oldest in the south, newest in the north. |
 | **Reclamation** | Heaviest in the wet south and fen, lightest on the scarp and above the snowline. |
-| **Archetype** | Sacred/monumental south · trace/preserved south-west · working/unfinished stone belt · grove/water east · small/maintained north · junction/inexplicable centre. |
+| **Reference fit** | Water/cliff references go to matching hydrology and relief; snow references above the snowline; grove/open-plain references to matching biome profiles. Placement follows visible environmental evidence in the image. |
 | **Culture** | See §7. |
 | **Population** | Effectively zero except in the north, and rare there. |
 

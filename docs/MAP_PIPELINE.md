@@ -9,6 +9,12 @@
 > how structures are composed ([RUINS.md](RUINS.md)).
 >
 > Read [AGENTS.md](../AGENTS.md) first if you have not.
+>
+> The evidence-labelled operational methods for measuring, planning, building
+> and reviewing reference sites live in
+> [`building-knowledge/`](../building-knowledge/README.md). This document owns
+> data boundaries and iteration order; use the handbook for procedures and
+> update/supersession rules.
 
 ---
 
@@ -72,13 +78,21 @@ at each, which is the whole reason to name them.
 | **L0** | Continent | Landmass silhouette, ranges, watersheds, sea level | Fully, as registered coarse images |
 | **L1** | Regions | Biome/build profile, climate, snowline, abandonment, wilderness bias, **culture** | Fully, as registered coarse images and profile records |
 | **L2** | Topology | Domains, named sites, absolute positions, extents, entrances, sightlines and route graph | Fully |
-| **L3** | Site plan | Precincts, axes, platform polygons, levels, stairs, walls and major part placement | Authored for remembered places; assisted for repetition and minor marks |
-| **L4** | Kit | The geometry of each part | Authored once, reused everywhere |
+| **L3** | Site plan | Measured transcription of one named structural reference: footprint, levels, entrances, sightline and all visible major masses | Authored uniquely per reconstruction; only minimum hidden continuations are inferred |
+| **L4** | Blocks | Site-owned voxel runs for every visible stair, wall, arch, pillar, break, rubble mass and vegetation exclusion | Authored uniquely; no shared architectural generator inside the footprint |
 
-The thing to hold onto: **the author's control is total at L0–L3 wherever a
-player is expected to remember the result.** Machines at L3 repeat ranges,
-resolve fitted terrain, apply coherent damage and dress detail; they do not
-choose the composition. L4 is a library.
+The thing to hold onto: **the author's control is total at L0–L4 wherever a
+player is expected to remember the result.** For supplied-reference sites,
+machines only materialise explicit site-owned voxel data. They do not repeat
+architectural ranges, fit stairs, generate damage or dress the measured
+footprint.
+
+For the current phase, “authored” at L3 does not mean free composition. The
+author has selected direct reconstruction: every production plan names one
+`world-new/reference-*.png` and transcribes its visible composition. L2 may
+rotate and place the whole reconstruction to fit compatible atlas terrain; it
+may not merge several references into a new site. Outside measured footprints,
+only normal deterministic biome/elevation/hydrology terrain is built.
 
 L1 is where [WORLD.md](WORLD.md) attaches. L3 and L4 are where
 [RUINS.md](RUINS.md) attaches. This file owns the plumbing between them.
@@ -95,9 +109,10 @@ The single most important structural rule in the pipeline:
 Authored artifacts are the source of truth, live in version control as text or
 images, and are the only thing a human touches. Derived artifacts are a pure
 function of the authored ones plus explicitly scoped dressing seeds, are
-regenerable at any time, and are disposable. A seed may vary trees, rubble or a
-repeated colonnade within authored limits; it may not move a site, reroute a
-major road or choose a hero composition.
+regenerable at any time, and are disposable. A seed may vary ordinary
+wilderness outside a measured site; it may not vary trees, rubble, paving,
+damage or architecture inside a supplied-reference footprint, move a site,
+reroute a major road or choose a hero composition.
 
 If those ever mix — if the generator writes back into an authored file, or a
 human patches a derived one — the map stops being reproducible and the canonical
@@ -140,17 +155,19 @@ content/chapter_01/
   world.json        3,456-square runtime topology fixture                (legacy review)
   continent/        registered land/elevation/water/region fields       (L0/L1 images)
   domains/<id>.json connected platforms, levels, walls and silhouettes  (L3)
-  sites/<id>.json   optional later refinement below a domain plan        (L3)
-  kit/              part sources and socket metadata                    (L4)
+  sites/<id>.json   reference, atlas pairing and locked review metadata  (L3)
+  sites/<id>-plan.json exact terrain, surfaces and block projections     (L3/L4)
   derived/          disposable sector output; never hand-edited
 ```
 
 The atlas is 12,288 × 9,216 blocks while the current runtime fixture is 3,456
 square. `topology.json` is the permanent rectangular source and `atlas.json`
-registers it through `topologyPath`. `world.json` remains only the review-runtime
-fixture until production sectors can compile routes and sites. The two are never
-scaled into one another at load time, because that would make supposedly absolute
-coordinates depend on a runtime setting.
+registers it through `topologyPath`. `world.json` now belongs only to opt-in
+legacy diagnostics. Normal startup composes the fixed production sectors around
+the active site, but route/site/navigation results are not yet persisted into
+sector artifacts. The two coordinate systems are never scaled into one another
+at load time, because that would make supposedly absolute coordinates depend on
+a runtime setting.
 
 A site record carries a stable id and display name; absolute block position and
 orientation; extent; domain, tier and archetype; culture and age; named
@@ -190,15 +207,22 @@ rather than late.**
 
 The loop that matters:
 
-1. Change an authored record or paint a registered layer.
-2. Audit the atlas registration, biome/profile references and topology.
-3. Preview the whole atlas, sector grid and authored graph.
-4. Regenerate *only the affected sectors*, including deterministic seam aprons.
-5. See the affected domain in the actual game render, at the actual scale, under
+1. For reference-site work, read the relevant evidence-scoped methods and site
+   ledger in [`building-knowledge/`](../building-knowledge/README.md), then
+   inspect the live source and current captures.
+2. Change an authored record or paint a registered layer.
+3. Audit the atlas registration, biome/profile references and topology.
+4. Preview the whole atlas, sector grid and authored graph.
+5. Regenerate *only the affected sectors, site or review window*, including
+   deterministic seam aprons.
+6. See the affected domain or site in the actual game render, at the actual scale, under
    the actual lighting.
-6. Adjust the authored plan; optionally regenerate only its subordinate detail.
+7. Adjust the authored plan; optionally regenerate only its subordinate detail.
+8. When the work produces a repeatable success, stronger check, scope limit or
+   corrected failure, update or supersede the owning building-knowledge entry
+   with the exact evidence inspected in this session.
 
-Step 5 is not negotiable. **Scale can only be judged in the game.** A layout that
+Step 6 is not negotiable. **Scale can only be judged in the game.** A layout that
 looks right in a top-down editor routinely reads as either toy-sized or
 incomprehensibly vast when you stand in it, and the entire reason this direction
 exists is that the previous ruins were an order of magnitude too small without
@@ -240,15 +264,12 @@ menu, teleport and chunk streaming are all already there.
 - **L2 a text record with map and in-game views** — position and orient a site,
   name its entrances, and draw the routes between graph nodes. Every tool writes
   an *authored record* (§3).
-- **L3 authored plans with procedural assistants** — hero districts and
-  precincts own their platform polygons, level hierarchy, walls, stairs and
-  major silhouettes. The first domain plan is currently text plus an immediate
-  terrain-backed SVG; an in-game manipulation surface remains future work.
-  Assistants repeat parametric parts, conform terrain and apply dressing without
-  changing the plan.
-- **L4 Blender**, eventually. Not yet — see [RUINS.md](RUINS.md) §7: the part kit
-  is achievable in voxels today and the reference images prove it, so the
-  composition layer can be built and judged before any asset pipeline exists.
+- **L3/L4 explicit site blueprints** — supplied-reference sites own their
+  terrain silhouette plus direct voxel runs for every visible architectural and
+  decay mass. The first acceptance target is `reference-10`; the old generic
+  domain compiler remains diagnostic only.
+- **L4 Blender**, eventually, for content not already being transcribed as voxel
+  reference sites. It does not replace or simplify the current explicit pass.
 
 ---
 
@@ -288,14 +309,16 @@ production coordinates. The strict atlas audit now validates the permanent
 the topology preview draws domains, site envelopes, routes and affected sector
 addresses directly over the accepted elevation, water and region sources. The
 first southern gateway domain is permanently placed at the central delta
-threshold. Its first L3 domain plan fixes seven platform polygons at Y106/108/
-112/116, four named platform cutouts, three stairs, ten connective wall runs,
-eight exact route sockets and thirty-nine scale-checked silhouette placements.
+threshold. Its L3/L4 domain plan fixes seven platform polygons at Y106/108/
+114/122, four named platform cutouts, three stairs, sixteen connective wall runs,
+eight exact route sockets, forty-five scale-checked silhouette placements and
+fourteen coherent surface-treatment envelopes.
 The terrain-backed domain preview shows those records over the accepted delta
 shelf and water. A review compiler now composes the nine affected sector
 artifacts, realises the exact L2/L3 records as terrain-backed voxel geometry and
-applies globally deterministic paving-edge, reclamation and biome-vegetation
-assistants within the authored densities. Fixed late-morning and night captures
+applies globally deterministic paving-edge, surface-damage, reclamation,
+ground-detail and biome-vegetation assistants within the authored densities.
+Fixed late-morning and early-full-night captures
 use the ordinary game lighting and atmosphere at all four review distances. The
 authored sources remain untouched. The old source overlay and authored-route
 playable runtime still consume `world.json` only.
@@ -312,9 +335,14 @@ terrain, ink, atmosphere, grade and water paths without allocating the
 continent.
 Canonical runtime mode no longer runs the procedural
 settlement/significant-landmark searches or the summit-seeking sanctum fixture.
-Culture, abandonment, the authored wilderness density source, player traversal
-of production sectors, the remaining 26–56 site envelopes and continent-scale
-road graph, persistent per-sector structure/navigation output, reference-grade
-realisation of the first L3 plan, and all later domain plans remain unbuilt. See
+The current southern plan is a superseded multi-reference tooling fixture; it is
+not production content under the reconstruction contract above. The active
+Reference 10 site has a strict source-facing v2 plan, explicit one-cell-per-voxel
+runtime parity, source/runtime SVG previews, a locked isometric/top capture rig,
+and collision-enabled player traversal inside its fixed four-sector normal-start
+mosaic. Culture, abandonment, the authored wilderness density source, dynamic
+mosaic handoff, the remaining 26–56 site envelopes and continent-scale road
+graph, persistent per-sector structure/navigation output, author-accepted
+realisation of the first L3/L4 plan, and all later site plans remain unbuilt. See
 [ROADMAP.md](ROADMAP.md) §3
 and [CURRENT_STATE.md](../CURRENT_STATE.md) §8.

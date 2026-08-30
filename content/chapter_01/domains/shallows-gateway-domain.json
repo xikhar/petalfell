@@ -1,6 +1,8 @@
 {
   "version": 1,
   "domainId": "shallows-gateway-domain",
+  "sourceMode": "ToolingFixture",
+  "reconstructionReferencePath": "",
   "origin": { "x": 6400, "z": 6500 },
   "axisDegrees": 180,
   "referencePaths": [
@@ -38,32 +40,113 @@
             { "x": 66, "z": -58 }, { "x": 50, "z": -102 }
           ]
         }
+      ],
+      "surfacePatches": [
+        {
+          "id": "forecourt-west-earth-cap", "role": "ReclaimedEarth",
+          "materialId": "reclaimed-sand", "coverage": 0.86, "wavelength": 62,
+          "polygon": [
+            { "x": -145, "z": -150 }, { "x": -42, "z": -150 },
+            { "x": -34, "z": -72 }, { "x": -58, "z": -24 },
+            { "x": -142, "z": -32 }
+          ]
+        },
+        {
+          "id": "forecourt-east-earth-cap", "role": "ReclaimedEarth",
+          "materialId": "reclaimed-moss", "coverage": 0.74, "wavelength": 58,
+          "polygon": [
+            { "x": 38, "z": -150 }, { "x": 144, "z": -148 },
+            { "x": 142, "z": -34 }, { "x": 62, "z": -24 },
+            { "x": 34, "z": -78 }
+          ]
+        },
+        {
+          "id": "forecourt-west-broken-paving", "role": "BrokenPaving",
+          "materialId": "weathered-stone", "coverage": 0.66, "wavelength": 38,
+          "polygon": [
+            { "x": -88, "z": -112 }, { "x": -22, "z": -112 },
+            { "x": -22, "z": -18 }, { "x": -82, "z": -18 }
+          ]
+        },
+        {
+          "id": "forecourt-east-broken-paving", "role": "BrokenPaving",
+          "materialId": "weathered-stone", "coverage": 0.58, "wavelength": 42,
+          "polygon": [
+            { "x": 24, "z": -116 }, { "x": 96, "z": -110 },
+            { "x": 88, "z": -18 }, { "x": 24, "z": -18 }
+          ]
+        },
+        {
+          "id": "forecourt-collapse-debris", "role": "RubbleField",
+          "materialId": "collapse-rubble", "coverage": 0.62, "wavelength": 44,
+          "polygon": [
+            { "x": 54, "z": -148 }, { "x": 142, "z": -138 },
+            { "x": 142, "z": -40 }, { "x": 72, "z": -34 },
+            { "x": 44, "z": -84 }
+          ]
+        }
       ]
     },
     {
       "id": "gate-upper-court",
       "siteId": "shallows-monumental-gate",
       "role": "Deck",
-      "surfaceY": 112,
+      "surfaceY": 114,
       "materialId": "stone-pale-terraced",
       "edgeTreatment": "Revetment",
       "reclamation": 0.22,
       "polygon": [
         { "x": -120, "z": 20 }, { "x": 120, "z": 20 },
         { "x": 120, "z": 120 }, { "x": -120, "z": 120 }
+      ],
+      "surfacePatches": [
+        {
+          "id": "upper-west-earth-cap", "role": "ReclaimedEarth",
+          "materialId": "reclaimed-sand", "coverage": 0.68, "wavelength": 56,
+          "polygon": [
+            { "x": -114, "z": 26 }, { "x": -36, "z": 26 },
+            { "x": -42, "z": 102 }, { "x": -112, "z": 112 }
+          ]
+        },
+        {
+          "id": "upper-east-broken-paving", "role": "BrokenPaving",
+          "materialId": "weathered-stone", "coverage": 0.62, "wavelength": 36,
+          "polygon": [
+            { "x": 34, "z": 28 }, { "x": 114, "z": 28 },
+            { "x": 110, "z": 112 }, { "x": 46, "z": 104 }
+          ]
+        },
+        {
+          "id": "upper-wing-collapse-debris", "role": "RubbleField",
+          "materialId": "collapse-rubble", "coverage": 0.54, "wavelength": 34,
+          "polygon": [
+            { "x": -112, "z": 86 }, { "x": 112, "z": 86 },
+            { "x": 112, "z": 116 }, { "x": -112, "z": 116 }
+          ]
+        }
       ]
     },
     {
       "id": "gate-crown",
       "siteId": "shallows-monumental-gate",
       "role": "Slab",
-      "surfaceY": 116,
+      "surfaceY": 122,
       "materialId": "stone-pale-bedded",
       "edgeTreatment": "Revetment",
       "reclamation": 0.12,
       "polygon": [
         { "x": -85, "z": 120 }, { "x": 85, "z": 120 },
         { "x": 85, "z": 160 }, { "x": -85, "z": 160 }
+      ],
+      "surfacePatches": [
+        {
+          "id": "crown-weathered-floor", "role": "BrokenPaving",
+          "materialId": "weathered-stone", "coverage": 0.48, "wavelength": 30,
+          "polygon": [
+            { "x": -78, "z": 124 }, { "x": 78, "z": 124 },
+            { "x": 78, "z": 157 }, { "x": -78, "z": 157 }
+          ]
+        }
       ]
     },
     {
@@ -108,6 +191,24 @@
             { "x": 432, "z": -86 }
           ]
         }
+      ],
+      "surfacePatches": [
+        {
+          "id": "lower-deck-earth-cap", "role": "ReclaimedEarth",
+          "materialId": "reclaimed-moss", "coverage": 0.82, "wavelength": 70,
+          "polygon": [
+            { "x": 282, "z": -152 }, { "x": 516, "z": -152 },
+            { "x": 514, "z": -58 }, { "x": 286, "z": -62 }
+          ]
+        },
+        {
+          "id": "lower-collapse-debris", "role": "RubbleField",
+          "materialId": "collapse-rubble", "coverage": 0.68, "wavelength": 46,
+          "polygon": [
+            { "x": 284, "z": -150 }, { "x": 386, "z": -150 },
+            { "x": 390, "z": -66 }, { "x": 286, "z": -72 }
+          ]
+        }
       ]
     },
     {
@@ -121,6 +222,16 @@
       "polygon": [
         { "x": 320, "z": -90 }, { "x": 480, "z": -90 },
         { "x": 480, "z": 50 }, { "x": 320, "z": 50 }
+      ],
+      "surfacePatches": [
+        {
+          "id": "lower-court-weathering", "role": "BrokenPaving",
+          "materialId": "weathered-stone", "coverage": 0.70, "wavelength": 48,
+          "polygon": [
+            { "x": 326, "z": -84 }, { "x": 474, "z": -84 },
+            { "x": 474, "z": 44 }, { "x": 326, "z": 44 }
+          ]
+        }
       ]
     },
     {
@@ -134,6 +245,24 @@
       "polygon": [
         { "x": -460, "z": -70 }, { "x": -340, "z": -70 },
         { "x": -340, "z": 70 }, { "x": -460, "z": 70 }
+      ],
+      "surfacePatches": [
+        {
+          "id": "stela-field-earth-cap", "role": "ReclaimedEarth",
+          "materialId": "reclaimed-sand", "coverage": 0.90, "wavelength": 74,
+          "polygon": [
+            { "x": -454, "z": -64 }, { "x": -346, "z": -64 },
+            { "x": -346, "z": 64 }, { "x": -454, "z": 64 }
+          ]
+        },
+        {
+          "id": "stela-field-rubble", "role": "RubbleField",
+          "materialId": "collapse-rubble", "coverage": 0.46, "wavelength": 38,
+          "polygon": [
+            { "x": -450, "z": -58 }, { "x": -350, "z": -58 },
+            { "x": -350, "z": 58 }, { "x": -450, "z": 58 }
+          ]
+        }
       ]
     }
   ],
@@ -173,8 +302,8 @@
     {
       "id": "monumental-gate-west-wing",
       "siteId": "shallows-monumental-gate",
-      "points": [ { "x": -125, "z": 108 }, { "x": -18, "z": 108 } ],
-      "height": 28,
+      "points": [ { "x": -82, "z": 134 }, { "x": -18, "z": 134 } ],
+      "height": 20,
       "state": "Broken",
       "materialId": "stone-pale-bedded",
       "openingSocketIds": []
@@ -182,8 +311,8 @@
     {
       "id": "monumental-gate-east-wing",
       "siteId": "shallows-monumental-gate",
-      "points": [ { "x": 18, "z": 108 }, { "x": 125, "z": 108 } ],
-      "height": 28,
+      "points": [ { "x": 18, "z": 134 }, { "x": 82, "z": 134 } ],
+      "height": 20,
       "state": "Broken",
       "materialId": "stone-pale-bedded",
       "openingSocketIds": []
@@ -263,6 +392,78 @@
       "state": "Stub",
       "materialId": "stone-pale-bedded",
       "openingSocketIds": []
+    },
+    {
+      "id": "forecourt-west-foundation-trace",
+      "siteId": "shallows-monumental-gate",
+      "points": [
+        { "x": -136, "z": -122 }, { "x": -106, "z": -122 },
+        { "x": -106, "z": -36 }, { "x": -66, "z": -36 }
+      ],
+      "height": 1,
+      "state": "Trace",
+      "materialId": "stone-pale-terraced",
+      "openingSocketIds": []
+    },
+    {
+      "id": "forecourt-east-foundation-trace",
+      "siteId": "shallows-monumental-gate",
+      "points": [
+        { "x": 136, "z": -118 }, { "x": 106, "z": -118 },
+        { "x": 106, "z": -34 }, { "x": 68, "z": -34 }
+      ],
+      "height": 1,
+      "state": "Trace",
+      "materialId": "stone-pale-terraced",
+      "openingSocketIds": []
+    },
+    {
+      "id": "upper-west-foundation-trace",
+      "siteId": "shallows-monumental-gate",
+      "points": [
+        { "x": -112, "z": 40 }, { "x": -70, "z": 40 },
+        { "x": -70, "z": 94 }, { "x": -112, "z": 94 }
+      ],
+      "height": 1,
+      "state": "Trace",
+      "materialId": "stone-pale-bedded",
+      "openingSocketIds": []
+    },
+    {
+      "id": "upper-east-foundation-trace",
+      "siteId": "shallows-monumental-gate",
+      "points": [
+        { "x": 112, "z": 42 }, { "x": 72, "z": 42 },
+        { "x": 72, "z": 94 }, { "x": 112, "z": 94 }
+      ],
+      "height": 1,
+      "state": "Trace",
+      "materialId": "stone-pale-bedded",
+      "openingSocketIds": []
+    },
+    {
+      "id": "lower-court-foundation-trace",
+      "siteId": "shallows-lower-precinct",
+      "points": [
+        { "x": 330, "z": -72 }, { "x": 370, "z": -72 },
+        { "x": 370, "z": 34 }, { "x": 330, "z": 34 }
+      ],
+      "height": 1,
+      "state": "Trace",
+      "materialId": "stone-pale-terraced",
+      "openingSocketIds": []
+    },
+    {
+      "id": "stela-field-boundary-trace",
+      "siteId": "shallows-stela-field",
+      "points": [
+        { "x": -450, "z": -58 }, { "x": -350, "z": -58 },
+        { "x": -350, "z": 54 }
+      ],
+      "height": 1,
+      "state": "Trace",
+      "materialId": "stone-pale-bedded",
+      "openingSocketIds": []
     }
   ],
   "routeSockets": [
@@ -279,8 +480,8 @@
     {
       "id": "gate-hero-arch", "siteId": "shallows-monumental-gate",
       "platformId": "gate-crown", "kind": "Arch", "state": "Broken",
-      "point": { "x": 0, "z": 140 }, "orientationDegrees": 180,
-      "height": 28, "span": 14
+      "point": { "x": 0, "z": 144 }, "orientationDegrees": 180,
+      "height": 30, "span": 16
     },
     {
       "id": "gate-west-pylon", "siteId": "shallows-monumental-gate",
@@ -509,6 +710,42 @@
       "platformId": "causeway-deck", "kind": "Pylon", "state": "Broken",
       "point": { "x": -36, "z": -454 }, "orientationDegrees": 180,
       "height": 15
+    },
+    {
+      "id": "gate-hero-west-tower", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-crown", "kind": "Pylon", "state": "Standing",
+      "point": { "x": 26, "z": 144 }, "orientationDegrees": 180,
+      "height": 25
+    },
+    {
+      "id": "gate-hero-east-tower", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-crown", "kind": "Pylon", "state": "Broken",
+      "point": { "x": -26, "z": 144 }, "orientationDegrees": 180,
+      "height": 23
+    },
+    {
+      "id": "gate-processional-west-column", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-upper-court", "kind": "Column", "state": "Standing",
+      "point": { "x": 48, "z": 38 }, "orientationDegrees": 180,
+      "height": 23
+    },
+    {
+      "id": "gate-processional-east-column", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-upper-court", "kind": "Column", "state": "Broken",
+      "point": { "x": -48, "z": 40 }, "orientationDegrees": 180,
+      "height": 20
+    },
+    {
+      "id": "gate-forecourt-west-column", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-forecourt", "kind": "Column", "state": "Broken",
+      "point": { "x": 52, "z": -18 }, "orientationDegrees": 180,
+      "height": 18
+    },
+    {
+      "id": "gate-forecourt-east-column", "siteId": "shallows-monumental-gate",
+      "platformId": "gate-forecourt", "kind": "Column", "state": "Standing",
+      "point": { "x": -52, "z": -16 }, "orientationDegrees": 180,
+      "height": 21
     }
   ]
 }

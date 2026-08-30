@@ -15,6 +15,9 @@ public sealed class DomainPlanDefinition
 {
 	public int Version { get; set; } = 1;
 	public string DomainId { get; set; } = "";
+	public PlanSourceMode SourceMode { get; set; } = PlanSourceMode.ToolingFixture;
+	public string ReconstructionReferencePath { get; set; } = "";
+	public PlanReferenceView ReferenceView { get; set; }
 	public BlockPoint Origin { get; set; } = new();
 	public float AxisDegrees { get; set; }
 	public List<string> ReferencePaths { get; set; } = new();
@@ -41,6 +44,32 @@ public sealed class DomainPlanDefinition
 		if (ReferencePaths.Count == 0) report.Error("at least one visual reference is required");
 		foreach (string path in ReferencePaths)
 			if (!Godot.FileAccess.FileExists(path)) report.Error($"reference '{path}' does not exist");
+		if (SourceMode == PlanSourceMode.ReferenceReconstruction)
+		{
+			if (string.IsNullOrWhiteSpace(ReconstructionReferencePath))
+				report.Error("a reference reconstruction requires reconstructionReferencePath");
+			else if (!ReferencePaths.Contains(ReconstructionReferencePath, StringComparer.Ordinal))
+				report.Error("reconstructionReferencePath must also be the plan's visual reference");
+			else if (!Godot.FileAccess.FileExists(ReconstructionReferencePath))
+				report.Error($"reconstruction reference '{ReconstructionReferencePath}' does not exist");
+			if (ReferencePaths.Count != 1)
+				report.Error("a reference reconstruction must name exactly one structural reference");
+			if (ReferenceView == null)
+				report.Error("a reference reconstruction requires a locked referenceView");
+			else
+			{
+				Point(ReferenceView.Focus, "reference view focus", requireInsideDomain: false);
+				if (ReferenceView.Distance <= 0f || ReferenceView.PitchDegrees <= 0f ||
+				    ReferenceView.PitchDegrees >= 89f)
+					report.Error("referenceView needs positive distance and pitch in (0,89)");
+				if (ReferenceView.HeightOffset < 0f || ReferenceView.HeightOffset > 64f)
+					report.Error("referenceView heightOffset must be in 0–64 blocks");
+				if (ReferenceView.SourceWidth <= 0 || ReferenceView.SourceHeight <= 0)
+					report.Error("referenceView source dimensions must be positive");
+			}
+		}
+		else
+			report.Warning("plan is a tooling fixture, not production reconstruction content");
 
 		var ids = new HashSet<string>(StringComparer.Ordinal);
 		var sites = world.Sites.Where(s => s.DomainId == domain.Id)
@@ -108,12 +137,38 @@ public sealed class DomainPlanDefinition
 						report.Error($"platform cutout '{cutout.Id}' leaves platform '{platform.Id}'");
 				}
 			}
+			foreach (var patch in platform.SurfacePatches)
+			{
+				Id(patch.Id, "surface patch");
+				if (patch.Coverage <= 0f || patch.Coverage > 1f)
+					report.Error($"surface patch '{patch.Id}' coverage {patch.Coverage} must be in (0,1]");
+				if (patch.Wavelength < 12 || patch.Wavelength > 192)
+					report.Error($"surface patch '{patch.Id}' wavelength {patch.Wavelength} must be in 12–192 blocks");
+				if (string.IsNullOrWhiteSpace(patch.MaterialId))
+					report.Error($"surface patch '{patch.Id}' materialId is required");
+				if (patch.Polygon.Count < 3)
+					report.Error($"surface patch '{patch.Id}' needs at least three points");
+				else if (MathF.Abs(PolygonArea(patch.Polygon)) < 1f)
+					report.Error($"surface patch '{patch.Id}' polygon has no area");
+				foreach (var point in patch.Polygon)
+				{
+					Point(point, $"surface patch '{patch.Id}'");
+					if (!PointInLocalPolygon(point, platform.Polygon))
+						report.Error($"surface patch '{patch.Id}' leaves platform '{platform.Id}'");
+				}
+			}
 		}
 
 		if (Platforms.Select(p => p.SurfaceY).Distinct().Count() < 2)
 			report.Error("a connected domain plan needs a hierarchy of at least two platform levels");
-		foreach (string siteId in sites.Keys)
-			if (!Platforms.Any(p => p.SiteId == siteId)) report.Error($"site '{siteId}' has no authored platform");
+		if (SourceMode == PlanSourceMode.ToolingFixture)
+			foreach (string siteId in sites.Keys)
+				if (!Platforms.Any(p => p.SiteId == siteId)) report.Error($"site '{siteId}' has no authored platform");
+		else if (Platforms.Count == 0)
+			report.Error("a reference reconstruction needs at least one measured platform");
+		var activeSiteIds = Platforms.Select(p => p.SiteId)
+			.Where(id => !string.IsNullOrWhiteSpace(id))
+			.ToHashSet(StringComparer.Ordinal);
 
 		foreach (var stair in Stairs)
 		{
@@ -164,7 +219,10 @@ public sealed class DomainPlanDefinition
 				report.Error($"route socket '{socket.Id}' references missing platform '{socket.PlatformId}'");
 			Point(socket.Point, $"route socket '{socket.Id}'", false);
 		}
-		foreach (var site in sites.Values)
+		IEnumerable<CanonicalSite> socketSites = SourceMode == PlanSourceMode.ReferenceReconstruction
+			? sites.Values.Where(site => activeSiteIds.Contains(site.Id))
+			: sites.Values;
+		foreach (var site in socketSites)
 		foreach (var entrance in site.Entrances)
 			if (!socketNodes.Contains(entrance.RouteNodeId))
 				report.Error($"site entrance '{site.Id}/{entrance.Id}' has no L3 route socket for '{entrance.RouteNodeId}'");
@@ -182,7 +240,10 @@ public sealed class DomainPlanDefinition
 			ValidateLandmarkScale(landmark, report);
 		}
 
-		foreach (var site in sites.Values.Where(s => s.Tier is SiteTier.District or SiteTier.GreatWork))
+		IEnumerable<CanonicalSite> silhouetteSites = SourceMode == PlanSourceMode.ReferenceReconstruction
+			? sites.Values.Where(site => activeSiteIds.Contains(site.Id))
+			: sites.Values;
+		foreach (var site in silhouetteSites.Where(s => s.Tier is SiteTier.District or SiteTier.GreatWork))
 			if (!Landmarks.Any(l => l.SiteId == site.Id && l.Height >= 15))
 				report.Error($"{site.Tier.ToString().ToLowerInvariant()} site '{site.Id}' has no 15-block silhouette landmark");
 		return report;
@@ -202,14 +263,14 @@ public sealed class DomainPlanDefinition
 	private static void ValidateLandmarkScale(PlanLandmark landmark, WorldAuditReport report)
 	{
 		bool Range(int value, int min, int max) => value >= min && value <= max;
-		switch (landmark.Kind)
-		{
+			switch (landmark.Kind)
+			{
 			case PlanLandmarkKind.Column when !Range(landmark.Height, 15, 30):
 				report.Error($"column '{landmark.Id}' height {landmark.Height} must be 15–30"); break;
 			case PlanLandmarkKind.Arch when !Range(landmark.Height, 12, 30) || !Range(landmark.Span, 8, 16):
 				report.Error($"arch '{landmark.Id}' must be 12–30 high with an 8–16 span"); break;
-			case PlanLandmarkKind.Pylon when !Range(landmark.Height, 15, 25):
-				report.Error($"pylon '{landmark.Id}' height {landmark.Height} must be 15–25"); break;
+			case PlanLandmarkKind.Pylon when !Range(landmark.Height, 15, 32):
+				report.Error($"pylon '{landmark.Id}' height {landmark.Height} must be 15–32"); break;
 			case PlanLandmarkKind.FallenColumn when !Range(landmark.Length, 10, 30):
 				report.Error($"fallen column '{landmark.Id}' length {landmark.Length} must be 10–30"); break;
 			case PlanLandmarkKind.Colonnade when landmark.Count < 3 || !Range(landmark.Height, 15, 30):
@@ -276,6 +337,19 @@ public sealed class DomainPlanDefinition
 	}
 }
 
+public enum PlanSourceMode { ToolingFixture, ReferenceReconstruction }
+
+public sealed class PlanReferenceView
+{
+	public PlanPoint Focus { get; set; } = new();
+	public float Distance { get; set; }
+	public float YawDegrees { get; set; }
+	public float PitchDegrees { get; set; }
+	public float HeightOffset { get; set; }
+	public int SourceWidth { get; set; }
+	public int SourceHeight { get; set; }
+}
+
 public sealed class PlanPoint
 {
 	public int X { get; set; }
@@ -285,6 +359,7 @@ public sealed class PlanPoint
 public enum PlanPlatformRole { Slab, Deck, Court, Causeway, Terrace, Trace }
 public enum PlanEdgeTreatment { Revetment, PrecinctWall, Ragged, Submerged, None }
 public enum PlanCutoutRole { Terrain, Collapsed }
+public enum PlanSurfacePatchRole { ReclaimedEarth, BrokenPaving, RubbleField }
 public enum PlanStairRole { Grand, Side, Water }
 public enum PlanWallState { Standing, Broken, Stub, Trace }
 public enum PlanLandmarkKind { Column, FallenColumn, Arch, Pylon, Colonnade, Emblem, Basin }
@@ -302,6 +377,12 @@ public sealed class PlanPlatform
 	public float Reclamation { get; set; }
 	public List<PlanPoint> Polygon { get; set; } = new();
 	public List<PlanPlatformCutout> Cutouts { get; set; } = new();
+	/// <summary>
+	/// Authored L4 envelopes for the places where the platform has gone back to
+	/// earth, lost its paving or accumulated collapse. Their coherent interiors
+	/// are derived; their location and narrative role are permanent.
+	/// </summary>
+	public List<PlanSurfacePatch> SurfacePatches { get; set; } = new();
 }
 
 public sealed class PlanPlatformCutout
@@ -315,6 +396,18 @@ public sealed class PlanPlatformCutout
 	public int Depth { get; set; }
 	/// <summary>Authored density intent for deterministic growth inside the void.</summary>
 	public float Reclamation { get; set; }
+	public List<PlanPoint> Polygon { get; set; } = new();
+}
+
+public sealed class PlanSurfacePatch
+{
+	public string Id { get; set; } = "";
+	public PlanSurfacePatchRole Role { get; set; }
+	public string MaterialId { get; set; } = "";
+	/// <summary>Authored fraction of the envelope affected by the coherent field.</summary>
+	public float Coverage { get; set; }
+	/// <summary>Authored visual scale of the patch; never replaced by per-block hashes.</summary>
+	public int Wavelength { get; set; } = 48;
 	public List<PlanPoint> Polygon { get; set; } = new();
 }
 

@@ -1,0 +1,766 @@
+{
+  "version": 2,
+  "siteId": "bloom-grove-court",
+  "referencePath": "res://world-new/reference-10.png",
+  "basis": "The source-facing overhead is a strong rough guide for connected plot topology. The locked isometric reference owns final acceptance, ground-contact calibration, vertical silhouette, openings, damage, material and lighting detail, and vegetation silhouettes.",
+  "coordinateContract": {
+    "origin": { "x": 0, "z": 0 },
+    "playerSpawn": { "x": 0, "z": -9 },
+    "plotView": "source-facing",
+    "oneCellIsOneVoxel": true,
+    "runtimePlanScale": 1,
+    "runtimeMirrorX": true,
+    "sourceViewYawDegrees": 135,
+    "sourceViewPitchDegrees": 35.26439
+  },
+  "terrain": [
+    {
+      "id": "surrounding-meadow",
+      "role": "surrounding-terrain",
+      "surfaceY": 108,
+      "material": "natural",
+      "writeMode": "preserve-atlas",
+      "polygon": [[-50,78],[66,78],[79,64],[76,46],[82,28],[80,5],[74,-15],[68,-35],[49,-45],[29,-53],[10,-63],[-14,-59],[-35,-51],[-53,-35],[-61,-12],[-59,10],[-51,31],[-57,51]]
+    },
+    {
+      "id": "west-north-stack-tier-1",
+      "role": "eroded-platform-shelf",
+      "surfaceY": 109,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[-25,27],[-17,27],[-17,25],[-7,25],[-7,29],[-4,29],[-4,41],[-7,41],[-7,48],[-18,48],[-18,46],[-25,46]]
+    },
+    {
+      "id": "west-north-stack-tier-2",
+      "role": "eroded-platform-shelf",
+      "surfaceY": 110,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[-22,30],[-14,30],[-14,28],[-8,28],[-8,33],[-6,33],[-6,41],[-10,41],[-10,46],[-20,46],[-20,42],[-22,42]]
+    },
+    {
+      "id": "west-north-stack-tier-3",
+      "role": "eroded-platform-shelf",
+      "surfaceY": 111,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[-19,33],[-12,33],[-12,31],[-8,31],[-8,36],[-7,36],[-7,42],[-11,42],[-11,45],[-19,45]]
+    },
+    {
+      "id": "west-north-stack-tier-4",
+      "role": "eroded-platform-shelf",
+      "surfaceY": 112,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[-16,36],[-10,36],[-10,34],[-8,34],[-8,40],[-11,40],[-11,44],[-16,44]]
+    },
+    {
+      "id": "west-mid-stack-tier-1",
+      "role": "eroded-platform-shelf",
+      "surfaceY": 109,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[-31,3],[-22,3],[-22,5],[-16,5],[-16,11],[-14,11],[-14,18],[-24,18],[-24,15],[-31,15]]
+    },
+    {
+      "id": "west-mid-stack-tier-2",
+      "role": "eroded-platform-shelf",
+      "surfaceY": 110,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[-27,6],[-20,6],[-20,7],[-16,7],[-16,14],[-15,14],[-15,18],[-24,18],[-24,15],[-27,15]]
+    },
+    {
+      "id": "west-mid-stack-tier-3",
+      "role": "eroded-platform-shelf",
+      "surfaceY": 111,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[-23,10],[-18,10],[-18,12],[-15,12],[-15,18],[-22,18],[-22,15],[-23,15]]
+    },
+    {
+      "id": "east-north-stack-tier-1",
+      "role": "eroded-platform-shelf",
+      "surfaceY": 109,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[33,18],[44,18],[44,20],[52,20],[52,25],[55,25],[55,34],[51,34],[51,41],[43,41],[43,44],[33,44]]
+    },
+    {
+      "id": "east-north-stack-tier-2",
+      "role": "eroded-platform-shelf",
+      "surfaceY": 110,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[36,21],[45,21],[45,23],[51,23],[51,29],[53,29],[53,35],[49,35],[49,40],[38,40],[38,37],[36,37]]
+    },
+    {
+      "id": "east-north-stack-tier-3",
+      "role": "eroded-platform-shelf",
+      "surfaceY": 111,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[38,24],[46,24],[46,26],[49,26],[49,34],[47,34],[47,38],[39,38],[39,35],[38,35]]
+    },
+    {
+      "id": "east-north-stack-tier-4",
+      "role": "eroded-platform-shelf",
+      "surfaceY": 112,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[40,27],[46,27],[46,30],[48,30],[48,34],[45,34],[45,37],[40,37]]
+    },
+    {
+      "id": "east-south-stack-tier-1",
+      "role": "eroded-platform-shelf",
+      "surfaceY": 109,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[32,-32],[42,-32],[42,-30],[49,-30],[49,-26],[52,-26],[52,-18],[48,-18],[48,-15],[38,-15],[38,-17],[32,-17]]
+    },
+    {
+      "id": "east-south-stack-tier-2",
+      "role": "eroded-platform-shelf",
+      "surfaceY": 110,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[35,-29],[43,-29],[43,-27],[48,-27],[48,-23],[50,-23],[50,-18],[46,-18],[46,-14],[37,-14],[37,-18],[35,-18]]
+    },
+    {
+      "id": "east-south-stack-tier-3",
+      "role": "eroded-platform-shelf",
+      "surfaceY": 111,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[38,-26],[44,-26],[44,-24],[47,-24],[47,-18],[44,-18],[44,-13],[39,-13],[39,-17],[38,-17]]
+    },
+    {
+      "id": "northwest-detached-shelf",
+      "role": "detached-terrain-blocks",
+      "surfaceY": 110,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "footprint": [-35,-14,-34,-13]
+    },
+    {
+      "id": "west-detached-shelf",
+      "role": "detached-terrain-blocks",
+      "surfaceY": 109,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "footprint": [-34,19,-32,20]
+    },
+    {
+      "id": "southwest-detached-shelf",
+      "role": "detached-terrain-blocks",
+      "surfaceY": 109,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "footprint": [-27,-34,-25,-33]
+    },
+    {
+      "id": "north-detached-shelf",
+      "role": "detached-terrain-blocks",
+      "surfaceY": 109,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "footprint": [-21,-39,-19,-38]
+    },
+    {
+      "id": "northeast-detached-shelf",
+      "role": "detached-terrain-blocks",
+      "surfaceY": 109,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "footprint": [18,-39,20,-38]
+    },
+    {
+      "id": "east-detached-shelf",
+      "role": "detached-terrain-blocks",
+      "surfaceY": 110,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "footprint": [51,-12,52,-11]
+    },
+    {
+      "id": "southeast-detached-shelf",
+      "role": "detached-terrain-blocks",
+      "surfaceY": 109,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "footprint": [52,7,54,8]
+    },
+    {
+      "id": "lower-court",
+      "role": "lower-court",
+      "surfaceY": 109,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[-29,16],[15,16],[15,12],[20,12],[20,8],[23,8],[23,-4],[21,-4],[23,-13],[22,-22],[24,-22],[23,-30],[18,-30],[18,-34],[10,-34],[10,-35],[-2,-35],[-2,-34],[-10,-34],[-10,-32],[-18,-32],[-18,-30],[-25,-30],[-25,-27],[-29,-27],[-28,-17],[-30,-17],[-28,-7],[-30,-7],[-28,2],[-30,2]]
+    },
+    {
+      "id": "west-upper-platform",
+      "role": "raised-platform",
+      "surfaceY": 114,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[-14,10],[14,10],[14,25],[13,31],[15,31],[14,38],[10,38],[10,42],[5,42],[5,44],[-2,44],[-2,42],[-9,42],[-9,40],[-13,40],[-13,36],[-15,36],[-14,29],[-16,29],[-14,21],[-15,21]]
+    },
+    {
+      "id": "east-upper-south-slab",
+      "role": "raised-platform",
+      "surfaceY": 114,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[13,-27],[21,-27],[21,-29],[33,-29],[33,-27],[41,-27],[41,-25],[46,-25],[46,-20],[48,-20],[46,-10],[13,-10]]
+    },
+    {
+      "id": "east-upper-central-slab",
+      "role": "raised-platform",
+      "surfaceY": 114,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[13,-8],[46,-8],[46,-2],[47,-2],[46,7],[48,7],[46,12],[44,12],[44,17],[13,17]]
+    },
+    {
+      "id": "east-upper-north-slab",
+      "role": "raised-platform",
+      "surfaceY": 114,
+      "material": "reclaimed-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[13,21],[44,21],[44,30],[41,30],[41,36],[32,36],[32,38],[22,38],[22,42],[17,42],[17,40],[13,40]]
+    }
+  ],
+  "surfacePatches": [
+    {
+      "id": "north-court-worn",
+      "terrainId": "west-upper-platform",
+      "material": "worn-paving",
+      "footprints": [
+        [-9,12,-6,13],[-3,12,1,12],[4,12,8,12],[1,13,8,13],[-9,14,-4,14],
+        [1,14,7,16],[11,14,11,16],[-12,15,-12,16],[-9,15,-2,15],[-9,16,-9,16],
+        [-5,16,-2,16],[-12,17,-9,17],[-5,17,11,17],[-12,18,2,18],[6,18,6,19],
+        [9,18,9,19],[11,18,11,19],[-12,19,-8,20],[-3,19,2,19],[-3,20,11,20],
+        [-12,21,11,21],[-9,22,-5,23],[-2,22,11,22],[-2,23,8,23],[-12,24,-10,25],
+        [-5,24,-5,24],[-2,24,2,24],[5,24,8,24],[-5,25,-4,25],[-1,25,2,25],
+        [5,25,6,25],[10,25,11,26],[-12,26,0,27],[4,26,6,26],[4,27,11,27],
+        [-12,28,-9,29],[-6,28,11,28],[-6,29,-1,29],[2,29,11,29],[-12,30,-11,31],
+        [-7,30,-1,30],[2,30,2,30],[6,30,11,30],[-7,31,2,31],[6,31,9,31],
+        [-12,32,9,32]
+      ]
+    },
+    {
+      "id": "north-court-warm",
+      "terrainId": "west-upper-platform",
+      "material": "warm-paving",
+      "footprints": [
+        [-3,13,0,14],[8,14,10,16],[-4,19,-4,20],[-9,24,-6,25],[1,26,3,27],
+        [3,30,5,31]
+      ]
+    },
+    {
+      "id": "north-court-cool",
+      "terrainId": "west-upper-platform",
+      "material": "cool-paving",
+      "footprints": [
+        [3,18,5,19],[-7,19,-5,20],[7,25,9,26],[-10,30,-8,31]
+      ]
+    },
+    {
+      "id": "north-court-moss",
+      "terrainId": "west-upper-platform",
+      "material": "moss-paving",
+      "footprints": [
+        [-11,15,-10,16],[10,18,10,19],[-3,25,-2,25]
+      ]
+    },
+    {
+      "id": "lower-court-worn",
+      "terrainId": "lower-court",
+      "material": "worn-paving",
+      "footprints": [
+        [-7,-25,-1,-25],[4,-25,11,-25],[-7,-24,-7,-24],[-3,-24,-1,-23],[4,-24,5,-23],
+        [9,-24,11,-23],[-10,-23,-7,-22],[-3,-22,11,-22],[-10,-21,7,-21],[11,-21,11,-20],
+        [-10,-20,-8,-19],[-4,-20,0,-19],[4,-20,7,-20],[4,-19,11,-19],[-8,-18,3,-18],
+        [7,-18,8,-17],[-8,-17,-5,-16],[-1,-17,3,-16],[7,-16,11,-16],[-10,-15,-5,-15],
+        [-1,-15,11,-15],[-8,-14,-5,-12],[-2,-14,11,-12],[-10,-11,-10,-10],[-6,-11,3,-10],
+        [7,-11,11,-10],[-18,-9,-18,-7],[-15,-9,-15,-7],[-11,-9,-10,-9],[-6,-9,-1,-9],
+        [2,-9,4,-7],[8,-9,11,-7],[-11,-8,-8,-7],[-5,-8,-1,-7],[-15,-6,-8,-6],
+        [-5,-6,7,-6],[11,-6,11,-5],[-15,-5,-14,-4],[-11,-5,1,-3],[5,-5,7,-5],
+        [5,-4,11,-3],[-18,-3,-14,-3],[-18,-2,-16,-2],[-13,-2,-6,-1],[-1,-2,11,0],
+        [-16,-1,-16,-1],[-16,0,-6,0]
+      ]
+    },
+    {
+      "id": "lower-court-warm",
+      "terrainId": "lower-court",
+      "material": "warm-paving",
+      "footprints": [
+        [0,-25,3,-23],[8,-21,10,-20],[-4,-17,-2,-15],[-14,-9,-12,-7],[5,-9,7,-7],
+        [-5,-2,-2,0]
+      ]
+    },
+    {
+      "id": "lower-court-cool",
+      "terrainId": "lower-court",
+      "material": "cool-paving",
+      "footprints": [
+        [-6,-24,-4,-22],[4,-18,6,-16],[-9,-11,-7,-9],[-18,-6,-16,-4],[2,-5,4,-3]
+      ]
+    },
+    {
+      "id": "lower-court-moss",
+      "terrainId": "lower-court",
+      "material": "moss-paving",
+      "footprints": [
+        [-10,-18,-9,-16],[-15,-2,-14,-1]
+      ]
+    },
+    {
+      "id": "west-annex-worn",
+      "terrainId": "lower-court",
+      "material": "worn-paving",
+      "footprints": [
+        [-24,-26,-18,-26],[-14,-26,-14,-24],[-21,-25,-18,-24],[-25,-23,-17,-21],[-27,-20,-17,-20],
+        [-27,-19,-14,-18],[-27,-17,-23,-16],[-20,-17,-16,-16],[-27,-15,-26,-13],[-20,-15,-14,-15],
+        [-22,-14,-14,-14],[-22,-13,-19,-13],[-15,-13,-14,-12],[-27,-12,-25,-10],[-21,-12,-19,-12],
+        [-21,-11,-14,-10],[-22,6,-19,7],[-27,8,-23,8],[-20,8,-19,8],[-25,9,-19,10],
+        [-27,11,-19,11],[-27,12,-23,13],[-20,12,-19,13]
+      ]
+    },
+    {
+      "id": "west-annex-warm",
+      "terrainId": "lower-court",
+      "material": "warm-paving",
+      "footprints": [
+        [-17,-26,-15,-24],[-27,-23,-26,-21],[-24,-12,-22,-10],[-24,6,-23,7],[-22,12,-21,13]
+      ]
+    },
+    {
+      "id": "west-annex-cool",
+      "terrainId": "lower-court",
+      "material": "cool-paving",
+      "footprints": [
+        [-24,-25,-22,-24],[-22,-17,-21,-15],[-18,-13,-16,-12],[-27,9,-26,10]
+      ]
+    },
+    {
+      "id": "west-annex-moss",
+      "terrainId": "lower-court",
+      "material": "moss-paving",
+      "footprints": [
+        [-15,-17,-14,-16],[-22,8,-21,8]
+      ]
+    },
+    {
+      "id": "east-south-worn",
+      "terrainId": "east-upper-south-slab",
+      "material": "worn-paving",
+      "footprints": [
+        [16,-24,17,-22],[21,-24,23,-23],[27,-24,33,-24],[27,-23,30,-23],[21,-22,30,-22],
+        [14,-21,17,-21],[21,-21,24,-21],[28,-21,30,-21],[14,-20,15,-20],[18,-20,24,-20],
+        [28,-20,33,-20],[18,-19,19,-18],[22,-19,24,-19],[31,-19,33,-17],[22,-18,27,-18],
+        [14,-17,27,-17],[16,-16,20,-14],[14,-13,20,-13],[15,-12,20,-12],[15,-11,16,-11],
+        [20,-11,20,-11]
+      ]
+    },
+    {
+      "id": "east-south-warm",
+      "terrainId": "east-upper-south-slab",
+      "material": "warm-paving",
+      "footprints": [
+        [18,-24,20,-23],[25,-21,27,-19],[14,-19,15,-18],[17,-11,19,-11]
+      ]
+    },
+    {
+      "id": "east-south-cool",
+      "terrainId": "east-upper-south-slab",
+      "material": "cool-paving",
+      "footprints": [
+        [16,-20,17,-18],[28,-19,30,-17]
+      ]
+    },
+    {
+      "id": "east-south-moss",
+      "terrainId": "east-upper-south-slab",
+      "material": "moss-paving",
+      "footprints": [
+        [20,-19,21,-18],[14,-12,14,-11]
+      ]
+    },
+    {
+      "id": "east-central-worn",
+      "terrainId": "east-upper-central-slab",
+      "material": "worn-paving",
+      "footprints": [
+        [14,-8,20,-5],[17,-4,20,-2],[14,-1,20,3],[14,4,17,6],[14,7,20,9],
+        [18,10,20,12],[14,13,20,16],[22,13,26,14],[30,13,33,14],
+        [22,9,24,10],[30,9,33,10],[25,4,28,5],[34,4,37,5],
+        [22,0,26,1],[30,0,33,1]
+      ]
+    },
+    {
+      "id": "east-central-warm",
+      "terrainId": "east-upper-central-slab",
+      "material": "warm-paving",
+      "footprints": [
+        [14,10,17,12],[27,13,29,14],[25,9,27,10],[29,4,31,5],[34,0,36,1]
+      ]
+    },
+    {
+      "id": "east-central-cool",
+      "terrainId": "east-upper-central-slab",
+      "material": "cool-paving",
+      "footprints": [
+        [14,-4,16,-2],[18,4,20,6],[34,13,36,14],[28,9,29,10],
+        [32,4,33,5],[27,0,29,1]
+      ]
+    },
+    {
+      "id": "east-central-moss",
+      "terrainId": "east-upper-central-slab",
+      "material": "moss-paving",
+      "footprints": [
+        [37,13,38,14],[34,9,35,10],[37,0,38,1]
+      ]
+    },
+    {
+      "id": "east-north-worn",
+      "terrainId": "east-upper-north-slab",
+      "material": "worn-paving",
+      "footprints": [
+        [14,21,16,22],[20,21,28,21],[32,21,33,21],[20,22,33,22],[14,23,22,23],
+        [26,23,29,23],[33,23,36,23],[14,24,17,26],[22,24,29,24],[33,24,34,24],
+        [22,25,22,26],[26,25,26,27],[30,25,30,27],[34,25,34,25],[34,26,36,26],
+        [14,27,22,27],[14,28,20,29]
+      ]
+    },
+    {
+      "id": "east-north-warm",
+      "terrainId": "east-upper-north-slab",
+      "material": "warm-paving",
+      "footprints": [
+        [18,24,21,26],[27,25,29,27],[34,27,36,27]
+      ]
+    },
+    {
+      "id": "east-north-cool",
+      "terrainId": "east-upper-north-slab",
+      "material": "cool-paving",
+      "footprints": [
+        [17,21,19,22],[23,23,25,23],[30,23,32,24]
+      ]
+    },
+    {
+      "id": "east-north-moss",
+      "terrainId": "east-upper-north-slab",
+      "material": "moss-paving",
+      "footprints": [
+        [35,24,36,25]
+      ]
+    }
+  ],
+  "structures": [
+    {
+      "id": "main-court-stair",
+      "kind": "stair",
+      "fromTerrain": "lower-court",
+      "toTerrain": "west-upper-platform",
+      "axis": [0,1],
+      "fromLanding": [-3,-1,10,0],
+      "toLanding": [-3,13,10,14],
+      "treads": [
+        { "footprint": [-3,1,10,2], "topY": 109 },
+        { "footprint": [-3,3,10,4], "topY": 110 },
+        { "footprint": [-3,5,10,6], "topY": 111 },
+        { "footprint": [-3,7,10,8], "topY": 112 },
+        { "footprint": [-3,9,10,10], "topY": 113 },
+        { "footprint": [-3,11,10,12], "topY": 114 }
+      ]
+    },
+    {
+      "id": "south-threshold-step",
+      "kind": "stair",
+      "fromTerrain": "surrounding-meadow",
+      "toTerrain": "lower-court",
+      "axis": [0,1],
+      "fromLanding": [-4,-38,6,-36],
+      "toLanding": [-4,-29,6,-28],
+      "treads": [
+        { "footprint": [-4,-35,6,-33], "topY": 108 },
+        { "footprint": [-4,-32,6,-30], "topY": 109 }
+      ]
+    },
+    {
+      "id": "north-arch-facade",
+      "kind": "connected-facade",
+      "supportTerrain": "west-upper-platform",
+      "baseY": 114,
+      "footprints": [[-3,20,-1,23],[0,20,9,23],[10,20,12,23],[-3,24,12,26],[-3,27,1,28],[4,27,8,28],[10,27,12,28]],
+      "height": 15,
+      "opening": { "axis": "x", "span": [0,9], "leftBase": [-1,21], "rightBase": [10,21], "clearHeight": 11 }
+    },
+    {
+      "id": "inner-west-spine",
+      "kind": "connected-wall-run",
+      "supportTerrain": "west-upper-platform",
+      "baseY": 114,
+      "footprints": [[-11,10,-10,31],[-9,10,-8,15],[-10,30,-3,31]],
+      "height": 11
+    },
+    {
+      "id": "east-inner-spine-south-west",
+      "kind": "connected-wall-run",
+      "supportTerrain": "east-upper-south-slab",
+      "baseY": 114,
+      "footprint": [13,-17,14,-11],
+      "height": 3
+    },
+    {
+      "id": "east-inner-spine-south-east",
+      "kind": "connected-wall-run",
+      "supportTerrain": "east-upper-south-slab",
+      "baseY": 114,
+      "footprints": [[17,-16,21,-15],[20,-14,21,-11]],
+      "height": 12
+    },
+    {
+      "id": "east-inner-spine-central",
+      "kind": "connected-wall-run",
+      "supportTerrain": "east-upper-central-slab",
+      "baseY": 114,
+      "footprints": [[13,-8,14,16],[15,3,21,4],[20,-8,21,2]],
+      "height": 13
+    },
+    {
+      "id": "east-inner-spine-north",
+      "kind": "connected-wall-run",
+      "supportTerrain": "east-upper-north-slab",
+      "baseY": 114,
+      "footprint": [13,21,14,31],
+      "height": 4
+    },
+    {
+      "id": "east-central-outer-low-wall",
+      "kind": "connected-wall-run",
+      "supportTerrain": "east-upper-central-slab",
+      "baseY": 114,
+      "footprints": [[29,0,38,1],[39,1,40,14]],
+      "height": 3
+    },
+    {
+      "id": "east-central-inner-low-wall-north",
+      "kind": "connected-wall-run",
+      "supportTerrain": "east-upper-central-slab",
+      "baseY": 114,
+      "footprints": [[20,12,27,13],[20,9,21,13]],
+      "height": 3
+    },
+    {
+      "id": "east-central-inner-low-wall-east",
+      "kind": "connected-wall-run",
+      "supportTerrain": "east-upper-central-slab",
+      "baseY": 114,
+      "footprints": [[31,4,32,8],[31,4,33,5]],
+      "height": 3
+    },
+    {
+      "id": "east-north-branch",
+      "kind": "connected-wall-run",
+      "supportTerrain": "east-upper-north-slab",
+      "baseY": 114,
+      "footprints": [[15,22,36,23],[35,22,36,31]],
+      "height": 10
+    },
+    {
+      "id": "rear-east-stele",
+      "kind": "isolated-survivor",
+      "supportTerrain": "east-upper-north-slab",
+      "baseY": 114,
+      "footprint": [19,34,20,35],
+      "height": 8
+    },
+    {
+      "id": "east-south-enclosure",
+      "kind": "connected-wall-run",
+      "supportTerrain": "east-upper-south-slab",
+      "baseY": 114,
+      "footprints": [[21,-23,33,-22],[32,-23,33,-12],[21,-23,22,-20]],
+      "height": 9
+    },
+    {
+      "id": "west-enclosure",
+      "kind": "connected-wall-run",
+      "supportTerrain": "lower-court",
+      "baseY": 109,
+      "footprints": [[-26,-6,-25,9],[-26,8,-10,9],[-15,-6,-14,9]],
+      "height": 9
+    },
+    {
+      "id": "south-west-wall",
+      "kind": "connected-wall-run",
+      "supportTerrain": "lower-court",
+      "baseY": 109,
+      "footprints": [[-11,-28,-10,9],[-15,-28,-10,-27]],
+      "height": 11
+    },
+    {
+      "id": "south-gate-west",
+      "kind": "connected-wall-run",
+      "supportTerrain": "lower-court",
+      "baseY": 109,
+      "footprints": [[-9,-29,-5,-28],[-9,-29,-8,-15],[-8,-16,-5,-15]],
+      "height": 10
+    },
+    {
+      "id": "south-gate-east",
+      "kind": "connected-wall-run",
+      "supportTerrain": "lower-court",
+      "baseY": 109,
+      "footprints": [[7,-29,18,-28],[7,-29,8,-15],[7,-16,11,-15]],
+      "height": 11
+    },
+    {
+      "id": "west-stair-shoulder",
+      "kind": "connected-stair-shoulder",
+      "supportTerrain": "lower-court",
+      "baseY": 109,
+      "footprints": [[-8,1,-4,2],[-7,3,-4,9]],
+      "height": 14
+    },
+    {
+      "id": "west-stair-shoulder-upper",
+      "kind": "connected-stair-shoulder",
+      "supportTerrain": "west-upper-platform",
+      "baseY": 114,
+      "footprint": [-7,10,-4,12],
+      "height": 3
+    },
+    {
+      "id": "east-stair-shoulder",
+      "kind": "connected-stair-shoulder",
+      "supportTerrain": "lower-court",
+      "baseY": 109,
+      "footprint": [11,1,12,9],
+      "height": 9
+    },
+    {
+      "id": "east-stair-shoulder-west-cap",
+      "kind": "connected-stair-shoulder",
+      "supportTerrain": "west-upper-platform",
+      "baseY": 114,
+      "footprint": [11,10,12,12],
+      "height": 3
+    },
+    {
+      "id": "east-stair-shoulder-east-cap",
+      "kind": "connected-stair-shoulder",
+      "supportTerrain": "east-upper-central-slab",
+      "baseY": 114,
+      "footprint": [13,1,13,12],
+      "height": 4
+    },
+    {
+      "id": "east-inner-rubble-north",
+      "kind": "rubble-cluster",
+      "supportTerrain": "east-upper-central-slab",
+      "baseY": 114,
+      "envelope": [23,6,29,10],
+      "cells": [[23,8],[24,8],[25,8],[26,8],[24,9],[25,9],[26,9],[27,9],[25,10],[26,10],[27,10],[28,10],[29,10],[26,7],[27,7],[28,7],[27,6]]
+    },
+    {
+      "id": "west-enclosure-rubble",
+      "kind": "rubble-cluster",
+      "supportTerrain": "lower-court",
+      "baseY": 109,
+      "envelope": [-23,-3,-17,3],
+      "cells": [[-23,-2],[-22,-2],[-21,-2],[-20,-2],[-22,-1],[-21,-1],[-20,-1],[-19,-1],[-21,0],[-20,0],[-19,0],[-18,0],[-20,1],[-19,1],[-18,1],[-17,1],[-19,2],[-18,2],[-18,3]]
+    },
+    {
+      "id": "north-arch-west-foot-rubble",
+      "kind": "rubble-cluster",
+      "supportTerrain": "west-upper-platform",
+      "baseY": 114,
+      "envelope": [-7,17,-3,20],
+      "cells": [[-7,18],[-6,18],[-5,18],[-4,18],[-3,18],[-6,17],[-5,17],[-5,19],[-4,19],[-3,19],[-3,20]]
+    },
+    {
+      "id": "north-arch-east-foot-rubble",
+      "kind": "rubble-cluster",
+      "supportTerrain": "west-upper-platform",
+      "baseY": 114,
+      "envelope": [9,17,12,19],
+      "cells": [[9,18],[10,18],[11,18],[12,18],[10,17],[11,17],[12,17],[11,19],[12,19]]
+    },
+    {
+      "id": "west-stair-shoulder-rubble",
+      "kind": "rubble-cluster",
+      "supportTerrain": "lower-court",
+      "baseY": 109,
+      "envelope": [-12,-1,-8,2],
+      "cells": [[-12,0],[-11,0],[-10,0],[-9,0],[-10,-1],[-9,-1],[-8,-1],[-9,1],[-8,1],[-8,2]]
+    },
+    {
+      "id": "east-stair-shoulder-rubble",
+      "kind": "rubble-cluster",
+      "supportTerrain": "lower-court",
+      "baseY": 109,
+      "envelope": [8,-1,12,1],
+      "cells": [[8,0],[9,0],[10,0],[11,0],[12,0],[9,-1],[10,-1],[11,-1],[11,1],[12,1]]
+    },
+    {
+      "id": "east-middle-south-rubble",
+      "kind": "rubble-cluster",
+      "supportTerrain": "east-upper-south-slab",
+      "baseY": 114,
+      "envelope": [17,-12,19,-11],
+      "cells": [[17,-11],[18,-11],[19,-11],[18,-12]]
+    },
+    {
+      "id": "east-middle-central-rubble",
+      "kind": "rubble-cluster",
+      "supportTerrain": "east-upper-central-slab",
+      "baseY": 114,
+      "envelope": [19,-8,20,-7],
+      "cells": [[19,-8],[20,-8],[20,-7]]
+    },
+    {
+      "id": "east-south-enclosure-rubble",
+      "kind": "rubble-cluster",
+      "supportTerrain": "east-upper-south-slab",
+      "baseY": 114,
+      "envelope": [24,-21,30,-17],
+      "cells": [[24,-19],[25,-19],[26,-19],[27,-19],[28,-19],[29,-19],[30,-19],[25,-20],[26,-20],[27,-20],[28,-20],[27,-21],[28,-21],[29,-18],[30,-18],[30,-17]]
+    },
+    {
+      "id": "south-gate-west-rubble",
+      "kind": "rubble-cluster",
+      "supportTerrain": "lower-court",
+      "baseY": 109,
+      "envelope": [-7,-28,-2,-24],
+      "cells": [[-7,-26],[-6,-26],[-5,-26],[-4,-26],[-3,-26],[-2,-26],[-6,-27],[-5,-27],[-4,-27],[-3,-27],[-5,-28],[-4,-28],[-3,-25],[-2,-25],[-2,-24]]
+    },
+    {
+      "id": "south-gate-east-rubble",
+      "kind": "rubble-cluster",
+      "supportTerrain": "lower-court",
+      "baseY": 109,
+      "envelope": [7,-27,12,-23],
+      "cells": [[7,-25],[8,-25],[9,-25],[10,-25],[11,-25],[12,-25],[8,-26],[9,-26],[10,-26],[11,-26],[9,-27],[10,-27],[11,-24],[12,-24],[12,-23]]
+    }
+  ],
+  "surroundingTrees": [
+    [-40,74],[0,65],[34,67],[62,74],[-25,53],[35,48],[51,48],
+    [-28,35],[56,30],[-43,18],[61,9],[-47,-10],[-32,-24],
+    [59,-7],[63,-14],[-27,-43],[7,-57],[78,-15]
+  ],
+  "acceptanceRules": {
+    "isolatedSurvivorMaximumFootprint": [2,2],
+    "thinWallMaximumWidth": 2,
+    "thickerMassesMustBeConnected": true,
+    "eachStairMustTouchBothNamedTerrains": true,
+    "surfacePatchesMustNotOverlap": true,
+    "significantGeometryMustAppearInThisPlan": true,
+    "generatorMayNotMoveOrAddStructures": true
+  }
+}

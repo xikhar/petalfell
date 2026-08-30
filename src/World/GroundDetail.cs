@@ -332,6 +332,59 @@ public static class GroundDetail
 	}
 
 	/// <summary>
+	/// Floating detail for a compiled production-atlas window. Water height is
+	/// per column in the atlas, so every petal is placed on the same stepped
+	/// surface that <see cref="AtlasSectorWindow.BuildWater"/> materialises.
+	/// Random draws use global coordinates, making overlap and rebuild order
+	/// irrelevant at sector seams.
+	/// </summary>
+	public static ArrayMesh BuildAtlasWater(AtlasSectorWindow window, int ci, int ck)
+	{
+		AtlasSectorData data = window.Data;
+		int cs = ChunkMesher.ChunkSize;
+		int x0 = ci * cs, z0 = ck * cs;
+		int x1 = Math.Min(data.Width, x0 + cs), z1 = Math.Min(data.Depth, z0 + cs);
+		var f = new Field();
+
+		for (int z = z0; z < z1; z++)
+		for (int x = x0; x < x1; x++)
+		{
+			int index = z * data.Width + x;
+			int surface = data.WaterSurface[index];
+			if (surface == 0 || surface - data.Height[index] < 2) continue;
+
+			int gx = data.OriginX + x, gz = data.OriginZ + z;
+			var rng = new Draw(gx, gz, 0x0FA7);
+			float fx = x + 0.5f, fz = z + 0.5f, y = surface + 0.38f;
+			if (rng.Chance(0.005f))
+			{
+				var pad = rng.Pick(PadColors);
+				int count = rng.Int(1, 3);
+				for (int k = 0; k < count; k++)
+				{
+					float ox = rng.Range(-0.34f, 0.34f), oz = rng.Range(-0.34f, 0.34f);
+					f.Fleck(fx + ox, y, fz + oz, rng.Range(0.46f, 0.72f),
+						rng.Range(0.42f, 0.66f), rng.Next() * 1.57f, pad);
+					if (k == 0 && rng.Chance(0.30f))
+						f.Box(fx + ox, y + 0.02f, fz + oz, 0.20f, 0.14f, 0.20f,
+							rng.Pick(FlowerTops));
+				}
+				continue;
+			}
+
+			if (!rng.Chance(0.011f)) continue;
+			int petals = rng.Int(1, 2);
+			for (int k = 0; k < petals; k++)
+				f.Fleck(fx + rng.Range(-0.38f, 0.38f), y,
+					fz + rng.Range(-0.38f, 0.38f), rng.Range(0.26f, 0.42f),
+					rng.Range(0.22f, 0.36f), rng.Next() * 1.57f,
+					rng.Pick(Palette.PetalColors));
+		}
+
+		return f.Empty ? null : f.Build();
+	}
+
+	/// <summary>
 	/// Everything the land has put back on a ruin in this chunk.
 	///
 	/// The sprigs were decided once, during world construction, by
@@ -632,6 +685,136 @@ public static class GroundDetail
 		// arbitrary height on a wall face, which the per-column pass above has no
 		// way to reach — it only ever looks at the top of each column.
 		Sprigs(f, ci, ck);
+
+		return f.Empty ? null : f.Build();
+	}
+
+	/// <summary>
+	/// Sub-voxel detail for a compiled atlas window. The authored biome profile
+	/// chooses the vocabulary; the visible cap and water depth decide what can
+	/// physically grow at a column. Broad fields create clumps while the global
+	/// coordinate draw supplies deterministic variation inside them.
+	/// </summary>
+	public static ArrayMesh BuildAtlas(AtlasSectorWindow window, int ci, int ck)
+	{
+		_meadow ??= new Noise2D(Seed + 71);
+		_flowers ??= new Noise2D(Seed + 72);
+
+		AtlasSectorData data = window.Data;
+		VoxelGrid grid = window.Grid;
+		int cs = ChunkMesher.ChunkSize;
+		int x0 = ci * cs, z0 = ck * cs;
+		int x1 = Math.Min(data.Width, x0 + cs), z1 = Math.Min(data.Depth, z0 + cs);
+		var f = new Field();
+
+		for (int z = z0; z < z1; z++)
+		for (int x = x0; x < x1; x++)
+		{
+			int index = z * data.Width + x;
+			int h = grid.HeightAt(x, z);
+			if (h <= 0 || h >= grid.Height || grid.At(x, h, z) != Palette.AIR) continue;
+			int water = data.WaterSurface[index];
+			if (water > 0 && h <= water) continue;
+
+			byte cap = grid.At(x, h - 1, z);
+			bool grassy = Palette.IsGrassSurface(cap) || cap is Palette.MOSS or Palette.BLOSSOM_DRIFT;
+			bool muddy = cap == Palette.MUD;
+			bool snowy = cap == Palette.SNOW;
+			bool scree = cap == Palette.SCREE;
+			bool sandy = cap == Palette.SAND;
+			bool stony = cap is Palette.STONE or Palette.STONE_PALE or Palette.STONE_WARM or
+				Palette.MOSS_STONE or Palette.PAVING;
+			if (!grassy && !muddy && !snowy && !scree && !sandy && !stony) continue;
+
+			int gx = data.OriginX + x, gz = data.OriginZ + z;
+			var rng = new Draw(gx, gz, 0x5EED);
+			float y = h, fx = x + 0.5f, fz = z + 0.5f;
+			string detailSet = window.GroundDetailSetAt(x, z);
+
+			// The atlas stores actual water height, so a shallow is a depth test
+			// rather than a comparison with one legacy global sea plane.
+			int depth = water > 0 ? water - data.Height[index] : 0;
+			if ((sandy || grassy || muddy) && water > 0 && depth <= 3)
+			{
+				if (rng.Chance(detailSet.Contains("reed", StringComparison.Ordinal) ? 0.16f : 0.07f))
+				{
+					int count = rng.Int(2, 4);
+					for (int k = 0; k < count; k++)
+						f.Tuft(fx + rng.Range(-0.30f, 0.30f), water + 0.31f,
+							fz + rng.Range(-0.30f, 0.30f), rng.Range(0.10f, 0.17f),
+							rng.Range(0.38f, 0.76f), ReedBase, ReedTip,
+							rng.Next() * 6.28f, rng.Range(-0.18f, 0.18f), rng.Range(-0.18f, 0.18f));
+				}
+				continue;
+			}
+
+			if (grassy)
+			{
+				var block = Palette.Get(cap);
+				var light = new Color(block.Top.R * 1.08f, block.Top.G * 1.08f, block.Top.B * 1.08f);
+				float lush = _meadow.Fbm01(gx * 0.045f, gz * 0.045f, 3);
+				float density = detailSet is "talus-and-blanks" or "snow-windtrace"
+					? 0.010f + lush * 0.025f
+					: 0.018f + lush * 0.055f;
+				if (rng.Chance(density))
+				{
+					int count = rng.Int(1, 3);
+					for (int k = 0; k < count; k++)
+						f.Tuft(fx + rng.Range(-0.32f, 0.32f), y - 0.03f,
+							fz + rng.Range(-0.32f, 0.32f), rng.Range(0.16f, 0.30f),
+							rng.Range(0.26f, 0.52f), TuftBase, light, rng.Next() * 6.28f,
+							rng.Range(-0.14f, 0.14f), rng.Range(-0.14f, 0.14f));
+				}
+
+				bool flowers = detailSet.Contains("flower", StringComparison.Ordinal) ||
+					detailSet.Contains("petal", StringComparison.Ordinal);
+				float flowerField = _flowers.Fbm01(gx * 0.028f, gz * 0.028f, 3);
+				if (flowers && flowerField > 0.66f && rng.Chance((flowerField - 0.66f) * 0.30f))
+				{
+					float stem = rng.Range(0.24f, 0.42f);
+					float ox = rng.Range(-0.30f, 0.30f), oz = rng.Range(-0.30f, 0.30f);
+					f.Tuft(fx + ox, y - 0.03f, fz + oz, 0.07f, stem,
+						TuftBase, TuftBase, 0f, 0f, 0f, 0.6f);
+					f.Box(fx + ox, y + stem - 0.04f, fz + oz, 0.20f, 0.16f, 0.20f,
+						rng.Pick(FlowerTops), 0.9f, rng.Next() * 6.28f);
+				}
+				if (rng.Chance(0.0055f))
+					f.Box(fx + rng.Range(-0.25f, 0.25f), y - 0.05f,
+						fz + rng.Range(-0.25f, 0.25f), rng.Range(0.24f, 0.46f),
+						rng.Range(0.14f, 0.28f), rng.Range(0.24f, 0.46f), rng.Pick(PebbleTops));
+				continue;
+			}
+
+			if (muddy)
+			{
+				if (rng.Chance(detailSet.Contains("reed", StringComparison.Ordinal) ? 0.07f : 0.025f))
+					f.Tuft(fx + rng.Range(-0.30f, 0.30f), y - 0.03f,
+						fz + rng.Range(-0.30f, 0.30f), rng.Range(0.09f, 0.15f),
+						rng.Range(0.30f, 0.62f), ReedBase, ReedTip, rng.Next() * 6.28f,
+						rng.Range(-0.20f, 0.20f), rng.Range(-0.20f, 0.20f));
+				continue;
+			}
+
+			if (sandy)
+			{
+				if (rng.Chance(0.0045f))
+					f.Box(fx + rng.Range(-0.28f, 0.28f), y - 0.05f,
+						fz + rng.Range(-0.28f, 0.28f), rng.Range(0.20f, 0.40f),
+						rng.Range(0.10f, 0.22f), rng.Range(0.20f, 0.40f), rng.Pick(PebbleTops));
+				if (detailSet.Contains("petal", StringComparison.Ordinal) && rng.Chance(0.0025f))
+					f.Fleck(fx + rng.Range(-0.36f, 0.36f), y + 0.02f,
+						fz + rng.Range(-0.36f, 0.36f), rng.Range(0.08f, 0.14f),
+						rng.Range(0.04f, 0.07f), rng.Next() * Mathf.Pi,
+						rng.Pick(Palette.PetalColors));
+				continue;
+			}
+
+			float stoneChance = detailSet is "scree-and-heather" or "fern-moss-flower" ? 0.018f : 0.010f;
+			if ((stony || scree) && rng.Chance(stoneChance))
+				f.Box(fx + rng.Range(-0.25f, 0.25f), y - 0.06f,
+					fz + rng.Range(-0.25f, 0.25f), rng.Range(0.22f, 0.40f),
+					rng.Range(0.10f, 0.20f), rng.Range(0.22f, 0.40f), Lichen);
+		}
 
 		return f.Empty ? null : f.Build();
 	}

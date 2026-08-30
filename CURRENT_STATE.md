@@ -9,7 +9,7 @@
 > [docs/ROADMAP.md](docs/ROADMAP.md). Everything below is the substrate that work
 > builds on.
 
-Last updated: 28 August 2026
+Last updated: 30 August 2026
 
 This document records what is present in the Godot project today. It is a factual
 snapshot, not a design target or implementation guide. Keep it that way: nothing
@@ -18,6 +18,9 @@ aspirational belongs here, and anything listed must have been seen working.
 - [`plan.md`](plan.md) owns the product vision, game scope, and long-term goals.
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) owns the engineering decisions and intended
   system boundaries.
+- [`building-knowledge/`](building-knowledge/README.md) owns evidence-labelled,
+  reusable reference-reconstruction procedures and their failure history; it is
+  not a status or design authority.
 - This file owns implemented, partial, and missing status.
 
 ---
@@ -27,14 +30,14 @@ aspirational belongs here, and anything listed must have been seen working.
 - Godot 4.7.1 Mono project using C# and the Forward+ renderer.
 - Jolt is selected as the 3D physics engine.
 - The game is assembled in code from `src/Main.cs`; `main.tscn` is the entry scene.
-- The default world footprint is **3456×3456 columns** with a voxel height of 76 —
-  roughly twenty times the area it began at. That growth was only possible because
-  voxel storage became derived rather than dense; see §2. This is now a review
-  fixture, not the production-map footprint.
+- The **3456×3456×76** generated world is now an opt-in review fixture reached
+  with `--legacy-world`; it is no longer normal startup.
 - The authored production atlas contract is **12,288×9,216×192 blocks**, divided
-  into sixteen by twelve 768-block sectors, with sea level at 40. Its first land
-  and elevation blockouts and authoring-time sector compiler exist; the playable
-  runtime still does not allocate production terrain.
+  into sixteen by twelve 768-block sectors, with sea level at 40. Normal startup
+  now opens a playable, collision-enabled four-sector atlas window at the active
+  Bloom Reach reconstruction. Full cross-continent sector-window handoff is not
+  built yet; the active window proves the production runtime boundary without
+  allocating continent-scale global arrays.
 - The project builds cleanly with `dotnet build`, with no warnings.
 
 ## 2. Map and world generation
@@ -84,17 +87,23 @@ aspirational belongs here, and anything listed must have been seen working.
 - `review-domain` composes the first domain's nine ordinary sector artifacts
   into a temporary 2,352-square window (2,304-block core plus outer apron).
   `DomainPlanBlockout` then realises its exact route polylines, seven platforms
-  at Y106/108/112/116, four named terrain/collapse cutouts, three fitted stairs,
-  ten wall runs and thirty-nine measured landmarks. Of 185,979 current platform
+  at Y106/108/114/122, four named terrain/collapse cutouts, three fitted stairs,
+  sixteen wall runs and forty-five measured landmarks. Of 185,979 current platform
   cells, 68,675 retain their compiled terrain cap, 96,135 use made paving and
   21,169 use reclaimed caps; two collapsed cutouts lower 11,820 cells by their
   authored depths. Ragged/submerged terraces, courses, buttresses, colonnade
   lintels, cutout rims and rubble are deterministic assistants inside authored
-  edge contracts. Platform and cutout reclamation values allow the biome grammar
-  to return only where the plan permits it. `AtlasDomainDressing` placed 852
+  edge contracts. Fourteen authored L4 surface envelopes now derive 100,194
+  coherent reclaimed-earth/broken-paving cells and 85 sparse rubble clusters;
+  recessed pylon glyphs and floor meanders remain geometry at far zoom. Platform,
+  cutout and surface-envelope reclamation values allow the biome grammar
+  to return only where the plan permits it. `AtlasDomainDressing` placed 892
   biome-selected trees from a globally anchored lattice in the current
   nine-sector review. Fixed captures exercise near, wide, reverse and far views
-  at both late morning and night through the ordinary day-cycle rig.
+  at both late morning and early full night through the ordinary day-cycle rig.
+  Atlas windows now use `GroundDetail` directly with global-coordinate draws,
+  profile-owned detail vocabularies and per-column water surfaces; this is the
+  same merged detail meshes and shaders used by ordinary play.
 - `content/chapter_01/map.json` currently defines:
   - the playable boundary and chapter spawn;
   - six elevation zones and six authored biome zones;
@@ -355,35 +364,15 @@ road network, and landmarks as a content layer — are **built**, and are descri
 in §2. What remains is the layer above them, and it is the current effort. See
 [AGENTS.md](AGENTS.md) and [docs/ROADMAP.md](docs/ROADMAP.md).
 
-- **The Massif process exists and one reference-exact site is built with it,
-  as a review fixture, not as world content.** `src/World/Massif.cs` is the
-  general additive slab-stack earthworks system ([docs/RUINS.md](docs/RUINS.md)
-  §5a): flat-topped noise-warped slabs stacked on a natural summit, final
-  height max(slab plan, existing ground) so a site can never dig or moat,
-  masonry decks with frayed edges and parapet blocks, stairs notched through
-  the slab fronts, fill in the monument's own coursed pale masonry, the land
-  beyond the slabs untouched. The summit sanctum (`src/World/Sanctum.cs`) was
-  its working case: three tiers (base capping the peak, mid +8, crown +16)
-  with satellite slabs shed around the skirt, and the monument on the decks —
-  17-wide arched apse with meander glyphs and crystal light, the glowing
-  emblem inlaid flush at its foot, a two-flight axis stair down the tier
-  fronts, a west deck with five unequal columns and a torn round tower, an
-  east deck with two glyph pylons, side stairs off every tier, dressed slabs,
-  a fallen column and rubble. Bare stone, no moss. Placed on the most
-  prominent summit that leaves vertical headroom for the stack under the
-  world ceiling of 76.
-  Built from the parametric part library in `src/World/RuinKit.cs`, it was
-  reviewed through the `sanctum*` capture shots. Canonical mode now disables it
-  because it searches for its own summit; it remains available to legacy
-  sandbox maps.
-  The earlier kit YARD and flat hand-composed PRECINCT were retired in the
-  2026-08 direction shift ([docs/ROADMAP.md](docs/ROADMAP.md) §3): the author
-  judged them "very basic" against the references — sites must be multi-layered
-  terrain with the landmarks integrated, one built to exact detail at a time.
-  The production-domain review now compiles authored L3 polygons and terracing
-  into a disposable runtime window. What does NOT yet exist is an accepted
-  reference-quality site, persisted per-sector structure/navigation artifacts,
-  production collision/player streaming, or final reclamation/detail.
+- **The old Massif/Sanctum path remains only as a legacy diagnostic.**
+  `src/World/Massif.cs`, `src/World/Sanctum.cs` and `src/World/RuinKit.cs`
+  demonstrated additive slab operations and reference-scale vocabulary, but the
+  resulting summit fixture was never reference-exact production content. It
+  searches for its own summit, stamps parametric parts and is disabled in
+  canonical mode. Supplied-reference sites instead use measured plan-owned
+  terrain and unique site-owned voxel blocks. The legacy path remains available
+  only in the opt-in sandbox world; it must not be cited as the construction
+  method or visual evidence for Bloom Grove Court.
 - **Canonical topology and its first tools exist.**
   `content/chapter_01/topology.json` is the version 2 permanent 12,288×9,216
   source for domains, sites, entrances, graph nodes and routes. Its first
@@ -393,10 +382,11 @@ in §2. What remains is the layer above them, and it is the current effort. See
   `src/World/CanonicalWorld.cs` performs a strict pre-generation audit;
   the atlas audit also checks production extent and province references. SVG
   previews show the topology over accepted macro layers and sector boundaries
-  without generating terrain. The in-game map and canonical runtime route stamps
+  without generating terrain. The in-game map overlay and legacy route stamps
   still use only the smaller fixture. The production source deliberately remains
-  below the 30–60-site target. Its first domain has review geometry only; that
-  geometry is not yet part of the ordinary playable runtime.
+  below the 30–60-site target. Normal startup realises the explicit Bloom Grove
+  Court over production terrain; the superseded southern-domain geometry remains
+  a tooling fixture and does not enter normal play.
   ([docs/MAP_PIPELINE.md](docs/MAP_PIPELINE.md))
 - **The production atlas manifest, first macro blockouts and first sector compiler
   exist.** The selected colour, line and elevation maps are tracked under
@@ -407,24 +397,56 @@ in §2. What remains is the layer above them, and it is the current effort. See
   deterministic compiler emits one disposable terrain/hydrology/profile sector
   plus apron and verifies neighbor overlap. A read-only production-sector window
   now materialises its voxel columns and multi-height water for visual review.
-  The ordinary game still owns global 3,456-square fields; production player/
-  collision streaming and persistent route/site artifacts have not been built.
+  The old game owns global 3,456-square fields only in `--legacy-world`. The
+  active production site now has player traversal, collision and chunk streaming
+  over four compiled sectors. Seamless handoff to arbitrary neighbouring mosaics
+  and persistent route/site artifacts remain open.
   ([docs/ATLAS.md](docs/ATLAS.md))
 - **The first authored L3 composition source has a review compiler.**
   `content/chapter_01/domains/shallows-gateway-domain.json` supplies seven
   platform polygons, four named terrain/collapse cutouts, four absolute levels,
-  three stairs, ten walls, eight route sockets and thirty-nine measured landmark
+  three stairs, sixteen walls, eight route sockets and forty-five measured landmark
   placements for the connected southern domain. Its authored collapse depths
   and platform/cutout reclamation densities control where the deterministic
-  assistants may lower, reclaim and plant made ground. `DomainPlanDefinition`
+  assistants may lower, reclaim and plant made ground. Fourteen L4 surface
+  envelopes author coherent earth caps, broken paving and collapse rubble without
+  storing generated cells. `DomainPlanDefinition`
   validates it; the SVG renders it over accepted terrain; and the domain review
   realises the plan through the ordinary voxel renderer across sector seams.
   Fixed day/night captures prove the large axis, levels, context and long-range
-  shadows exist. The stronger edge masonry, arches, colonnades, rubble and
-  reclamation make the district legible, but its ground detail and local ruin
-  variation remain below the target references. It is a developed blockout, not
-  an accepted production site.
+  shadows exist. Atlas-native ground detail, stronger edge masonry, arches,
+  colonnades, rubble, glyph recesses and reclamation make the district legible,
+  but walking-distance microarchitecture and local decay remain below the target
+  references. It is a developed blockout, not an accepted production site.
+  The author superseded its blended original composition on 29 August 2026 and
+  rejected the later generic `reference-1` portal attempt for the same visible
+  kit-like regularity. Neither is canon. Production now begins with an explicit,
+  site-specific `reference-10` voxel transcription in Bloom Reach; no generic
+  architectural builder or procedural dressing is allowed inside its footprint.
   ([docs/RUINS.md](docs/RUINS.md) §4)
+- **The first explicit reference transcription is an active Blockout under
+  reconstruction; author acceptance remains open.** `bloom-grove-court` owns a
+  strict source-facing v2 ground plan and unique voxel builder at atlas
+  coordinate `9800,4600`. The current plan has 27 terrain records, 24 explicit
+  surface-patch groups covering 1,893 cells, 34 structure records (including two
+  stairs and eleven exact rubble clusters), and eighteen tree anchors. Its raised
+  east precinct is three detached y114 slabs with lower-terrain channels at
+  source z=-10..-9 and z=17..20. The central slab keeps its pre-widening boundary,
+  while the occupied ruin reaches only source x=40 through a broken low L return
+  and two interior low remnants. Structures and surfaces do not bridge either
+  channel. Python and C# audits enforce one cell per voxel, the explicit runtime
+  mirror, terrain
+  ownership, stair connections, thin connected runs and runtime projection
+  parity. The locked comparison is 1672×941 at yaw 135 degrees and true-isometric
+  pitch 35.264 degrees. The v13 locked-day and true-top raw views, overlays, and
+  edge differences and the complete v13 matrix have been reviewed for that
+  correction: all rotations keep both channels open without floating backs, the
+  rightward extent stays modest at far range, and square shafts do not regress.
+  Those findings are claim-scoped, not whole-site fidelity or author acceptance.
+  The current evidence and remaining visual
+  uncertainty live in the
+  [site knowledge ledger](building-knowledge/sites/bloom-grove-court.md);
+  no whole-site `author-accepted` claim exists.
 - **The story layer.** Regions with roles, domains, and site allocation by
   meaning rather than by fit. ([docs/WORLD.md](docs/WORLD.md))
 - Biome identities affect terrain, flora, ground detail, and airborne detail, but the

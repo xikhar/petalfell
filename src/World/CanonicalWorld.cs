@@ -46,6 +46,9 @@ public sealed class CanonicalWorldDefinition
 		foreach (var domain in world.Domains)
 			if (!string.IsNullOrWhiteSpace(domain.PlanPath))
 				domain.Plan = DomainPlanDefinition.Load(domain.PlanPath);
+		foreach (var site in world.Sites)
+			if (!string.IsNullOrWhiteSpace(site.PlanPath))
+				site.ReferencePlan = ReferenceSiteDefinition.Load(site.PlanPath);
 		return world;
 	}
 
@@ -147,6 +150,13 @@ public sealed class CanonicalWorldDefinition
 				report.Error($"site '{site.Id}' status {site.Status} requires a planPath");
 			if (!string.IsNullOrWhiteSpace(site.PlanPath) && !Godot.FileAccess.FileExists(site.PlanPath))
 				report.Error($"site '{site.Id}' planPath '{site.PlanPath}' does not exist");
+			else if (atlas != null && !string.IsNullOrWhiteSpace(site.PlanPath))
+			{
+				if (site.ReferencePlan == null)
+					report.Error($"site '{site.Id}' reference plan '{site.PlanPath}' did not load");
+				else
+					report.Include(site.ReferencePlan.Audit(atlas, site), $"reference site '{site.Id}'");
+			}
 		}
 
 		foreach (var node in RouteNodes)
@@ -302,6 +312,7 @@ public sealed class CanonicalSite
 	public float Age { get; set; }
 	public bool RequiresRoute { get; set; } = true;
 	public string PlanPath { get; set; } = "";
+	[JsonIgnore] public ReferenceSiteDefinition ReferencePlan { get; internal set; }
 	public List<CanonicalSiteEntrance> Entrances { get; set; } = new();
 	public List<string> SightlineSiteIds { get; set; } = new();
 }

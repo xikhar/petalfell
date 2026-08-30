@@ -93,6 +93,12 @@ places that were left, old roads, story locations, and important environmental
 compositions are fixed. Natural detail between those places is generated
 consistently from the fixed world plan.
 
+For the current Chapter 1 production phase, fixed significant places are direct
+measured reconstructions of the supplied `world-new/reference-*.png` districts,
+placed where their visible terrain, water and biome context fits the atlas. Do
+not compose substitute sites from several references. Outside those measured
+footprints, normal biome/elevation/hydrology terrain remains the world.
+
 The first complete target is a playable **Chapter 1**, built on systems that can
 later support additional regions, maps, chapters, remnants, quests, items,
 characters, and mechanics without rebuilding the game around each new addition.
@@ -298,6 +304,8 @@ For significant content, stability is not merely a fixed seed. Domains, sites,
 entrances, sightlines and primary/secondary roads have stable IDs and absolute
 block coordinates in authored source. Procedural systems realise and dress those
 facts; they do not choose or relocate them.
+The geometry inside a production site is likewise stable because it transcribes
+one named structural reference, not because a generator found a plausible ruin.
 
 ---
 
@@ -712,6 +720,12 @@ naturally to the current world and not feel like obvious placeholders.
 ## 14. Blender and Authored 3D Asset Plan
 
 Petalfell should use Blender-authored assets where deliberate form, silhouette, animation, or repeated production quality matters. It should not attempt to procedurally construct every building, character, and prop from basic blocks at runtime.
+
+For the currently supplied `world-new/reference-*.png` sites, this broader asset
+strategy is overridden by the reconstruction contract: each site is an explicit,
+unique voxel transcription. Shared modular architecture and procedural damage
+remain valid for later non-reference content only; they may not substitute for a
+visible stair, pillar, wall, arch, ruin break or terrain mass in these sites.
 
 ### 14.1 Assets Best Authored in Blender
 

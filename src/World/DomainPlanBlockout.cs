@@ -41,6 +41,8 @@ public static class DomainPlanBlockout
 		private int _pavedCapCells;
 		private int _reclaimedCapCells;
 		private int _cutoutCells;
+		private int _surfacePatchCells;
+		private int _rubbleClusters;
 		private int _stairCells;
 		private int _placedBlocks;
 
@@ -65,13 +67,18 @@ public static class DomainPlanBlockout
 			foreach (PlanPlatform platform in _plan.Platforms) BuildPlatform(platform);
 			foreach (PlanPlatform platform in _plan.Platforms) BuildPlatformCutouts(platform);
 			foreach (PlanStair stair in _plan.Stairs) BuildStair(stair);
+			BuildSurfacePatches(rubbleOnly: false);
 			BuildPlatformDressing();
 			BuildAuthoredRoutes();
 			foreach (PlanLandmark landmark in _plan.Landmarks) BuildLandmark(landmark);
 			foreach (PlanWall wall in _plan.Walls) BuildWall(wall);
+			// Collapse debris belongs above the finished architecture. Applying it last
+			// prevents a rubble lump from silently lifting an authored pylon or wall.
+			BuildSurfacePatches(rubbleOnly: true);
 			return new DomainBlockoutStatistics(_plan.Platforms.Count, _platformCells,
 				_terrainCapCells, _pavedCapCells, _reclaimedCapCells,
 				_plan.Platforms.Sum(p => p.Cutouts.Count), _cutoutCells,
+				_plan.Platforms.Sum(p => p.SurfacePatches.Count), _surfacePatchCells, _rubbleClusters,
 				_plan.Stairs.Count, _stairCells, _routeCells.Count, _plan.Walls.Count,
 				_plan.Landmarks.Count, _placedBlocks);
 		}
@@ -147,6 +154,67 @@ public static class DomainPlanBlockout
 					_grid.RedescribeUnedited(x, z, target, cap,
 						Palette.STONE_PALE, Palette.STONE_PALE);
 					_cutoutCells++;
+				}
+			}
+		}
+
+		private void BuildSurfacePatches(bool rubbleOnly)
+		{
+			foreach (PlanPlatform platform in _plan.Platforms)
+			foreach (PlanSurfacePatch patch in platform.SurfacePatches)
+			{
+				bool rubble = patch.Role == PlanSurfacePatchRole.RubbleField;
+				if (rubble != rubbleOnly) continue;
+				List<Vector2> polygon = patch.Polygon.Select(LocalPoint).ToList();
+				int minX = Math.Max(0, (int)MathF.Floor(polygon.Min(p => p.X)));
+				int maxX = Math.Min(_grid.Size - 1, (int)MathF.Ceiling(polygon.Max(p => p.X)));
+				int minZ = Math.Max(0, (int)MathF.Floor(polygon.Min(p => p.Y)));
+				int maxZ = Math.Min(_grid.Size - 1, (int)MathF.Ceiling(polygon.Max(p => p.Y)));
+				uint patchHash = (uint)Rng.StableHash($"{_domain.Id}:{patch.Id}");
+				float ox = (patchHash & 255u) * .37f;
+				float oz = ((patchHash >> 8) & 255u) * -.41f;
+				float threshold = .72f - patch.Coverage * 1.42f;
+				if (rubble) threshold += .22f;
+				byte material = ResolveSurfaceMaterial(patch.MaterialId);
+				for (int z = minZ; z <= maxZ; z++)
+				for (int x = minX; x <= maxX; x++)
+				{
+					if (!InsidePolygon(new Vector2(x + .5f, z + .5f), polygon)) continue;
+					int globalX = x + _data.OriginX, globalZ = z + _data.OriginZ;
+					float field = _platformEdge.Fbm(globalX / (float)patch.Wavelength + ox,
+						globalZ / (float)patch.Wavelength + oz, 3);
+					if (field <= threshold) continue;
+
+					if (rubble)
+					{
+						// Broad failure fields choose the collapse areas; a sparse, jittered
+						// global lattice only chooses individual heaps inside them. The former
+						// six-block grid carpet was visible from the far camera.
+						const int rubbleCell = 14;
+						if (PositiveModulo(globalX, rubbleCell) != 0 ||
+						    PositiveModulo(globalZ, rubbleCell) != 0) continue;
+						int cellX = FloorDiv(globalX, rubbleCell), cellZ = FloorDiv(globalZ, rubbleCell);
+						var scatter = new Rng(unchecked((int)patchHash ^ cellX * 73856093 ^ cellZ * 19349663));
+						Vector2 centre = new(x + scatter.RangeInt(-4, 5), z + scatter.RangeInt(-4, 5));
+						BuildRubbleCluster(centre, unchecked((int)patchHash + cellX + cellZ));
+						_rubbleClusters++;
+						_surfacePatchCells += 4;
+						continue;
+					}
+
+					int top = _grid.Top[z * _grid.Size + x] - 1;
+					if (top < 0) continue;
+					byte resolved = material;
+					if (patch.Role == PlanSurfacePatchRole.BrokenPaving)
+					{
+						// One slow secondary field gives whole paving scars an old/damp side;
+						// it is deliberately not a block hash.
+						float damp = _platformEdge.Fbm(globalX / 68f - ox, globalZ / 68f - oz, 2);
+						if (damp > .24f && material == Palette.STONE_WARM)
+							resolved = Palette.MOSS_STONE;
+					}
+					Put(x, top, z, resolved);
+					_surfacePatchCells++;
 				}
 			}
 		}
@@ -399,7 +467,10 @@ public static class DomainPlanBlockout
 				.ToHashSet(StringComparer.Ordinal);
 			foreach (CanonicalRoute route in _world.Routes)
 			{
-				if (!domainNodes.Contains(route.FromNodeId) && !domainNodes.Contains(route.ToNodeId))
+				bool include = _plan.SourceMode == PlanSourceMode.ReferenceReconstruction
+					? domainNodes.Contains(route.FromNodeId) && domainNodes.Contains(route.ToNodeId)
+					: domainNodes.Contains(route.FromNodeId) || domainNodes.Contains(route.ToNodeId);
+				if (!include)
 					continue;
 				byte material = route.Kind == RoadKind.Trail ? Palette.PATH : Palette.PAVING;
 				for (int i = 1; i < route.Points.Count; i++)
@@ -456,7 +527,8 @@ public static class DomainPlanBlockout
 					float t = sample / (float)samples;
 					Vector2 centre = from + delta * t;
 					if (openings.Any(o => o.DistanceTo(centre) <= Math.Max(3f, thickness * 2f))) continue;
-					int realisedHeight = WallHeight(wall, sample, phase);
+					float gx = centre.X + _data.OriginX, gz = centre.Y + _data.OriginZ;
+					int realisedHeight = WallHeight(wall, sample, phase, gx, gz);
 					int baseX = (int)MathF.Round(centre.X);
 					int baseZ = (int)MathF.Round(centre.Y);
 					int baseFloor = InWindow(baseX, baseZ)
@@ -472,10 +544,9 @@ public static class DomainPlanBlockout
 					if (baseFloor >= 0 && realisedHeight >= 7)
 						BuildWallCoping(centre, across, baseFloor + realisedHeight - 1,
 							thickness + 1, material);
-					if (sample > 0 && sample < samples && sample % 18 == 0)
+					if (realisedHeight >= 3 && sample > 0 && sample < samples && sample % 18 == 0)
 						BuildWallButtress(centre, direction, across,
 							Math.Min(realisedHeight, 5 + (sample / 18) % 3), material);
-					float gx = centre.X + _data.OriginX, gz = centre.Y + _data.OriginZ;
 					float footAge = _platformEdge.Fbm(gx / 32f - 71f, gz / 32f + 61f, 3);
 					if (wall.State != PlanWallState.Standing && sample % 11 == 0 && footAge > -.06f)
 						BuildRubbleCluster(centre + across * (footAge > .2f ? 2.5f : -2.5f), sample);
@@ -508,14 +579,20 @@ public static class DomainPlanBlockout
 			}
 		}
 
-		private static int WallHeight(PlanWall wall, int sample, float phase) => wall.State switch
+		private int WallHeight(PlanWall wall, int sample, float phase, float globalX, float globalZ)
 		{
-			PlanWallState.Standing => wall.Height,
-			PlanWallState.Trace => 1,
-			PlanWallState.Stub => Math.Min(wall.Height, 4),
-			_ => Math.Clamp((int)MathF.Round(wall.Height *
-				(.58f + .22f * MathF.Sin((sample / 12) * 1.7f + phase))), 2, wall.Height),
-		};
+			if (wall.State == PlanWallState.Standing) return wall.Height;
+			if (wall.State == PlanWallState.Trace) return 1;
+			if (wall.State == PlanWallState.Stub) return Math.Min(wall.Height, 4);
+			// Forty-eight-block failure bays make a wall lose coherent sections. The
+			// former twelve-sample sine produced a decorative sawtooth, not collapse.
+			float failure = _platformEdge.Fbm(globalX / 48f + phase * 7f,
+				globalZ / 48f - phase * 5f, 3);
+			if (failure < -.08f) return 2;
+			float silhouette = .34f + (failure + 1f) * .23f +
+				.08f * MathF.Sin(sample / 17f + phase);
+			return Math.Clamp((int)MathF.Round(wall.Height * silhouette), 2, wall.Height);
+		}
 
 		private void BuildMasonryColumn(int x, int z, int height, byte material)
 		{
@@ -598,11 +675,20 @@ public static class DomainPlanBlockout
 				{
 					if (!intact && y > height - 3 && r + f > 1) continue;
 					Vector2 point = Oriented(centre, r, f, degrees);
-					bool motif = f == -halfForward && r == 0 && y >= 4 && y < height - 3 &&
-					             (y % 6 is 0 or 1 || y % 6 == 4);
 					Put((int)MathF.Round(point.X), floor + y, (int)MathF.Round(point.Y),
-						motif || y > 0 && y % 5 == 0 ? Palette.STONE_WARM : Palette.STONE_PALE);
+						y > 0 && y % 5 == 0 ? Palette.STONE_WARM : Palette.STONE_PALE);
 				}
+			}
+			// The motif is geometry, not a colour stripe: recess the three-block face
+			// and expose a warm backing so ink and shadow preserve it at far zoom.
+			for (int y = 4; y < height - 3; y++)
+			for (int r = -1; r <= 1; r++)
+			{
+				if (!RuinKit.Meander(r + 1, y - 4)) continue;
+				Vector2 face = Oriented(centre, r, -1, degrees);
+				Vector2 backing = Oriented(centre, r, 0, degrees);
+				Put((int)MathF.Round(face.X), floor + y, (int)MathF.Round(face.Y), Palette.AIR);
+				Put((int)MathF.Round(backing.X), floor + y, (int)MathF.Round(backing.Y), Palette.STONE_WARM);
 			}
 		}
 
@@ -725,11 +811,15 @@ public static class DomainPlanBlockout
 			for (int z = -radius; z <= radius; z++)
 			for (int x = -radius; x <= radius; x++)
 			{
-				float d = MathF.Sqrt(x * x + z * z);
-				bool ring = MathF.Abs(d - radius * .78f) < 1f || MathF.Abs(d - radius * .42f) < 1f;
-				bool cross = (Math.Abs(x) <= 1 && Math.Abs(z) <= radius / 2) ||
-				             (Math.Abs(z) <= 1 && Math.Abs(x) <= radius / 2);
-				if (ring || cross) Put(cx + x, floor, cz + z, Palette.STONE_WARM);
+				int square = Math.Max(Math.Abs(x), Math.Abs(z));
+				bool outer = square == radius - 1 && !(x > radius / 2 && z == 1 - radius);
+				bool middle = square == Math.Max(2, radius - 5) &&
+				              !(x < -radius / 3 && z == Math.Max(2, radius - 5));
+				bool inner = radius >= 7 && square == Math.Max(1, radius - 9) &&
+				             !(x > 0 && z == 9 - radius);
+				bool bridge = Math.Abs(z) <= 1 && x >= 0 && x < radius - 1;
+				if (outer || middle || inner || bridge)
+					Put(cx + x, floor, cz + z, Palette.STONE);
 			}
 		}
 
@@ -844,9 +934,20 @@ public static class DomainPlanBlockout
 			"stone-mossed" => Palette.MOSS_STONE,
 			_ => throw new InvalidOperationException($"domain masonry material '{id}' has no blockout palette mapping"),
 		};
+
+		private static byte ResolveSurfaceMaterial(string id) => id switch
+		{
+			"reclaimed-sand" => Palette.SAND,
+			"reclaimed-moss" => Palette.MOSS,
+			"moss-stone" => Palette.MOSS_STONE,
+			"weathered-stone" => Palette.STONE_WARM,
+			"collapse-rubble" => Palette.RUBBLE,
+			_ => throw new InvalidOperationException($"domain surface material '{id}' has no blockout palette mapping"),
+		};
 	}
 }
 
 public readonly record struct DomainBlockoutStatistics(int Platforms, int PlatformCells,
 	int TerrainCapCells, int PavedCapCells, int ReclaimedCapCells, int Cutouts, int CutoutCells,
+	int SurfacePatches, int SurfacePatchCells, int RubbleClusters,
 	int Stairs, int StairCells, int RouteCells, int Walls, int Landmarks, int PlacedBlocks);

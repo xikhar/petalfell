@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "siteId": "bloom-grove-court",
+  "builderId": "reference-10-grove-court-v1",
+  "referencePath": "res://world-new/reference-10.png",
+  "groundPlanPath": "res://content/chapter_01/sites/bloom-grove-court-reference-10-plan.json",
+  "origin": { "x": 9800, "z": 4600 },
+  "axisDegrees": 0,
+  "footprintMin": { "x": -88, "z": -80 },
+  "footprintMax": { "x": 88, "z": 80 },
+  "playerSpawn": { "x": 0, "z": -9 },
+  "referenceView": {
+    "focus": { "x": 0, "z": -9 },
+    "distance": 190,
+    "yawDegrees": 135,
+    "pitchDegrees": 35.26439,
+    "heightOffset": 1.8,
+    "sourceWidth": 1672,
+    "sourceHeight": 941
+  }
+}

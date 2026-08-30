@@ -9,12 +9,26 @@
       "regionId": "shallows",
       "cultureId": "old-southern",
       "axisDegrees": 180,
-      "planPath": "res://content/chapter_01/domains/shallows-gateway-domain.json",
+      "planPath": "",
       "boundary": [
         { "x": 5700, "z": 6100 },
         { "x": 7050, "z": 6120 },
         { "x": 7120, "z": 7380 },
         { "x": 5580, "z": 7420 }
+      ]
+    },
+    {
+      "id": "bloom-reference-10-domain",
+      "displayName": "Bloom Grove Court Domain",
+      "regionId": "bloom-reach",
+      "cultureId": "old-eastern",
+      "axisDegrees": 0,
+      "planPath": "",
+      "boundary": [
+        { "x": 9320, "z": 4120 },
+        { "x": 10280, "z": 4120 },
+        { "x": 10280, "z": 5080 },
+        { "x": 9320, "z": 5080 }
       ]
     }
   ],
@@ -26,7 +40,7 @@
       "tier": "District",
       "archetype": "Monumental",
       "status": "Planned",
-      "centre": { "x": 6400, "z": 6500 },
+      "centre": { "x": 6400, "z": 6800 },
       "extentX": 360,
       "extentZ": 320,
       "orientationDegrees": 180,
@@ -44,9 +58,9 @@
       "tier": "Precinct",
       "archetype": "Causeway",
       "status": "Planned",
-      "centre": { "x": 6400, "z": 6880 },
+      "centre": { "x": 6400, "z": 7160 },
       "extentX": 280,
-      "extentZ": 360,
+      "extentZ": 320,
       "orientationDegrees": 180,
       "age": 0.92,
       "entrances": [
@@ -88,16 +102,33 @@
         { "id": "west-path", "routeNodeId": "stela-west" }
       ],
       "sightlineSiteIds": ["shallows-monumental-gate"]
+    },
+    {
+      "id": "bloom-grove-court",
+      "displayName": "Bloom Grove Court",
+      "domainId": "bloom-reference-10-domain",
+      "tier": "Precinct",
+      "archetype": "Shrine",
+      "status": "Blockout",
+      "centre": { "x": 9800, "z": 4600 },
+      "extentX": 176,
+      "extentZ": 160,
+      "orientationDegrees": 0,
+      "age": 0.82,
+      "requiresRoute": false,
+      "planPath": "res://content/chapter_01/sites/bloom-grove-court-reference-10.json",
+      "entrances": [],
+      "sightlineSiteIds": []
     }
   ],
   "routeNodes": [
-    { "id": "strand-west", "point": { "x": 5600, "z": 7160 } },
-    { "id": "strand-approach", "point": { "x": 6400, "z": 7160 } },
-    { "id": "strand-east", "point": { "x": 7120, "z": 7160 } },
-    { "id": "causeway-south", "point": { "x": 6400, "z": 7060 }, "siteId": "shallows-water-causeway", "entranceId": "south-landing" },
-    { "id": "causeway-north", "point": { "x": 6400, "z": 6700 }, "siteId": "shallows-water-causeway", "entranceId": "north-landing" },
-    { "id": "gate-south", "point": { "x": 6400, "z": 6660 }, "siteId": "shallows-monumental-gate", "entranceId": "south-approach" },
-    { "id": "gate-north", "point": { "x": 6400, "z": 6340 }, "siteId": "shallows-monumental-gate", "entranceId": "north-exit" },
+    { "id": "strand-west", "point": { "x": 5600, "z": 7360 } },
+    { "id": "strand-approach", "point": { "x": 6400, "z": 7360 } },
+    { "id": "strand-east", "point": { "x": 7120, "z": 7360 } },
+    { "id": "causeway-south", "point": { "x": 6400, "z": 7320 }, "siteId": "shallows-water-causeway", "entranceId": "south-landing" },
+    { "id": "causeway-north", "point": { "x": 6400, "z": 7000 }, "siteId": "shallows-water-causeway", "entranceId": "north-landing" },
+    { "id": "gate-south", "point": { "x": 6400, "z": 6960 }, "siteId": "shallows-monumental-gate", "entranceId": "south-approach" },
+    { "id": "gate-north", "point": { "x": 6400, "z": 6640 }, "siteId": "shallows-monumental-gate", "entranceId": "north-exit" },
     { "id": "spine-north", "point": { "x": 6400, "z": 6100 } },
     { "id": "lower-east", "point": { "x": 6125, "z": 6540 }, "siteId": "shallows-lower-precinct", "entranceId": "east-stair" },
     { "id": "stela-west", "point": { "x": 6740, "z": 6500 }, "siteId": "shallows-stela-field", "entranceId": "west-path" }
@@ -112,10 +143,10 @@
       "width": 7,
       "construction": "drowned-coastal-road",
       "points": [
-        { "x": 5600, "z": 7160 },
-        { "x": 5850, "z": 7130 },
-        { "x": 6100, "z": 7190 },
-        { "x": 6400, "z": 7160 }
+        { "x": 5600, "z": 7360 },
+        { "x": 5850, "z": 7330 },
+        { "x": 6100, "z": 7390 },
+        { "x": 6400, "z": 7360 }
       ]
     },
     {
@@ -127,10 +158,10 @@
       "width": 7,
       "construction": "drowned-coastal-road",
       "points": [
-        { "x": 6400, "z": 7160 },
-        { "x": 6660, "z": 7200 },
-        { "x": 6900, "z": 7140 },
-        { "x": 7120, "z": 7160 }
+        { "x": 6400, "z": 7360 },
+        { "x": 6660, "z": 7400 },
+        { "x": 6900, "z": 7340 },
+        { "x": 7120, "z": 7360 }
       ]
     },
     {
@@ -142,9 +173,9 @@
       "width": 5,
       "construction": "drowned-paving",
       "points": [
-        { "x": 6400, "z": 7160 },
-        { "x": 6390, "z": 7110 },
-        { "x": 6400, "z": 7060 }
+        { "x": 6400, "z": 7360 },
+        { "x": 6390, "z": 7340 },
+        { "x": 6400, "z": 7320 }
       ]
     },
     {
@@ -156,9 +187,9 @@
       "width": 12,
       "construction": "masonry-causeway",
       "points": [
-        { "x": 6400, "z": 7060 },
-        { "x": 6400, "z": 6880 },
-        { "x": 6400, "z": 6700 }
+        { "x": 6400, "z": 7320 },
+        { "x": 6400, "z": 7160 },
+        { "x": 6400, "z": 7000 }
       ]
     },
     {
@@ -170,8 +201,8 @@
       "width": 10,
       "construction": "processional-paving",
       "points": [
-        { "x": 6400, "z": 6700 },
-        { "x": 6400, "z": 6660 }
+        { "x": 6400, "z": 7000 },
+        { "x": 6400, "z": 6960 }
       ]
     },
     {
@@ -183,9 +214,9 @@
       "width": 12,
       "construction": "terraced-paving",
       "points": [
-        { "x": 6400, "z": 6660 },
-        { "x": 6400, "z": 6500 },
-        { "x": 6400, "z": 6340 }
+        { "x": 6400, "z": 6960 },
+        { "x": 6400, "z": 6800 },
+        { "x": 6400, "z": 6640 }
       ]
     },
     {
@@ -197,8 +228,8 @@
       "width": 8,
       "construction": "worn-stone",
       "points": [
-        { "x": 6400, "z": 6340 },
-        { "x": 6380, "z": 6220 },
+        { "x": 6400, "z": 6640 },
+        { "x": 6380, "z": 6320 },
         { "x": 6400, "z": 6100 }
       ]
     },
@@ -211,8 +242,8 @@
       "width": 5,
       "construction": "broken-stair-road",
       "points": [
-        { "x": 6400, "z": 6660 },
-        { "x": 6280, "z": 6630 },
+        { "x": 6400, "z": 6960 },
+        { "x": 6280, "z": 6780 },
         { "x": 6200, "z": 6590 },
         { "x": 6125, "z": 6540 }
       ]
@@ -226,8 +257,8 @@
       "width": 3,
       "construction": "foundation-trace",
       "points": [
-        { "x": 6400, "z": 6660 },
-        { "x": 6530, "z": 6600 },
+        { "x": 6400, "z": 6960 },
+        { "x": 6530, "z": 6780 },
         { "x": 6650, "z": 6540 },
         { "x": 6740, "z": 6500 }
       ]

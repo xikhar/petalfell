@@ -11,6 +11,12 @@
 > by number and should be looked at, not summarised.
 >
 > Read [AGENTS.md](../AGENTS.md) first if you have not.
+>
+> Repeatable construction procedures, their evidence level and their rejected
+> alternatives live in [`building-knowledge/`](../building-knowledge/README.md).
+> Read the relevant entries before implementing a reference site and update them
+> in the same session when a correction changes the method. This document keeps
+> design language and acceptance criteria; it does not duplicate those recipes.
 
 ---
 
@@ -46,9 +52,11 @@ images:
 | Precinct | 60–120 across | ~22 |
 | District | 250–350 across | *absent* |
 
-The wall stubs were the only thing in range. **This table is the acceptance
-criterion.** Anything built for this direction that does not reach these numbers
-has not addressed the problem, however well weathered it is.
+The wall stubs were the only thing in range. This table diagnoses the old scale
+failure and gives a cross-reference range; it is not permission to inflate a
+measured reconstruction. For supplied-reference sites, the visible player and
+source geometry own the exact dimensions. A thin 1×1 shaft in Reference 10 must
+not be widened merely to satisfy a broader column range.
 
 A note on why: the tall thin elements are not decoration. They are what makes a
 site legible from a distance and therefore what makes it worth walking toward.
@@ -58,7 +66,13 @@ one.
 
 ---
 
-## 3. The kit
+## 3. The retired diagnostic kit
+
+The following vocabulary remains useful for reading references and for legacy
+fixtures, but it is not a production reconstruction API. The generic builders
+proved scale ranges and then visibly failed: repeated capitals, identical piers,
+regular walls and generated stairs turned the references into a sparse kit yard.
+Each production site now writes its own voxel masses directly.
 
 Twelve parts. Small on purpose — every reference image is assembled from
 essentially this set, which is what gives them a common hand.
@@ -102,6 +116,57 @@ while still varying.
 
 ## 4. Composition
 
+### Reconstruction contract
+
+For the current production phase, neither composition nor visible architecture
+is built from the kit. Each
+site plan names one `world-new/reference-*.png` and reproduces that image's
+visible district: footprint, relative level hierarchy, stair count and width,
+wall/arch/column placement, silhouette, damage masses, terrain cuts, paving,
+rubble and vegetation relationship. The whole reconstruction may be rotated or
+uniformly scaled into a compatible permanent atlas location. It may not combine
+several references, add a new centre, simplify a major mass, or replace a visible
+detail with a generic part merely because the generic part already exists.
+Every visible element is encoded uniquely in a site-owned voxel blueprint; even
+two similar columns are authored as two different damaged masses. Procedural
+reclamation and biome dressing stop at the measured footprint boundary.
+
+The image does not reveal every back face. Hidden geometry completes only the
+minimum obvious continuation needed for collision and viewing from the reverse;
+uncertain areas remain plain rather than becoming opportunities for invention.
+Outside the measured footprint, the biome/elevation/hydrology compiler owns the
+landscape normally.
+
+### How exactness is checked
+
+Each reconstruction has one locked comparison view derived from its source
+image. The visible player establishes the two-block scale where present; image
+verticals and the two ground axes solve the isometric camera. Authoring then
+proceeds from large to small: trace the visible terrain/platform silhouette,
+record every level and stair, place the primary masses, then transcribe columns,
+arches, wall failures, rubble, paving and vegetation exclusions.
+
+The locked view uses the source's isometric quadrant. A cardinal orbit that
+shows the same site from a more flattering side is supporting evidence, never a
+reference comparison: screen-left/right relationships, stair direction and
+occlusion order must agree before an overlay is meaningful. For
+`reference-10.png` that solved view is yaw 135 degrees and the true isometric
+pitch of 35.264 degrees; its other three quarter turns test the hidden geometry.
+
+The review tool must render that locked camera and produce both a 50% overlay
+and an edge-difference image against the reference. Acceptance requires:
+
+- the outer site and terrain silhouette to coincide at the comparison view;
+- every visible platform edge, stair, portal, arch, pylon and standing column to
+  have a corresponding measured element;
+- no invented major mass, precinct, centre or axis;
+- material/lighting differences to be judged separately from geometry, so a
+  flattering grade cannot hide the wrong shape;
+- near, reverse and night views to remain collision-complete, while unseen
+  geometry stays conservative.
+
+The comparison overlay is derived review evidence, never an authored source.
+
 The single largest gap between the previous build and the references is not
 parts. It is that **the references are compositions and the previous build was a
 scatter.**
@@ -136,14 +201,14 @@ one culture, one axis grid and one wall system, inside which several sites sit.
 A landscape says *one people lived across all of this* through its connective
 geometry, not through its monuments.
 
-### Composition is authored; grammar is an assistant
+### Composition and visible blocks are transcribed
 
 The axis, level hierarchy, boundary, centre, silhouette and major part placement
-of a remembered site are authored facts. A generator may repeat a colonnade
-between authored endpoints, fit a stair between authored levels, vary coherent
-damage or dress rubble and paving; it may not invent the composition and ask the
-author to re-roll until one happens to work. See [MAP_PIPELINE.md](MAP_PIPELINE.md)
-§2, L3.
+of a remembered site are measured reference facts. No production generator may
+repeat a colonnade, fit a stair, choose damage, scatter rubble, pave a court or
+place vegetation inside that footprint. Low-level range writes are allowed only
+as serialization shorthand for explicitly measured blocks. See
+[MAP_PIPELINE.md](MAP_PIPELINE.md) §2, L3/L4.
 
 Sites are anchored in permanent atlas coordinates. A connected domain plan uses
 one domain-local origin and axis so shared walls and causeways cannot drift apart;
@@ -182,7 +247,7 @@ rests on, and it cannot be deferred even for the smallest first slice — a
 `reference-10` courtyard already needs a raised pad whose revetment is the same
 stone as its walls.
 
-### 5a. The Massif process — how every site's ground is built
+### 5a. The legacy Massif operation and its boundary
 
 One available technique, arrived at after three failed shapes for the first site
 (a small stamp, concentric terrace rings, an excavated mesa — each corrected by
@@ -214,12 +279,14 @@ The four rules:
    replacing their heights along the strip — carved from the mass, never leaned
    against it.
 
-A site is then: pick a summit with vertical headroom, cap it with a base tier a
-few courses proud of the peak, stack mid and crown tiers, shed small satellite
-slabs around the skirt, lay masonry decks where the monument stands, notch the
-stairs, and only then place parts from the kit. A causeway is a long thin slab;
-a cliff ledge is a slab against a mountainside; a district is many decks on few
-slabs — the same four calls should shape any site in `world-new/`.
+The legacy diagnostic assembled a site by choosing a summit, stacking broad
+noise-warped slabs, notching stairs and then stamping parts from the kit. That
+sequence is not used by Reference 10 and must not be generalized to
+`world-new/`. Production reconstruction ground is traced as explicit court,
+platform, shelf, channel and stair cells, with ordinary atlas terrain between
+the source-visible interventions. The current repeatable method and rejected
+ring/pad failures are documented in
+[terrain and detached slab integration](../building-knowledge/terrain/terrain-and-detached-slab-integration.md).
 
 ---
 
@@ -278,10 +345,10 @@ exactly as placed as a blocky one does.
 
 ## 8. Visual reference points
 
-Three games are the scenery baseline. **This is a visual and compositional
-reference only** — not tone, not gameplay, not story, and emphatically not
-palette. Petalfell's own story and world are original; what is borrowed is how
-landscape and architecture are *arranged* so that a large empty world reads.
+Three games remain the wilderness-spacing and sightline baseline. **They do not
+author production-site geometry.** Structural composition is transcribed from
+the supplied `world-new` images under §4. These games contribute only how broad
+empty terrain frames those reconstructions—not tone, gameplay, story or palette.
 
 `plan.md` §2.3 holds the separate, older list of *tonal* reference points. The
 two lists overlap by name and do not overlap in what is taken. Keep them
@@ -364,26 +431,49 @@ the failure of one isolated monument on generic terrain; canonical mode disables
 it because it chooses its own summit.
 
 **Authored and realised as a review blockout:** the first southern domain's
-versioned L3 plan fixes seven platform polygons at four absolute levels, three
-stairs, ten wall runs, eight graph-bound route sockets and thirty-nine silhouette
-placements. Four named platform cutouts preserve terrain or expose a collapse;
-collapsed cutout depth and platform/cutout reclamation density are authored, not
-decay chosen by the compiler. The strict audit enforces domain/site bounds,
-socket identity, reference paths and the scale table. The domain review composes
-its nine terrain sectors, fits the authored levels and routes, repeats only named
-ranges, frays named edges and derives terraces, coping, buttresses, cutout rims,
-rubble and surviving colonnade lintels within those contracts. The biome-driven
-grove pass supplies surrounding scale and enters made ground only where its
-authored reclamation value permits. Fixed late-morning and night views run
-through the ordinary game lighting rather than a presentation-only material rig.
+versioned L3/L4 plan fixes seven platform polygons at four absolute levels, three
+stairs, sixteen wall runs, eight graph-bound route sockets and forty-five
+silhouette placements. Four named platform cutouts preserve terrain or expose a
+collapse; collapsed cutout depth and platform/cutout reclamation density are
+authored, not decay chosen by the compiler. The strict audit enforces domain/site
+bounds, socket identity, reference paths and the scale table. The domain review
+composes its nine terrain sectors, fits the authored levels and routes, repeats
+only named ranges, frays named edges and derives terraces, coping, buttresses,
+cutout rims, rubble and surviving colonnade lintels within those contracts.
+Fourteen surface envelopes author broad earth caps, broken paving and collapse
+areas; their interiors are derived from global wavelength fields, including 85
+sparse rubble clusters in the current build. Recessed meanders and the floor
+emblem are geometry rather than tint. The biome-driven grove pass supplies
+surrounding scale and enters made ground only where authored reclamation permits
+it. Fixed late-morning and early-full-night views run through the ordinary game
+lighting rather than a presentation-only material rig.
 
-**Not accepted:** the fixed day/night captures read as a real district-scale
-axis rather than a small fixture, and the denser edges and silhouette remain
-legible at 1,000 units. Court-scale ground detail, localized wall failure, glyph
-treatment and L4 variation are still materially thinner than `reference-2`,
-`reference-5` and `reference-9`, and the structure geometry is not persisted
-into per-sector artifacts. A working compiler and a beautiful review frame are
-evidence of composition and scale, not evidence that the production site matches
-the reference at walking distance.
+**Not accepted:** the fixed day/night captures now read as a real district-scale
+axis rather than a small fixture, and the denser edges, surface breakup and
+silhouette remain legible at 1,000 units. Atlas-native ground detail, coherent
+wall failure, glyph geometry and L4 variation exist, but walking-distance
+microarchitecture and localized decay remain materially thinner than
+`reference-2`, `reference-5` and `reference-9`; structure geometry is also not
+persisted into per-sector artifacts. A working compiler and a beautiful review
+frame are evidence of composition and scale, not evidence that the production
+site matches the reference at walking distance.
+
+The author superseded this blended composition on 29 August 2026. A subsequent
+generic `reference-1` portal attempt was also rejected because it still stamped
+kit-like architecture onto broad slabs. Both remain evidence only.
+
+**Active Blockout under reconstruction:** the first production transcription is
+the unique `reference-10.png` Bloom Reach grove court. It owns its blocks,
+terrain cuts, paving damage, moss faces, blossom silhouettes and nearby stone
+falls directly; none are shared ruin-kit placements. Its strict plan and capture
+rig exist, but current visual evidence and open corrections are claim-scoped in
+the [Bloom Grove Court knowledge ledger](../building-knowledge/sites/bloom-grove-court.md).
+The complete v13 matrix has been reviewed for the corrected central occupied
+footprint: both lower channels remain open, reverse views show no floating back,
+far views keep the new extent modest, and square shafts do not regress. These
+claim-scoped findings are not whole-site fidelity or author acceptance.
+Normal startup places the traveller in its collision-enabled fixed four-sector
+production-atlas mosaic. Only explicit author confirmation can close this
+Blockout and allow the next structural reference to start.
 
 See [ROADMAP.md](ROADMAP.md) for order and slice status.

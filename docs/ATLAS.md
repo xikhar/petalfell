@@ -17,7 +17,10 @@
 
 The author selected `world-new/map/map-color.png`, `world-new/map/map-line.png`
 and `world-new/map/map-elevation.png` as the reasonable macro-map direction.
-They are **composition references**, not raster sources to trace literally.
+They are **macro composition references**, not raster sources to trace literally.
+This applies only to the three map images. The structural
+`world-new/reference-*.png` set has the opposite contract for the current phase:
+each production site is a measured reconstruction of one of those images.
 
 `map-color.png` establishes:
 
@@ -271,6 +274,12 @@ The same applies where architecture meets terrain. Site plans own levels and
 platform boundaries; the compiler resolves masonry, bedrock, banked soil,
 stairs and rubble as one ground operation before dressing either side.
 
+For supplied-reference footprints, the repeatable procedure and its evidence
+limits are maintained in the
+[terrain-integration building knowledge](../building-knowledge/terrain/terrain-and-detached-slab-integration.md).
+This atlas document owns the physical boundary; the live reference and audited
+site plan own the particular shelves, channels and revetments.
+
 ---
 
 ## 8. Geometry, material and shader formats
@@ -279,8 +288,8 @@ stairs and rubble as one ground operation before dressing either side.
 |---|---|---|---|
 | Wilderness terrain | painted L0/L1 layers + biome profile | sector height/surface fields and voxel columns | existing voxel shader and palette/material table |
 | Roads and ordinary causeways | route spline + construction profile | fitted voxel surface, cuts/fills and crossing records | shared voxel/wetness/reclamation path |
-| Hero district composition | `domains/<id>.json` connected plan, optional site refinements | terrain directives, placed kit parts and navigation | voxel blockout first; optional `.glb` replacement without moving sockets |
-| Reusable architecture | parametric voxel kit now; Blender source later | voxel placement or imported `.glb` with socket metadata | shared architecture material family, culture/profile parameters |
+| Supplied-reference site | unique site blueprint plus locked reference camera | explicit terrain and voxel runs, collision and navigation | no reusable architectural generator inside the measured footprint |
+| Minor non-reference architecture | authored template or later Blender source | voxel placement or imported `.glb` with socket metadata | shared material family, outside reconstruction footprints only |
 | Vegetation and props | reusable set definition; Blender source where needed | instanced geometry/MultiMesh and block forms | shared wind/ground-detail shaders, biome-selected parameters |
 | Water | painted water/hydrology intent | sector water surfaces and crossing data | existing water shader, profile-selected colour/fog response |
 | Decals and tiny dressing | profile ranges and stable field keys | instanced local detail | subordinate to silhouette and ink readability |
@@ -306,6 +315,12 @@ intentional empty intervals read without labels. A sector passes when its seams
 are invisible and rebuilding it leaves non-intersecting sector hashes unchanged.
 A domain passes only when its terrain, roads and structures read as one place at
 normal play distance and at the established far review distances.
+
+Reference-site work additionally follows the scoped measurement, plan and
+capture methods indexed in
+[`building-knowledge/`](../building-knowledge/README.md). Those entries must be
+updated with fresh evidence when a correction changes a site; an old capture
+cannot prove the current authored plan.
 
 ---
 
@@ -366,13 +381,14 @@ Mountain, confluence and drowned-south windows have been inspected in the game;
 the legacy 3,456-square runtime also passed its fixed hero capture after the
 shared material construction was extracted.
 
-Culture, abandonment and wilderness images remain planned. The ordinary game
-still builds the 3,456-square review world with whole-map arrays. The production
-window remains a review surface with no player, collision or multi-elevation
-planar reflections. A temporary domain mode composes nine normal sector
-artifacts, realises the first plan's routes and structures, and adds preliminary
-globally anchored biome trees; it does not enlarge or replace the sector
-artifact format. Persistent route/site/plan output and the accepted wilderness
-density source do not yet exist. `sample-atlas <x,z>` compiles one
-addressed source point on demand so authored absolute platform levels can be
-chosen against the actual deterministic terrain rather than the grayscale map.
+Culture, abandonment and wilderness images remain planned. Normal startup now
+opens a fixed 2×2/four-sector production-atlas mosaic at Bloom Grove Court with
+the player, collision and ordinary chunk streaming inside that mosaic; the old
+3,456-square generated world is available only through `--legacy-world`.
+Explicit sector/domain/site review and capture modes remain nonplayable review
+surfaces. Dynamic handoff to arbitrary neighbouring mosaics, persistent
+route/site/navigation output, an accepted wilderness-density source and
+multi-elevation planar reflections do not yet exist. `sample-atlas <x,z>`
+compiles one addressed source point on demand so authored absolute platform
+levels can be chosen against deterministic terrain rather than the grayscale
+map.

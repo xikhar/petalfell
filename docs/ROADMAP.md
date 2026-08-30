@@ -17,10 +17,13 @@ proceed as decided.
 | Decision | Choice |
 |---|---|
 | **Map identity** | One canonical world, authored once. Not re-generated from a seed. |
-| **Production extent** | 12,288 × 9,216 × 192 blocks, compiled as a 16 × 12 grid of deterministic 768-block sectors. The 3,456-square runtime is a review fixture, not the production map. |
+| **Production extent** | 12,288 × 9,216 × 192 blocks, compiled as a 16 × 12 grid of deterministic 768-block sectors. The old 3,456-square generated world is legacy diagnostics, not the production map. |
 | **Site count** | 30–60 sites for Chapter 1, mixed: a few great districts, more precincts, many small marks. |
 | **Current starting point** | Paint and validate the production atlas, then place every significant site and route before producing more site geometry. |
-| **Hero-site composition** | Authored plan. Procedural systems assist with repetition, fitting, damage and dressing; they do not invent the composition. |
+| **Hero-site composition** | Faithful measured reconstruction of one supplied `world-new/reference-*.png`, placed at a compatible authored atlas location. No original or blended hero-site designs for now. |
+| **Reconstruction implementation** | One site-owned explicit voxel blueprint per reference. No shared architectural kit or procedural tower, pillar, stair, portal, damage or dressing builder inside the measured footprint. |
+| **Normal startup** | A fixed four-sector production-atlas mosaic at the active reconstruction, with collision, the player and ordinary chunk streaming inside that mosaic. Dynamic handoff to arbitrary neighbouring mosaics remains unbuilt. The old 3,456 generated world is legacy diagnostic mode only. |
+| **Construction knowledge** | Evidence-scoped reconstruction methods live in [`building-knowledge/`](../building-knowledge/README.md). Agents read the relevant entries before building and update or supersede them in the same session when stronger evidence, a better method, or an author correction appears. The live reference always wins; only explicit author confirmation is `author-accepted`. |
 | **Coordinates** | Significant content uses stable absolute block coordinates and stable IDs. |
 | **Wilderness** | Deterministic procedural infill inside authored land, elevation, water, region, culture, abandonment and wilderness fields. Noise may vary a fact; it may not invent a major fact. |
 | **Roads and erosion** | Roads are authored splines realised against terrain. Erosion changes geometry and material before shader treatment; it is not a surface-only effect. |
@@ -73,6 +76,23 @@ is the large structural layer above it.
 > [ATLAS.md](ATLAS.md): 12,288 × 9,216 × 192, built as deterministic sectors.
 > The current 3,456-square runtime cannot be stretched to that size because its
 > remaining two-dimensional fields are global; it becomes a review fixture.
+>
+> **Reference reconstruction decision (author, 2026-08-29).** Stop composing
+> original sites from the shared kit. Each production ruin is a faithful measured
+> reconstruction of one supplied structural reference, placed where its visible
+> terrain/water/biome relationship fits the canonical atlas. The rest of the map
+> is normal deterministic biome, height and hydrology terrain; do not populate it
+> with invented districts. The existing southern gateway plan is retained only as
+> a compiler/tooling proof and must be replaced before it becomes production data.
+>
+> **Literal voxel transcription refinement (author, 2026-08-29).** The first
+> attempted `reference-1` reconstruction still used generic portal, pillar,
+> colonnade, wall and stair builders and produced large regular slabs. It was
+> rejected. Production reconstructions now bypass that kit entirely: one unique,
+> site-owned voxel blueprint records every visible mass and decay break. Work
+> begins with `reference-10.png` in Bloom Reach, whose visible traveller gives an
+> unambiguous two-block scale. Normal game startup moves to this atlas runtime;
+> the old generated world is opt-in legacy diagnostics.
 
 Each slice below leaves an artifact that the next one consumes.
 
@@ -163,38 +183,49 @@ ordinary chunk mesher, ink, atmosphere, grade and a multi-height water mesh at
 true atlas coordinates. Fixed captures have been inspected for mountain,
 confluence and drowned-south sectors. A review-only mosaic can now join a square
 set of those artifacts without changing their persistence boundary; the first
-domain uses sectors 7–9 in both axes. Collision, player traversal, multi-plane
-reflections and persistent road/site overlays remain outside the sector
-artifact, so the slice stays open.
+domain uses sectors 7–9 in both axes. The active reconstruction now uses a
+collision-enabled player and ordinary chunk streaming over its four-sector atlas
+window. Dynamic handoff between arbitrary mosaics, multi-plane reflections and
+persistent road/site overlays remain outside the sector artifact, so the slice
+stays open.
 
-### Slice E — one connected southern domain
+### Slice E — first exact reference reconstruction
 
-Build one 500–1000-block domain containing a 250–350-block primary district and
-two or more connected precincts. Use the monumental gate, water causeway and
-lower precinct references as one continuous composition. Author its platform
-polygons, levels, walls, stairs, route sockets and silhouette; use generators
-only to realise and dress those decisions.
+Reconstruct `world-new/reference-10.png` as a compact Bloom Reach grove court at
+the accepted dry meadow around `9800,4600`. Measure its visible player-scaled
+platform outline, two court levels, central stair, every wall, arch and pillar,
+paving break, rubble mass and vegetation opening. The reconstruction is one
+explicit site voxel blueprint. Procedural generation begins outside its measured
+footprint, not inside it.
 
-*Answers:* can authored terrain, routes and architecture read as one world at
-normal play distance and in the fixed 240-unit near, 440-unit wide/reverse and
-1,000-unit far review views?
+*Answers:* does the locked reference view align one-to-one, does the two-block
+traveller establish the same scale, and does the site remain coherent at close,
+play, wide and far distances from all four 90-degree rotations?
 
-*Status:* L3 blockout compilation has started. `domains/shallows-gateway-domain.json`
-fixes seven terrain/platform polygons at Y106/108/112/116, three fitted stair
-connections, four named terrain/collapse cutouts, ten shared wall runs, eight
-route sockets and thirty-nine measured silhouette placements across all four L2
-sites. `DomainPlanDefinition` audits the local-to-atlas transform, plan/site
-bounds, exact graph sockets, references, cutout containment and depth, authored
-reclamation densities, level hierarchy and reference scale.
-`preview-atlas-domain` composites the plan over accepted terrain. `review-domain`
-now composes its nine normal sector artifacts and realises platforms, exact
-routes, stairs, walls and landmarks into the ordinary voxel renderer;
-deterministic terraces, courses, buttresses, coping, cutout rims, rubble and a
-global-coordinate grove pass dress only authored or biome-owned intent. Eight
-fixed late-morning/night captures have been inspected through the real day-cycle
-rig. The district scale, connected level axis, long-range shadows and silhouette
-now work. Slice E stays open because the court surfaces, wall damage, glyphs and
-L4 ground detail still lack the density and local variation of the references.
+*Status:* active reconstruction; author acceptance remains open.
+`bloom-grove-court` owns a unique `reference-10` voxel blueprint at `9800,4600`;
+it does not call the shared ruin kit or superseded domain blockout. Its strict
+one-cell-per-voxel ground plan currently owns the court levels, stairs, detached
+upper slabs, structural projections, exact surface breakup, rubble and tree
+anchors, while the site builder owns each vertical block and damage course. The
+current v2 plan contains 27 terrain records, 24 surface-patch groups covering
+1,893 cells, 34 structure records including eleven rubble clusters, and eighteen
+trees. Its pre-widening central slab boundary is restored; the occupied ruin
+reaches only source x=40 through a broken low L return and two interior remnants,
+and neither it nor later surface work bridges the lower channels at z=-10..-9
+and z=17..20.
+Normal startup opens the fixed collision-enabled four-sector atlas mosaic;
+`--legacy-world` is the only route to the old generated fixture. The current
+evidence and remaining visual gaps are recorded without overstating acceptance
+in the [Bloom Grove Court knowledge ledger](../building-knowledge/sites/bloom-grove-court.md).
+The locked view remains the source's exact 1672×941 resolution, source-facing
+135-degree quadrant and 35.264-degree isometric pitch. Slice E stays open until
+the author accepts the match. The v13 locked-day and true-top raw views, overlays,
+and edge differences have been visually reviewed for the corrected footprint;
+the complete v13 matrix also keeps both channels open without floating backs,
+the rightward extent modest at far range, and the square shafts unchanged across
+all rotations. Those are claim-scoped findings, not whole-site fidelity or
+author acceptance. No second structural reference starts before author acceptance.
 
 ### Slice F — local content compilation and partial regeneration
 
@@ -204,15 +235,17 @@ hashes unchanged.
 
 ### Slice G — production
 
-Author the remaining great districts and precincts one connected domain at a
-time. Template-assisted generation is reserved for minor marks and repeated
-substructures; every generated result remains subordinate to an authored plan.
+Author the remaining supplied references one connected site at a time, only
+after the author accepts the completed first site. Templates remain reserved for
+minor non-reference marks; they do not enter a reconstruction footprint.
 
 ### Retained evidence from the retired order
 
-- The twelve-part voxel kit in `src/World/RuinKit.cs` is reusable vocabulary.
-- `src/World/Massif.cs` is a useful additive slab-stack operation, not the
-  universal site representation.
+- The twelve-part voxel kit in `src/World/RuinKit.cs` is legacy diagnostic
+  vocabulary, not a production reconstruction API.
+- `src/World/Massif.cs` is a legacy additive slab operation. It may inform a
+  measured landform that visibly has that character, but it does not own or
+  generate production-site ground.
 - `src/World/Sanctum.cs` is a review fixture and source of measured failures. It
   is not canonical content until a site record places it and a connected domain
   absorbs it.
@@ -269,10 +302,12 @@ laid out in rows captured well and was still judged "very basic" the moment it
 was compared to a reference, because the references are terrain, massing and
 variety — not parts. Judge work as a composed place or not at all.
 
-**Nothing repeats.** Every stair in the references differs in width, length,
-rise and what joins it; every column differs in weight, height and state. A
-builder must take those as parameters, and a site must vary them on every
-instance — one part stamped repeatedly is what "very basic" looks like.
+**Nothing visible is stamped.** Every stair in the references differs in width,
+length, rise and what joins it; every column differs in weight, height and state.
+Each instance is authored from the source, even where several instances share a
+source-observed grammar such as a constant square shaft. A reusable builder with
+different parameters is still the wrong production boundary if it replaces
+block-by-block transcription.
 
 **A valid platform polygon can still compile into a blank slab.** The first L3
 runtime pass was topologically correct and visually wrong: a complete pale cap

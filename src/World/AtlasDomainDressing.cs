@@ -17,10 +17,19 @@ public static class AtlasDomainDressing
 
 	public static AtlasDomainDressingStatistics Apply(AtlasSectorWindow window,
 		WorldAtlasDefinition atlas, DomainPlanDefinition plan, int worldSeed)
+		=> ApplyCore(window, atlas, plan, null, worldSeed);
+
+	public static AtlasDomainDressingStatistics Apply(AtlasSectorWindow window,
+		WorldAtlasDefinition atlas, ReferenceSiteDefinition site, int worldSeed)
+		=> ApplyCore(window, atlas, null, site, worldSeed);
+
+	private static AtlasDomainDressingStatistics ApplyCore(AtlasSectorWindow window,
+		WorldAtlasDefinition atlas, DomainPlanDefinition plan,
+		ReferenceSiteDefinition site, int worldSeed)
 	{
 		if (window == null) throw new ArgumentNullException(nameof(window));
 		if (atlas?.BiomeCatalog == null) throw new ArgumentNullException(nameof(atlas));
-		if (plan == null) throw new ArgumentNullException(nameof(plan));
+		if (plan == null && site == null) throw new ArgumentNullException(nameof(plan));
 		AtlasSectorData data = window.Data;
 		VoxelGrid grid = window.Grid;
 		var grove = new Noise2D(unchecked(worldSeed ^ Rng.StableHash("atlas:wilderness-grove")));
@@ -38,12 +47,13 @@ public static class AtlasDomainDressing
 				cellX * 73856093 ^ cellZ * 19349663));
 			int globalX = cellX * Cell + rng.RangeInt(2, Cell - 3);
 			int globalZ = cellZ * Cell + rng.RangeInt(2, Cell - 3);
+			if (site?.ContainsGlobal(globalX, globalZ) == true) continue;
 			int x = globalX - data.OriginX, z = globalZ - data.OriginZ;
 			if (x < 4 || z < 4 || x >= data.Width - 4 || z >= data.Depth - 4) continue;
 			candidates++;
 			int index = z * data.Width + x;
 			if (data.Land[index] == 0 || data.WaterSurface[index] > 0) continue;
-			float reclamation = ReclamationAt(plan, globalX, globalZ);
+			float reclamation = plan == null ? 0f : ReclamationAt(plan, globalX, globalZ);
 			// Any raised or cut column belongs to the authored L3 composition. A
 			// named cutout may explicitly invite growth back; the wilderness pass is
 			// not allowed to make that story decision on its own.
@@ -148,6 +158,17 @@ public static class AtlasDomainDressing
 		foreach (PlanPlatformCutout cutout in platform.Cutouts)
 			if (cutout.Reclamation > result && Inside(localX, localZ, cutout.Polygon))
 				result = cutout.Reclamation;
+		foreach (PlanSurfacePatch patch in platform.SurfacePatches)
+			if (Inside(localX, localZ, patch.Polygon))
+			{
+				float patchReclamation = patch.Role switch
+				{
+					PlanSurfacePatchRole.ReclaimedEarth => patch.Coverage,
+					PlanSurfacePatchRole.RubbleField => patch.Coverage * .72f,
+					_ => patch.Coverage * .35f,
+				};
+				if (patchReclamation > result) result = patchReclamation;
+			}
 		}
 		return result;
 	}

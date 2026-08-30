@@ -77,6 +77,19 @@ public sealed class AtlasSectorWindow
 		return field < blend ? _profiles[secondary] : _profiles[primary];
 	}
 
+	/// <summary>
+	/// Resolve the authored biome detail vocabulary at a local runtime column.
+	/// Consumers use this instead of reading the categorical profile bytes so
+	/// ground marks follow the same broad transition field as the block caps.
+	/// </summary>
+	public string GroundDetailSetAt(int localX, int localZ)
+	{
+		if (localX < 0 || localZ < 0 || localX >= _data.Width || localZ >= _data.Depth)
+			return "";
+		int index = localZ * _data.Width + localX;
+		return ProfileAt(index, localX, localZ).GroundDetailSetId;
+	}
+
 	private byte VaryNaturalCap(byte cap, int globalX, int globalZ)
 	{
 		if (!Palette.IsGrassSurface(cap)) return cap;

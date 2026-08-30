@@ -39,10 +39,11 @@ current effort:
    domain, site, entrance, sightline and road connection has a permanent authored
    identity before detailed geometry is built. Seeds may dress that intent; they
    may not invent or move it.
-3. **Ruins and monuments at the right scale**, matching the reference images in
-   `world-new/`, produced as authored connected districts rather than isolated
-   generated fixtures. The previous builds produced first *"a few bricks lying
-   around"*, then one sparse sanctum where the references show domains.
+3. **Measured reconstructions of the supplied ruins and monuments**, with each
+   `world-new/reference-*.png` district reproduced faithfully at a compatible
+   permanent atlas location. Do not invent replacement hero-site compositions
+   for now. Between those reconstruction footprints, the atlas remains ordinary
+   deterministic biome, elevation and hydrology terrain.
 
 ---
 
@@ -53,11 +54,17 @@ architectural. **Look at them. Do not work from the summaries.** They are cited
 throughout the documents by number, and they are tracked in the repository so
 that instruction stays honest on a fresh clone.
 
-The short version of what they establish: the unit of a ruin is a *district*, not
-a building; the terrain and the architecture are the same stone doing the same
-job; tall thin elements (columns, arches, pylons) carry the silhouette and are
-entirely absent from the current build; and the whole vocabulary is about twelve
-repeating parts.
+The structural references are now reconstruction sources, not mood boards. Their
+visible platform layout, relative levels, stairs, walls, arches, columns, damage,
+terrain cuts, surface breakup and surrounding vegetation must be measured and
+reproduced rather than recomposed. Camera-hidden geometry may only complete an
+obvious continuation; it may not add a new centre, axis or precinct.
+
+Before changing a reference site's plan, blocks, terrain, materials or review
+rig, read [`building-knowledge/README.md`](building-knowledge/README.md), its
+certainty contract, and every relevant technique/site entry. Those records
+contain the measured workflows and rejected interpretations that must not be
+rediscovered.
 
 `world-new/map/map-color.png`, `world-new/map/map-line.png` and
 `world-new/map/map-elevation.png` are the selected macro-map references. The
@@ -67,12 +74,10 @@ their generated labels, exact roads, contour numbers or landmark density are
 canon. Their accepted and rejected lessons are in [docs/ATLAS.md](docs/ATLAS.md)
 §1.
 
-**The scenery baseline** — how landscape and architecture are *arranged* so a
-large empty world reads — is Shadow of the Colossus, Elden Ring and Skyrim, taken
-on the visual axis only and assembled into an original world. What each
-contributes is in [docs/RUINS.md](docs/RUINS.md) §8. Petalfell's palette stays
-pastel and high-key; none of those three inform colour, and a reference from them
-that seems to argue for a darker world is being read wrong.
+**The scenery baseline** for wilderness spacing remains Shadow of the Colossus,
+Elden Ring and Skyrim on the visual axis only. It does not author site geometry:
+the supplied `world-new` structural references do. Petalfell's palette stays
+pastel and high-key.
 
 ---
 
@@ -87,8 +92,9 @@ Read the one that owns what you are changing. They cross-link; follow the links.
 | **[docs/WORLD.md](docs/WORLD.md)** | The **story layer**. The continent as a place: its regions, the history that explains their arrangement, the road network, and the rule by which sites are allocated. Sits *above* everything else and touches only parameters. |
 | **[docs/ATLAS.md](docs/ATLAS.md)** | The **physical atlas layer**. Production extent, sectors, L0/L1 source formats, deterministic wilderness, and the biome/material/model contracts that realise the story map. |
 | **[docs/MAP_PIPELINE.md](docs/MAP_PIPELINE.md)** | **How the map is made.** The canonical-map decision, the L0–L4 layer model, authored versus derived data, the iteration loop, and the authoring-surface options. |
-| **[docs/RUINS.md](docs/RUINS.md)** | **How things are built.** Scale targets, the twelve-part kit, authored composition plans and their procedural assistants, terrain-as-architecture, decay and reclamation. |
+| **[docs/RUINS.md](docs/RUINS.md)** | **How things are built.** Per-reference voxel transcription, scale targets, terrain-as-architecture, decay and reclamation. The old shared kit is diagnostic/legacy code, not a production-site authoring surface. |
 | **[docs/ROADMAP.md](docs/ROADMAP.md)** | **Settled decisions, build order, open questions, standing lessons.** The file that changes most often. Start here if you are picking up work. |
+| **[building-knowledge/README.md](building-knowledge/README.md)** | **How proven building work is repeated.** Evidence-labelled measurement, transcription, terrain, structure, surface and capture techniques; site-specific failure/evidence ledgers; and the rules for creating, updating and superseding that knowledge. It does not own design intent or current implementation status. |
 
 ### The existing project documents
 
@@ -123,6 +129,26 @@ range, fray paving, scatter rubble or dress wilderness. It may not choose the
 location, connection graph, major levels, silhouette or centre of a remembered
 place. ([MAP_PIPELINE.md](docs/MAP_PIPELINE.md) §2)
 
+**Reference sites are transcriptions.** For the current phase, L2 chooses a
+compatible permanent location and connection; L3/L4 transcribe one named
+`world-new/reference-*.png`. Do not merge several references into a new design,
+"improve" their composition, or fill the wilderness with invented ruins.
+
+**Production sites do not use the shared ruin kit.** Every visible stair, pillar,
+wall, arch, terrace, break, rubble mass and tree exclusion is authored in the
+site's own voxel blueprint. A low-level voxel write or rectangular fill is only
+storage shorthand; no architectural generator may stamp a reusable column,
+portal, stair or tower into a reconstruction. The first acceptance target is
+`reference-10.png` in Bloom Reach because its visible player fixes scale and its
+footprint is almost entirely observable.
+
+**Normal startup is the atlas runtime.** The old 3,456-square generated map is a
+legacy diagnostic selected explicitly, never the world shown by a normal run.
+The ordinary executable opens a fixed four-sector production-atlas mosaic with
+collision, the player and ordinary chunk streaming inside that mosaic at the
+current reconstruction site. Dynamic handoff to arbitrary neighbouring mosaics
+remains unbuilt.
+
 **Authored data is never written by the generator; derived data is never edited
 by hand.** If those mix, reproducibility is silently lost.
 ([MAP_PIPELINE.md](docs/MAP_PIPELINE.md) §3)
@@ -134,6 +160,16 @@ times in this project — wall decay, roof loss, moss patches. Treat it as a law
 **Scale is judged in the game, not in the code.** The previous ruins were an
 order of magnitude too small and that was not obvious from reading the source. If
 you build something spatial, look at it before reporting it done.
+
+**Building knowledge is a required part of reference-site work.** Consult the
+relevant [`building-knowledge/`](building-knowledge/README.md) entries before
+implementation. When a method works, a stronger check is found, or the author
+corrects/rejects an interpretation, update or supersede the relevant entry in
+the same work session. Record lifecycle separately from claim-level certainty;
+use the evidence states in
+[`CERTAINTY.md`](building-knowledge/CERTAINTY.md): an audit/build may establish
+only mechanical facts, a rendered file is not a visual review until inspected,
+and only an explicit author decision is `author-accepted`.
 
 **Bisect and measure; do not reason from symptoms.** A performance problem here
 was confidently attributed to the day cycle, measured at six percent, and turned
@@ -178,6 +214,8 @@ it is part of finishing a change.
 | A slice was built and verified | [CURRENT_STATE.md](CURRENT_STATE.md) (what exists now) and [ROADMAP.md](docs/ROADMAP.md) §2–3 |
 | A new fact was measured, or an assumption proved wrong | The document holding the wrong number, at source. Do not annotate — correct it |
 | A bug class or hard-won lesson emerged | [ROADMAP.md](docs/ROADMAP.md) §5, and the standing rules here if it is general enough |
+| A repeatable reference-building method worked, gained a stronger check, or revealed a narrower limit | Create or update the relevant [`building-knowledge/`](building-knowledge/README.md) entry with named evidence and honest certainty |
+| The author corrected/rejected a building interpretation or a later method replaced it | Mark the affected entry `rejected/superseded`, preserve the failure, add reciprocal replacement links, and update the site ledger immediately |
 | The author shifted direction | **All of them, in one pass.** See below |
 | A new document was added, or ownership moved | This file's ownership table |
 | The project entered a new phase | This file's "What phase the project is in" |
@@ -217,8 +255,10 @@ says *"we are changing from X to Y"*:
   [ROADMAP.md](docs/ROADMAP.md) §1 is the author's, not yours.
 - **Write for someone cold.** The next reader will not have had the conversation
   you just had. State the reasoning, not only the conclusion.
-- **High level, not implementation.** These documents say what and why. How lives
-  in the code and its comments.
+- **The owning design documents stay high level.** They say what and why; code
+  and comments own current mechanics. `building-knowledge/` is the deliberate
+  operational exception: it records repeatable procedures, checks, scope and
+  failure evidence, but links to rather than duplicating live coordinate data.
 
 ---
 
@@ -230,8 +270,19 @@ Run the game:
 godot-mono --path .
 ```
 
+**Godot GUI workspace rule:** on the author's Hyprland workstation, agents must
+launch every Godot GUI silently on workspace 5. Do not invoke a GUI command
+directly on the active workspace; use the workspace-5 `hl.dsp.exec_cmd` launcher
+shown in
+[`building-knowledge/rendering/capture-overlay-and-acceptance.md`](building-knowledge/rendering/capture-overlay-and-acceptance.md).
+Headless audits/previews do not open a window and are unaffected.
+
 Audit the authored world topology without generating terrain, or write its SVG
 preview:
+
+The `review-*` and `capture-*` lines below show tool interfaces. They open Godot
+and agents must run them through the workspace-5 silent launcher above; all
+other listed commands are headless.
 
 ```bash
 ./tools/world-authoring.sh audit
@@ -247,6 +298,12 @@ preview:
 ./tools/world-authoring.sh capture-sector 8,8
 ./tools/world-authoring.sh review-domain shallows-gateway-domain
 ./tools/world-authoring.sh capture-domain shallows-gateway-domain
+./tools/world-authoring.sh preview-site-plan bloom-grove-court ../shots/bloom-grove-source.svg
+./tools/world-authoring.sh preview-site-plan bloom-grove-court ../shots/bloom-grove-runtime.svg --runtime-facing
+./tools/world-authoring.sh reference-top-grid ../shots/reference-10-top-grid.svg
+./tools/world-authoring.sh reference-plan-overlay ../shots/reference-10-plan-overlay.svg
+./tools/world-authoring.sh review-site bloom-grove-court
+./tools/world-authoring.sh capture-site bloom-grove-court ../shots/reference-10-review
 ```
 
 The atlas and production-topology previews default under `../shots/`; the domain
@@ -271,6 +328,12 @@ both late-morning and night light through the ordinary `DayCycle`; its extended
 shadow and fog distances are review framing, not a second art pipeline. The
 mosaic and geometry remain derived review data; they never rewrite
 `topology.json`, a domain plan or an L0/L1 image.
+`preview-site-plan` strictly audits one reference-site ground plan and renders
+its source-facing or runtime-facing one-cell-per-voxel topology;
+`reference-top-grid` and `reference-plan-overlay` expose Reference 10's source
+registration. `review-site` is interactive and `capture-site` emits the locked
+day/night, calibrated top, and four-distance/four-rotation comparison set. These
+review modes are nonplayable and do not prove normal-startup collision.
 
 Compile without exporting:
 
