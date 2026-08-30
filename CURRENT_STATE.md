@@ -427,22 +427,35 @@ in §2. What remains is the layer above them, and it is the current effort. See
 - **The first explicit reference transcription is an active Blockout under
   reconstruction; author acceptance remains open.** `bloom-grove-court` owns a
   strict source-facing v2 ground plan and unique voxel builder at atlas
-  coordinate `9800,4600`. The current plan has 27 terrain records, 24 explicit
-  surface-patch groups covering 1,893 cells, 34 structure records (including two
-  stairs and eleven exact rubble clusters), and eighteen tree anchors. Its raised
-  east precinct is three detached y114 slabs with lower-terrain channels at
-  source z=-10..-9 and z=17..20. The central slab keeps its pre-widening boundary,
-  while the occupied ruin reaches only source x=40 through a broken low L return
-  and two interior low remnants. Structures and surfaces do not bridge either
-  channel. Python and C# audits enforce one cell per voxel, the explicit runtime
-  mirror, terrain
-  ownership, stair connections, thin connected runs and runtime projection
-  parity. The locked comparison is 1672×941 at yaw 135 degrees and true-isometric
-  pitch 35.264 degrees. The v13 locked-day and true-top raw views, overlays, and
-  edge differences and the complete v13 matrix have been reviewed for that
-  correction: all rotations keep both channels open without floating backs, the
-  rightward extent stays modest at far range, and square shafts do not regress.
-  Those findings are claim-scoped, not whole-site fidelity or author acceptance.
+  coordinate `9800,4600`. The current plan has 28 terrain records, 24 explicit
+  surface-patch groups covering 1,893 cells, 31 structure records (including two
+  stairs and ten exact rubble clusters covering 119 cells), and eighteen tree
+  anchors. Its raised east precinct is three detached y114 slabs with
+  lower-terrain channels at source z=-10..-9 and z=17..20. The central slab keeps
+  its pre-widening boundary, while the occupied ruin reaches only source x=40
+  through a broken low L return and two interior low remnants. Structures and
+  surfaces do not bridge either channel.
+
+  The current v16 correction removes the graded east stair-side shoulder, caps,
+  and rubble; splits the south-west wall into two connected masses around the
+  open passage at source x=-11..-10, z=-9..-6; makes all four central 2×2 pillar
+  shafts start at y116 continuously above the y114 base and y115 stylobate
+  course; and adds a y107 southern approach whose y107/y108/y109 walkable
+  surfaces produce two rises into the y109 lower court. One-cell-wide wall,
+  shoulder, and stele remnants remain separate structure classes rather than
+  mixed-width pillars. Source/runtime plan audits, the world audit, and
+  `dotnet build --no-restore` pass for this current data and builder.
+
+  Python and C# audits enforce one cell per voxel, the explicit runtime mirror,
+  terrain ownership, stair connections, thin connected runs and runtime
+  projection parity. The locked comparison is 1672×941 at yaw 135 degrees and
+  true-isometric pitch 35.264 degrees. The complete v13 matrix remains historical
+  evidence for the unchanged channels, central occupied footprint, reverse
+  support, and far extent. The v16 locked day, true top, and four play-distance
+  quarter-turn views have been inspected for the four corrections above. Those
+  findings are claim-scoped; a current complete close/play/wide/far matrix,
+  whole-site fidelity, collision/playability review, and author acceptance remain
+  open.
   The current evidence and remaining visual
   uncertainty live in the
   [site knowledge ledger](building-knowledge/sites/bloom-grove-court.md);

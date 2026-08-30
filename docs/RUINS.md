@@ -55,8 +55,10 @@ images:
 The wall stubs were the only thing in range. This table diagnoses the old scale
 failure and gives a cross-reference range; it is not permission to inflate a
 measured reconstruction. For supplied-reference sites, the visible player and
-source geometry own the exact dimensions. A thin 1×1 shaft in Reference 10 must
-not be widened merely to satisfy a broader column range.
+source geometry own the exact dimensions. Reference 10's current measured
+pillar family is consistently 2×2 and seated on connected foundations; its
+one-cell walls, stair shoulders and stelae are different structural classes,
+not permission to mix 1×1 needles into that pillar family.
 
 A note on why: the tall thin elements are not decoration. They are what makes a
 site legible from a distance and therefore what makes it worth walking toward.
@@ -468,10 +470,17 @@ terrain cuts, paving damage, moss faces, blossom silhouettes and nearby stone
 falls directly; none are shared ruin-kit placements. Its strict plan and capture
 rig exist, but current visual evidence and open corrections are claim-scoped in
 the [Bloom Grove Court knowledge ledger](../building-knowledge/sites/bloom-grove-court.md).
-The complete v13 matrix has been reviewed for the corrected central occupied
-footprint: both lower channels remain open, reverse views show no floating back,
-far views keep the new extent modest, and square shafts do not regress. These
-claim-scoped findings are not whole-site fidelity or author acceptance.
+The complete v13 matrix remains historical evidence for the unchanged corrected
+central occupied footprint: both lower channels remain open, reverse views show
+no floating back, and far views keep the new extent modest. The later v16
+annotated correction
+removes the invented graded bumps from the main stair's east side, opens a real
+passage by splitting the south-west foundation wall, seats the constant 2×2
+pillar family continuously on its stylobate, and gives the southern approach two
+low visible rises into the court. Its locked, top and four play-distance
+quarter-turn views have been inspected for those four claims. These
+claim-scoped findings are not complete multi-distance evidence, whole-site
+fidelity, or author acceptance.
 Normal startup places the traveller in its collision-enabled fixed four-sector
 production-atlas mosaic. Only explicit author confirmation can close this
 Blockout and allow the next structural reference to start.

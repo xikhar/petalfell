@@ -23,6 +23,14 @@
       "polygon": [[-50,78],[66,78],[79,64],[76,46],[82,28],[80,5],[74,-15],[68,-35],[49,-45],[29,-53],[10,-63],[-14,-59],[-35,-51],[-53,-35],[-61,-12],[-59,10],[-51,31],[-57,51]]
     },
     {
+      "id": "south-threshold-approach",
+      "role": "cut-approach-landing",
+      "surfaceY": 107,
+      "material": "worn-paving",
+      "writeMode": "author-surface",
+      "footprint": [-4,-40,6,-36]
+    },
+    {
       "id": "west-north-stack-tier-1",
       "role": "eroded-platform-shelf",
       "surfaceY": 109,
@@ -481,14 +489,15 @@
     {
       "id": "south-threshold-step",
       "kind": "stair",
-      "fromTerrain": "surrounding-meadow",
+      "fromTerrain": "south-threshold-approach",
       "toTerrain": "lower-court",
       "axis": [0,1],
-      "fromLanding": [-4,-38,6,-36],
-      "toLanding": [-4,-29,6,-28],
+      "fromLanding": [-4,-40,6,-38],
+      "toLanding": [-4,-31,6,-30],
       "treads": [
-        { "footprint": [-4,-35,6,-33], "topY": 108 },
-        { "footprint": [-4,-32,6,-30], "topY": 109 }
+        { "footprint": [-4,-37,6,-36], "topY": 107 },
+        { "footprint": [-4,-35,6,-34], "topY": 108 },
+        { "footprint": [-4,-33,6,-32], "topY": 109 }
       ]
     },
     {
@@ -597,12 +606,20 @@
       "height": 9
     },
     {
-      "id": "south-west-wall",
+      "id": "south-west-wall-south",
       "kind": "connected-wall-run",
       "supportTerrain": "lower-court",
       "baseY": 109,
-      "footprints": [[-11,-28,-10,9],[-15,-28,-10,-27]],
-      "height": 11
+      "footprints": [[-11,-28,-10,-10],[-15,-28,-10,-27]],
+      "height": 4
+    },
+    {
+      "id": "south-west-wall-north",
+      "kind": "connected-wall-run",
+      "supportTerrain": "lower-court",
+      "baseY": 109,
+      "footprint": [-11,-5,-10,9],
+      "height": 4
     },
     {
       "id": "south-gate-west",
@@ -635,30 +652,6 @@
       "baseY": 114,
       "footprint": [-7,10,-4,12],
       "height": 3
-    },
-    {
-      "id": "east-stair-shoulder",
-      "kind": "connected-stair-shoulder",
-      "supportTerrain": "lower-court",
-      "baseY": 109,
-      "footprint": [11,1,12,9],
-      "height": 9
-    },
-    {
-      "id": "east-stair-shoulder-west-cap",
-      "kind": "connected-stair-shoulder",
-      "supportTerrain": "west-upper-platform",
-      "baseY": 114,
-      "footprint": [11,10,12,12],
-      "height": 3
-    },
-    {
-      "id": "east-stair-shoulder-east-cap",
-      "kind": "connected-stair-shoulder",
-      "supportTerrain": "east-upper-central-slab",
-      "baseY": 114,
-      "footprint": [13,1,13,12],
-      "height": 4
     },
     {
       "id": "east-inner-rubble-north",
@@ -699,14 +692,6 @@
       "baseY": 109,
       "envelope": [-12,-1,-8,2],
       "cells": [[-12,0],[-11,0],[-10,0],[-9,0],[-10,-1],[-9,-1],[-8,-1],[-9,1],[-8,1],[-8,2]]
-    },
-    {
-      "id": "east-stair-shoulder-rubble",
-      "kind": "rubble-cluster",
-      "supportTerrain": "lower-court",
-      "baseY": 109,
-      "envelope": [8,-1,12,1],
-      "cells": [[8,0],[9,0],[10,0],[11,0],[12,0],[9,-1],[10,-1],[11,-1],[11,1],[12,1]]
     },
     {
       "id": "east-middle-south-rubble",

@@ -81,20 +81,17 @@ public static class Reference10GroveCourt
 			WriteNamed("rear-east-stele", WriteRearEastStele);
 			WriteNamed("east-south-enclosure", WriteEastSouthEnclosure);
 			WriteNamed("west-enclosure", WriteWestEnclosure);
-			WriteNamed("south-west-wall", WriteSouthWestWall);
+			WriteNamed("south-west-wall-south", WriteSouthWestWallSouth);
+			WriteNamed("south-west-wall-north", WriteSouthWestWallNorth);
 			WriteNamed("south-gate-west", WriteSouthGateWest);
 			WriteNamed("south-gate-east", WriteSouthGateEast);
 			WriteNamed("west-stair-shoulder", WriteWestStairShoulder);
 			WriteNamed("west-stair-shoulder-upper", WriteWestStairShoulderUpper);
-			WriteNamed("east-stair-shoulder", WriteEastStairShoulder);
-			WriteNamed("east-stair-shoulder-west-cap", WriteEastStairShoulderWestCap);
-			WriteNamed("east-stair-shoulder-east-cap", WriteEastStairShoulderEastCap);
 			WriteNamed("east-inner-rubble-north", WriteEastInnerRubbleNorth);
 			WriteNamed("west-enclosure-rubble", WriteWestEnclosureRubble);
 			WriteNamed("north-arch-west-foot-rubble", WriteNorthArchWestFootRubble);
 			WriteNamed("north-arch-east-foot-rubble", WriteNorthArchEastFootRubble);
 			WriteNamed("west-stair-shoulder-rubble", WriteWestStairShoulderRubble);
-			WriteNamed("east-stair-shoulder-rubble", WriteEastStairShoulderRubble);
 			WriteNamed("east-middle-south-rubble", WriteEastMiddleSouthRubble);
 			WriteNamed("east-middle-central-rubble", WriteEastMiddleCentralRubble);
 			WriteNamed("east-south-enclosure-rubble", WriteEastSouthEnclosureRubble);
@@ -193,15 +190,18 @@ public static class Reference10GroveCourt
 		private void WriteInnerWestSpine()
 		{
 			WriteProjectionBase(Palette.STONE);
+			WriteProjectionCourse(115, Palette.STONE_PALE);
 			Fill(-10, -8, 115, 115, 10, 14, Palette.STONE_PALE);
 			Fill(-11, -10, 115, 116, 15, 18, Palette.STONE_PALE);
-			Fill(-11, -11, 117, 123, 16, 16, Palette.STONE_PALE);
+			Fill(-11, -10, 117, 123, 16, 17, Palette.STONE_PALE);
+			Fill(-11, -10, 117, 117, 16, 17, Palette.STONE);
 			Fill(-10, -10, 115, 118, 21, 23, Palette.STONE_PALE);
 			Fill(-11, -11, 115, 116, 26, 29, Palette.STONE_PALE);
 			Fill(-9, -6, 115, 116, 30, 30, Palette.STONE_PALE);
 			Fill(-5, -3, 115, 115, 31, 31, Palette.STONE_WARM);
 			Put(-9, 115, 11, Palette.MOSS_STONE);
-			Put(-11, 123, 16, Palette.MOSS_STONE);
+			Fill(-11, -11, 120, 121, 16, 16, Palette.STONE_WARM);
+			Put(-11, 122, 16, Palette.MOSS_STONE);
 			Put(-10, 117, 22, Palette.STONE_WARM);
 			Put(-11, 115, 28, Palette.MOSS_STONE);
 		}
@@ -212,6 +212,7 @@ public static class Reference10GroveCourt
 			// wall trace therefore stops before the two-cell channel instead of hiding
 			// it beneath an apparently continuous masonry spine.
 			WriteProjectionBase(Palette.STONE);
+			WriteProjectionCourse(115, Palette.STONE_PALE);
 			Fill(13, 13, 115, 116, -17, -11, Palette.STONE_PALE);
 			Put(13, 116, -12, Palette.MOSS_STONE);
 		}
@@ -219,39 +220,54 @@ public static class Reference10GroveCourt
 		private void WriteEastInnerSpineSouthEast()
 		{
 			WriteProjectionBase(Palette.STONE);
+			WriteProjectionCourse(115, Palette.STONE_PALE);
 			Fill(17, 18, 115, 116, -16, -15, Palette.STONE_PALE);
-			Fill(17, 17, 117, 125, -15, -15, Palette.STONE_PALE);
-			Put(17, 120, -15, Palette.STONE_WARM);
+			Fill(17, 18, 117, 125, -16, -15, Palette.STONE_PALE);
+			Fill(17, 18, 117, 117, -16, -15, Palette.STONE);
+			Fill(17, 17, 120, 121, -15, -15, Palette.STONE_WARM);
+			Put(17, 122, -15, Palette.MOSS_STONE);
 		}
 
 		private void WriteEastInnerSpineCentral()
 		{
-			// A is the one broad 2x2 shaft in the reference; B-D remain constant 1x1
-			// squares.  The low trace is clipped at both natural cross-channels.
+			// The overhead and locked view read this precinct as four equal square
+			// survivors carried by one two-cell stylobate.  The earlier 1x1 B-D
+			// needles made a mixed post collection even though their canonical bases
+			// were already two cells wide.  Keep every surviving shaft 2x2 and put
+			// damage in the material courses, never in its cross-section.
 			WriteProjectionBase(Palette.STONE);
+			WriteProjectionCourse(115, Palette.STONE_PALE);
 			Fill(14, 14, 115, 115, -6, 0, Palette.STONE_WARM);
 			Fill(13, 13, 115, 116, 7, 13, Palette.STONE_PALE);
 
-			Fill(15, 16, 115, 116, 3, 4, Palette.STONE_PALE);
-			Fill(15, 16, 117, 126, 3, 4, Palette.STONE_PALE);
+			// The shaft begins on the first course above the two-course stylobate.
+			// Starting at y117 left an actual air slice at y116, which made the four
+			// survivors look like unrelated slabs hovering over the foundation.
+			Fill(15, 16, 116, 126, 3, 4, Palette.STONE_PALE);
 			Fill(15, 16, 117, 117, 3, 4, Palette.STONE);
-			Fill(15, 16, 121, 121, 3, 4, Palette.STONE_WARM);
-			Fill(20, 21, 115, 116, 3, 4, Palette.STONE_PALE);
-			Fill(20, 20, 117, 124, 4, 4, Palette.STONE_PALE);
-			Fill(20, 21, 115, 116, -2, -1, Palette.STONE_PALE);
-			Fill(21, 21, 117, 125, -1, -1, Palette.STONE_PALE);
-			Fill(20, 21, 115, 116, -8, -7, Palette.STONE_PALE);
-			Fill(20, 20, 117, 123, -7, -7, Palette.STONE_PALE);
+			Fill(20, 21, 116, 124, 3, 4, Palette.STONE_PALE);
+			Fill(20, 21, 117, 117, 3, 4, Palette.STONE);
+			Fill(20, 21, 116, 125, -2, -1, Palette.STONE_PALE);
+			Fill(20, 21, 117, 117, -2, -1, Palette.STONE);
+			Fill(20, 21, 116, 123, -8, -7, Palette.STONE_PALE);
+			Fill(20, 21, 117, 117, -8, -7, Palette.STONE);
 
-			Fill(15, 15, 124, 126, 3, 3, Palette.MOSS_STONE);
-			Put(20, 118, 4, Palette.STONE_WARM);
-			Put(21, 125, -1, Palette.MOSS_STONE);
-			Put(20, 123, -7, Palette.MOSS_STONE);
+			// Faded courses are narrow, contiguous stains on one corner. Full-width
+			// pink rings made the shafts look striped and weakened their square read.
+			Fill(15, 15, 121, 122, 3, 3, Palette.STONE_WARM);
+			Fill(15, 15, 123, 125, 3, 3, Palette.MOSS_STONE);
+			Fill(20, 20, 120, 121, 3, 3, Palette.STONE_WARM);
+			Put(20, 122, 3, Palette.MOSS_STONE);
+			Fill(21, 21, 122, 123, -1, -1, Palette.STONE_WARM);
+			Put(21, 124, -1, Palette.MOSS_STONE);
+			Fill(20, 20, 120, 121, -8, -8, Palette.STONE_WARM);
+			Put(20, 122, -8, Palette.MOSS_STONE);
 		}
 
 		private void WriteEastInnerSpineNorth()
 		{
 			WriteProjectionBase(Palette.STONE);
+			WriteProjectionCourse(115, Palette.STONE_PALE);
 			Fill(14, 14, 115, 117, 21, 23, Palette.STONE_PALE);
 			Fill(13, 13, 115, 115, 27, 31, Palette.STONE_WARM);
 			Put(14, 117, 21, Palette.MOSS_STONE);
@@ -263,6 +279,7 @@ public static class Reference10GroveCourt
 			// visible-right direction.  The terrain edge already had the right extent;
 			// this low return spreads occupied ruin across it without adding a pillar.
 			WriteProjectionBase(Palette.STONE);
+			WriteProjectionCourse(115, Palette.STONE_PALE);
 			Fill(29, 33, 115, 115, 0, 1, Palette.STONE_PALE);
 			Fill(35, 38, 115, 116, 0, 1, Palette.STONE_PALE);
 			Fill(39, 40, 115, 115, 1, 5, Palette.STONE_WARM);
@@ -276,6 +293,7 @@ public static class Reference10GroveCourt
 		private void WriteEastCentralInnerLowWallNorth()
 		{
 			WriteProjectionBase(Palette.STONE);
+			WriteProjectionCourse(115, Palette.STONE_PALE);
 			Fill(20, 21, 115, 115, 9, 11, Palette.STONE_PALE);
 			Fill(20, 24, 115, 115, 12, 13, Palette.STONE_PALE);
 			Fill(26, 27, 115, 116, 12, 13, Palette.STONE_WARM);
@@ -286,6 +304,7 @@ public static class Reference10GroveCourt
 		private void WriteEastCentralInnerLowWallEast()
 		{
 			WriteProjectionBase(Palette.STONE);
+			WriteProjectionCourse(115, Palette.STONE_PALE);
 			Fill(31, 32, 115, 115, 4, 6, Palette.STONE_PALE);
 			Fill(31, 33, 115, 115, 4, 5, Palette.STONE_WARM);
 			Fill(31, 31, 115, 116, 7, 8, Palette.STONE_PALE);
@@ -295,15 +314,18 @@ public static class Reference10GroveCourt
 		private void WriteEastNorthBranch()
 		{
 			WriteProjectionBase(Palette.STONE);
+			WriteProjectionCourse(115, Palette.STONE_PALE);
 			Fill(17, 22, 115, 116, 22, 22, Palette.STONE_PALE);
 			Fill(25, 30, 115, 115, 23, 23, Palette.STONE_WARM);
 			Fill(32, 36, 115, 116, 22, 23, Palette.STONE_PALE);
 			Fill(35, 36, 115, 116, 25, 31, Palette.STONE_PALE);
-			Fill(35, 35, 117, 122, 25, 25, Palette.STONE_PALE);
-			Fill(36, 36, 117, 118, 29, 29, Palette.STONE_WARM);
+			Fill(35, 36, 117, 122, 25, 26, Palette.STONE_PALE);
+			Fill(35, 36, 117, 117, 25, 26, Palette.STONE);
+			Fill(35, 36, 117, 118, 29, 30, Palette.STONE_PALE);
+			Fill(35, 35, 119, 120, 25, 25, Palette.STONE_WARM);
 			Put(18, 116, 22, Palette.MOSS_STONE);
 			Put(29, 115, 23, Palette.MOSS_STONE);
-			Put(35, 122, 25, Palette.MOSS_STONE);
+			Put(35, 121, 25, Palette.MOSS_STONE);
 		}
 
 		private void WriteRearEastStele()
@@ -311,7 +333,7 @@ public static class Reference10GroveCourt
 			WriteProjectionBase(Palette.STONE_PALE);
 			Fill(19, 20, 115, 120, 34, 35, Palette.STONE_PALE);
 			Fill(19, 20, 115, 115, 34, 35, Palette.STONE);
-			Fill(19, 20, 118, 118, 34, 35, Palette.STONE_WARM);
+			Fill(19, 19, 118, 119, 34, 34, Palette.STONE_WARM);
 			Fill(19, 20, 121, 121, 34, 34, Palette.STONE_WARM);
 			Fill(19, 19, 119, 120, 35, 35, Palette.MOSS_STONE);
 			Put(20, 121, 34, Palette.AIR);
@@ -320,16 +342,19 @@ public static class Reference10GroveCourt
 		private void WriteEastSouthEnclosure()
 		{
 			WriteProjectionBase(Palette.STONE);
+			WriteProjectionCourse(115, Palette.STONE_PALE);
 			Fill(21, 22, 115, 116, -23, -20, Palette.STONE_PALE);
-			Fill(21, 21, 117, 119, -22, -22, Palette.STONE_PALE);
+			Fill(21, 22, 117, 119, -23, -22, Palette.STONE_PALE);
+			Fill(21, 22, 117, 117, -23, -22, Palette.STONE);
 			Fill(24, 28, 115, 115, -23, -23, Palette.STONE_WARM);
 			Fill(31, 33, 115, 116, -23, -22, Palette.STONE_PALE);
 			Fill(32, 33, 115, 116, -21, -21, Palette.STONE_PALE);
 			Fill(32, 33, 115, 123, -16, -15, Palette.STONE_PALE);
 			Fill(32, 33, 117, 117, -16, -15, Palette.STONE);
-			Fill(32, 33, 121, 121, -16, -15, Palette.STONE_WARM);
+			Fill(32, 32, 120, 121, -16, -16, Palette.STONE_WARM);
 			Fill(32, 32, 115, 117, -13, -12, Palette.STONE_WARM);
-			Put(21, 116, -21, Palette.MOSS_STONE);
+			Fill(21, 21, 118, 118, -23, -23, Palette.STONE_WARM);
+			Put(21, 119, -23, Palette.MOSS_STONE);
 			Put(27, 115, -23, Palette.MOSS_STONE);
 			Fill(33, 33, 121, 123, -15, -15, Palette.MOSS_STONE);
 		}
@@ -337,51 +362,70 @@ public static class Reference10GroveCourt
 		private void WriteWestEnclosure()
 		{
 			WriteProjectionBase(Palette.STONE);
+			WriteProjectionCourse(110, Palette.STONE_PALE);
 			Fill(-26, -25, 110, 111, -6, -2, Palette.STONE_PALE);
-			Fill(-26, -26, 110, 116, 5, 5, Palette.STONE_PALE);
+			Fill(-26, -25, 111, 112, 4, 5, Palette.STONE_PALE);
+			Fill(-26, -25, 111, 111, 4, 5, Palette.STONE);
 			Fill(-24, -20, 110, 111, 8, 9, Palette.STONE_PALE);
 			Fill(-19, -17, 110, 110, 9, 9, Palette.STONE_WARM);
 			Fill(-15, -14, 110, 112, 5, 8, Palette.STONE_PALE);
-			Fill(-15, -15, 110, 115, 0, 0, Palette.STONE_PALE);
+			Fill(-15, -14, 111, 112, -1, 0, Palette.STONE_PALE);
+			Fill(-15, -14, 111, 111, -1, 0, Palette.STONE);
 			Put(-25, 111, -2, Palette.MOSS_STONE);
-			Put(-26, 116, 5, Palette.MOSS_STONE);
+			Put(-26, 112, 5, Palette.MOSS_STONE);
 			Put(-15, 112, 7, Palette.STONE_WARM);
+			Put(-15, 112, 0, Palette.MOSS_STONE);
 		}
 
-		private void WriteSouthWestWall()
+		private void WriteSouthWestWallSouth()
 		{
+			// The former single wall ran unbroken beside the whole court. The marked
+			// player-level route is now a real four-cell plan gap, so its south and
+			// north pieces are separate audited masses rather than a runtime carve.
 			WriteProjectionBase(Palette.STONE);
+			WriteProjectionCourse(110, Palette.STONE_PALE);
 			Fill(-15, -12, 110, 111, -28, -27, Palette.STONE_WARM);
 			Fill(-11, -10, 110, 111, -24, -21, Palette.STONE_PALE);
-			Fill(-11, -11, 110, 115, -19, -19, Palette.STONE_PALE);
+			Fill(-11, -10, 111, 111, -20, -19, Palette.STONE_PALE);
+			Fill(-11, -10, 111, 111, -20, -19, Palette.STONE);
 			Fill(-10, -10, 110, 111, -13, -11, Palette.STONE_PALE);
-			Fill(-11, -10, 110, 111, -6, -3, Palette.STONE_PALE);
-			Fill(-11, -11, 110, 118, -1, -1, Palette.STONE_PALE);
-			Fill(-10, -10, 110, 111, 7, 8, Palette.STONE_PALE);
-			Put(-11, 115, -19, Palette.MOSS_STONE);
+			Put(-11, 111, -20, Palette.MOSS_STONE);
 			Put(-10, 112, -12, Palette.STONE_WARM);
-			Put(-11, 118, -1, Palette.MOSS_STONE);
+		}
+
+		private void WriteSouthWestWallNorth()
+		{
+			WriteProjectionBase(Palette.STONE);
+			WriteProjectionCourse(110, Palette.STONE_PALE);
+			Fill(-11, -10, 110, 111, -5, -3, Palette.STONE_PALE);
+			Fill(-11, -10, 111, 112, -2, -1, Palette.STONE_PALE);
+			Fill(-11, -10, 111, 111, -2, -1, Palette.STONE);
+			Fill(-10, -10, 110, 111, 7, 8, Palette.STONE_PALE);
+			Put(-11, 112, -1, Palette.MOSS_STONE);
 		}
 
 		private void WriteSouthGateWest()
 		{
 			WriteProjectionBase(Palette.STONE);
+			WriteProjectionCourse(110, Palette.STONE_PALE);
 			Fill(-9, -8, 110, 111, -29, -25, Palette.STONE_PALE);
 			Fill(-9, -9, 112, 112, -25, -25, Palette.STONE);
-			Fill(-8, -8, 110, 117, -19, -19, Palette.STONE_PALE);
+			Fill(-9, -8, 111, 112, -20, -19, Palette.STONE_PALE);
+			Fill(-9, -8, 111, 111, -20, -19, Palette.STONE);
 			Fill(-8, -5, 110, 111, -16, -15, Palette.STONE_WARM);
 			Put(-9, 111, -25, Palette.MOSS_STONE);
-			Put(-8, 117, -19, Palette.MOSS_STONE);
+			Put(-9, 112, -20, Palette.MOSS_STONE);
 		}
 
 		private void WriteSouthGateEast()
 		{
 			WriteProjectionBase(Palette.STONE);
+			WriteProjectionCourse(110, Palette.STONE_PALE);
 			Fill(7, 8, 110, 111, -29, -24, Palette.STONE_PALE);
 			Fill(8, 8, 112, 112, -25, -25, Palette.STONE);
 			Fill(7, 8, 110, 120, -20, -19, Palette.STONE_PALE);
 			Fill(7, 8, 110, 110, -20, -19, Palette.STONE);
-			Fill(7, 8, 115, 115, -20, -19, Palette.STONE_WARM);
+			Fill(7, 7, 115, 116, -20, -20, Palette.STONE_WARM);
 			Fill(7, 11, 110, 111, -16, -15, Palette.STONE_PALE);
 			Fill(14, 18, 110, 111, -29, -28, Palette.STONE_WARM);
 			Put(8, 113, -25, Palette.MOSS_STONE);
@@ -391,51 +435,26 @@ public static class Reference10GroveCourt
 		private void WriteWestStairShoulder()
 		{
 			WriteProjectionBase(Palette.STONE);
-			Fill(-4, -4, 110, 110, 1, 2, Palette.STONE_PALE);
-			Fill(-4, -4, 110, 111, 3, 4, Palette.STONE_PALE);
-			Fill(-4, -4, 110, 112, 5, 6, Palette.STONE_PALE);
-			Fill(-4, -4, 110, 113, 7, 8, Palette.STONE_PALE);
-			Fill(-4, -4, 110, 114, 9, 9, Palette.STONE_PALE);
+			// These are two-cell graded stair cheeks, not a procession of thin posts.
+			Fill(-5, -4, 110, 110, 1, 2, Palette.STONE_PALE);
+			Fill(-5, -4, 110, 111, 3, 4, Palette.STONE_PALE);
+			Fill(-5, -4, 110, 112, 5, 6, Palette.STONE_PALE);
+			Fill(-5, -4, 110, 113, 7, 8, Palette.STONE_PALE);
+			Fill(-5, -4, 110, 114, 9, 9, Palette.STONE_PALE);
 			Fill(-7, -6, 110, 111, 8, 9, Palette.STONE_PALE);
 			Fill(-7, -6, 112, 122, 8, 9, Palette.STONE_PALE);
 			Fill(-7, -6, 112, 112, 8, 9, Palette.STONE);
-			Fill(-7, -6, 118, 118, 8, 9, Palette.STONE_WARM);
+			Fill(-7, -7, 118, 119, 8, 8, Palette.STONE_WARM);
 			Fill(-7, -7, 120, 122, 9, 9, Palette.MOSS_STONE);
-			Put(-4, 112, 6, Palette.STONE_WARM);
+			Put(-5, 112, 6, Palette.STONE_WARM);
 		}
 
 		private void WriteWestStairShoulderUpper()
 		{
 			WriteProjectionBase(Palette.STONE);
-			Fill(-4, -4, 115, 116, 10, 12, Palette.STONE_PALE);
+			Fill(-5, -4, 115, 116, 10, 12, Palette.STONE_PALE);
 			Fill(-7, -7, 115, 116, 10, 11, Palette.STONE_WARM);
-			Put(-4, 116, 11, Palette.MOSS_STONE);
-		}
-
-		private void WriteEastStairShoulder()
-		{
-			WriteProjectionBase(Palette.STONE);
-			Fill(11, 11, 110, 110, 1, 2, Palette.STONE_PALE);
-			Fill(11, 11, 110, 111, 3, 4, Palette.STONE_PALE);
-			Fill(11, 11, 110, 112, 5, 6, Palette.STONE_PALE);
-			Fill(11, 11, 110, 113, 7, 8, Palette.STONE_PALE);
-			Fill(11, 11, 110, 114, 9, 9, Palette.STONE_PALE);
-			Put(11, 112, 6, Palette.MOSS_STONE);
-		}
-
-		private void WriteEastStairShoulderWestCap()
-		{
-			WriteProjectionBase(Palette.STONE);
-			Fill(11, 11, 115, 116, 10, 12, Palette.STONE_PALE);
-			Put(11, 116, 11, Palette.MOSS_STONE);
-		}
-
-		private void WriteEastStairShoulderEastCap()
-		{
-			WriteProjectionBase(Palette.STONE);
-			Fill(13, 13, 115, 116, 7, 10, Palette.STONE_PALE);
-			Fill(13, 13, 117, 117, 9, 10, Palette.STONE_WARM);
-			Put(13, 115, 3, Palette.MOSS_STONE);
+			Put(-5, 116, 11, Palette.MOSS_STONE);
 		}
 
 		private void WriteEastInnerRubbleNorth()
@@ -485,16 +504,6 @@ public static class Reference10GroveCourt
 			Put(-12, 109, 0, Palette.STONE);
 			Put(-9, 109, -1, Palette.MOSS_STONE);
 			Put(-8, 109, 2, Palette.STONE_WARM);
-		}
-
-		private void WriteEastStairShoulderRubble()
-		{
-			WriteProjectionBase(Palette.STONE_PALE);
-			Fill(9, 10, 110, 110, 0, 0, Palette.STONE_WARM);
-			Fill(12, 12, 110, 111, 1, 1, Palette.STONE);
-			Put(8, 109, 0, Palette.STONE);
-			Put(10, 109, -1, Palette.MOSS_STONE);
-			Put(11, 109, 1, Palette.STONE_WARM);
 		}
 
 		private void WriteEastMiddleSouthRubble()

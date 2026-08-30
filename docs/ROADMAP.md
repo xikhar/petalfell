@@ -208,24 +208,34 @@ it does not call the shared ruin kit or superseded domain blockout. Its strict
 one-cell-per-voxel ground plan currently owns the court levels, stairs, detached
 upper slabs, structural projections, exact surface breakup, rubble and tree
 anchors, while the site builder owns each vertical block and damage course. The
-current v2 plan contains 27 terrain records, 24 surface-patch groups covering
-1,893 cells, 34 structure records including eleven rubble clusters, and eighteen
-trees. Its pre-widening central slab boundary is restored; the occupied ruin
+current v2 plan contains 28 terrain records, 24 surface-patch groups covering
+1,893 cells, 31 structure records including two stairs and ten rubble clusters
+covering 119 exact cells, and eighteen trees. Its pre-widening central slab
+boundary is restored; the occupied ruin
 reaches only source x=40 through a broken low L return and two interior remnants,
 and neither it nor later surface work bridges the lower channels at z=-10..-9
-and z=17..20.
+and z=17..20. The current v16 correction removes the graded east stair-side
+shoulder/cap/rubble family; divides the south-west wall around a true passage at
+source x=-11..-10, z=-9..-6; seats the four constant 2×2 central pillar shafts at
+y116 continuously over the y114 base and y115 stylobate; and introduces a y107
+southern approach whose y107/y108/y109 walkable surfaces make two rises into the
+y109 lower court. One-cell walls, shoulders, and stelae remain distinct from the
+2×2 pillar family. Source/runtime plan audits, the world audit, and
+`dotnet build --no-restore` pass for this revision.
 Normal startup opens the fixed collision-enabled four-sector atlas mosaic;
 `--legacy-world` is the only route to the old generated fixture. The current
 evidence and remaining visual gaps are recorded without overstating acceptance
 in the [Bloom Grove Court knowledge ledger](../building-knowledge/sites/bloom-grove-court.md).
 The locked view remains the source's exact 1672×941 resolution, source-facing
 135-degree quadrant and 35.264-degree isometric pitch. Slice E stays open until
-the author accepts the match. The v13 locked-day and true-top raw views, overlays,
-and edge differences have been visually reviewed for the corrected footprint;
-the complete v13 matrix also keeps both channels open without floating backs,
-the rightward extent modest at far range, and the square shafts unchanged across
-all rotations. Those are claim-scoped findings, not whole-site fidelity or
-author acceptance. No second structural reference starts before author acceptance.
+the author accepts the match. The complete v13 matrix remains historical visual
+evidence for the unchanged corrected footprint, channels, reverse support, and
+far extent. The v16 locked-day, true-top, and four play-distance quarter-turn
+captures have been inspected for the stair-side subtraction, open wall passage,
+continuous 2×2 pillar foundations, and two-rise threshold. Those are
+claim-scoped findings; current close/wide/far coverage, whole-site fidelity,
+collision/playability review, and author acceptance remain open. No second
+structural reference starts before author acceptance.
 
 ### Slice F — local content compilation and partial regeneration
 
