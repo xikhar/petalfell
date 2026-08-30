@@ -880,6 +880,8 @@ public partial class Main : Node3D
 			{
 				if (fishingKey.Keycode == Key.Q) Rig.Rotate45(-1);
 				else if (fishingKey.Keycode == Key.E) Rig.Rotate45(1);
+				else if (fishingKey.PhysicalKeycode == Key.K || fishingKey.Keycode == Key.K)
+					Rig.StartAutoZoomToMaximum();
 			}
 			GetViewport().SetInputAsHandled();
 			return;
@@ -908,6 +910,8 @@ public partial class Main : Node3D
 		{
 			if (k.Keycode == Key.Q) Rig.Rotate45(-1);
 			if (k.Keycode == Key.E) Rig.Rotate45(1);
+			if (k.PhysicalKeycode == Key.K || k.Keycode == Key.K)
+				Rig.StartAutoZoomToMaximum();
 		}
 	}
 

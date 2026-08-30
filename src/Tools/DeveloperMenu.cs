@@ -151,6 +151,10 @@ public partial class DeveloperMenu : CanvasLayer
 		_maxZoom = AddSlider(content, "Maximum zoom", 24.0, 240.0, 1.0,
 			_camera.MaxDistance, value => $"{value:0}", SetMaximumZoom);
 
+		AddSlider(content, "K auto-zoom speed", 1.0, 60.0, 0.5,
+			_camera.AutoZoomSpeed, value => $"{value:0.0} blocks/s",
+			value => _camera.AutoZoomSpeed = (float)value);
+
 		_root.Visible = false;
 	}
 

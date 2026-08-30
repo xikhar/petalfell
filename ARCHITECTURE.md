@@ -66,6 +66,9 @@ post-processing** (tonemap, glow, adjustments). That single fact shapes §2.
 
 **Decision: keep the reference rig. Perspective, ~21° FOV, pitch ~33.5°, yaw snapped to
 45°, dolly zoom over a 50–120 unit range, critically-damped follow springs with lead.**
+Manual wheel zoom uses the ordinary damped target. K instead starts a linear
+distance-per-second dolly to the current maximum distance; wheel input cancels
+that move, and the tilde developer surface owns its live speed parameter.
 
 Reasoning:
 

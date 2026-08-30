@@ -27,6 +27,9 @@ public partial class CameraRig : Camera3D
 	public float TargetDistance = 75f;
 	public float MinDistance = 50f;
 	public float MaxDistance = 120f;
+	/// <summary>World-space camera-distance units travelled per second by K auto-zoom.</summary>
+	public float AutoZoomSpeed = 12f;
+	public bool AutoZooming { get; private set; }
 
 	private Vector3 _focus = new(0, 12, 0);
 	private Vector3 _smoothFocus = new(0, 12, 0);
@@ -48,7 +51,18 @@ public partial class CameraRig : Camera3D
 
 	public void Zoom(float delta)
 	{
+		// The wheel is direct author/player intent and must immediately take camera
+		// ownership back from a cinematic move.
+		if (AutoZooming) TargetDistance = Distance;
+		AutoZooming = false;
 		TargetDistance = Mathf.Clamp(TargetDistance + delta, MinDistance, MaxDistance);
+	}
+
+	/// <summary>Begin a constant-speed dolly to the current widest zoom limit.</summary>
+	public void StartAutoZoomToMaximum()
+	{
+		TargetDistance = MaxDistance;
+		AutoZooming = Distance < MaxDistance - 0.001f;
 	}
 
 	public void SetZoomLimits(float minimum, float maximum)
@@ -57,6 +71,7 @@ public partial class CameraRig : Camera3D
 		MaxDistance = Mathf.Max(MinDistance, maximum);
 		TargetDistance = Mathf.Clamp(TargetDistance, MinDistance, MaxDistance);
 		Distance = Mathf.Clamp(Distance, MinDistance, MaxDistance);
+		if (AutoZooming) TargetDistance = MaxDistance;
 	}
 
 	/// <summary>Critically damped approach — no overshoot, no lag spike on a hard turn.</summary>
@@ -71,7 +86,22 @@ public partial class CameraRig : Camera3D
 		float dt = (float)delta;
 
 		Yaw = Damp(Yaw, TargetYaw, 7f, dt);
-		Distance = Damp(Distance, TargetDistance, 6f, dt);
+		if (AutoZooming)
+		{
+			// MoveToward makes the visible camera distance linear in time. Driving only
+			// TargetDistance would still pass through the ordinary exponential spring
+			// and produce a fast start with a long asymptotic tail.
+			Distance = Mathf.MoveToward(Distance, MaxDistance,
+				Mathf.Max(0.01f, AutoZoomSpeed) * dt);
+			TargetDistance = Distance;
+			if (Distance >= MaxDistance - 0.001f)
+			{
+				Distance = MaxDistance;
+				TargetDistance = MaxDistance;
+				AutoZooming = false;
+			}
+		}
+		else Distance = Damp(Distance, TargetDistance, 6f, dt);
 
 		// Frame a little above the feet: the traveller is short against the
 		// terraces and centring on them puts the horizon in the wrong place.

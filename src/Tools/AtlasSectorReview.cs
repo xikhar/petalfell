@@ -563,7 +563,7 @@ public partial class AtlasSectorReview : Node3D
 
 			if (_shotDirectory != null) await RunCapture();
 			else if (_playable)
-				GD.Print("[atlas-runtime] W/A/S/D move  hold Shift slow-walk  Space jump  Q/E orbit  mouse wheel zoom  M atlas map  Shift-click atlas reload/teleport  tilde developer settings  --legacy-world restores the retired fixture");
+				GD.Print("[atlas-runtime] W/A/S/D move  hold Shift slow-walk  Space jump  Q/E orbit  K auto-zoom  mouse wheel zoom  M atlas map  Shift-click atlas reload/teleport  tilde developer settings  --legacy-world restores the retired fixture");
 			else GD.Print("[atlas-review] W/A/S/D pan  Q/E orbit  mouse wheel zoom");
 		}
 		catch (Exception ex)
@@ -1110,6 +1110,11 @@ public partial class AtlasSectorReview : Node3D
 				else if (playableKey.Keycode == Key.E)
 				{
 					_camera.Rotate45(1);
+					handled = true;
+				}
+				else if (playableKey.PhysicalKeycode == Key.K || playableKey.Keycode == Key.K)
+				{
+					_camera.StartAutoZoomToMaximum();
 					handled = true;
 				}
 			}

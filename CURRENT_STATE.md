@@ -344,6 +344,9 @@ aspirational belongs here, and anything listed must have been seen working.
 - A small white hemispherical pulse expands and disappears at the selected point.
 - Q and E orbit the camera in 45° steps. The mouse wheel zooms between the active
   minimum and maximum distances.
+- K starts a constant-speed camera move to the active maximum zoom distance.
+  Manual wheel input cancels it, and the tilde developer panel exposes its
+  speed in blocks per second alongside the editable zoom limits.
 
 ## 5. Dog companion
 
