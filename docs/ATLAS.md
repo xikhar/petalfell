@@ -204,12 +204,21 @@ Compilation keeps the two kinds of derived information explicit:
 - edge-connected black in `land.png` is ocean at sea level; enclosed black
   components are lakes held below their lowest surrounding authored bank; and
 - white land at `water >= 240` becomes a permanent river/lake core whose surface
-  follows the local authored valley before profile noise. Lower values only lower
-  floodplains and banks toward that guide; they never raise terrain.
+  follows the local authored valley before profile noise. Lower values shape
+  ordinary floodplains and banks toward profile-backed targets on the common
+  six-block natural-edge lattice. That convergence may raise or lower incidental
+  local noise, but it preserves a source-authored cut whose rise exceeds the
+  profile's `preserveCutRise`.
 
-Biome profiles own floodplain/bank thresholds, rises, surface drop and bed depth.
-Those parameters vary how a province realises the accepted watershed; they do
-not move it.
+The accepted elevation image stores zero under water as no-data, not as a terrain
+height. Land sampling renormalises bilinear weights over land texels only; water-
+side profile resolution uses the continuous valley guide. After bank shaping,
+every dry cardinal neighbour must be at least one voxel above the adjacent water
+surface. The sector payload validates that invariant, including its apron.
+
+Biome profiles own floodplain/bank thresholds, rises, source-cut preservation,
+surface drop and bed depth. Those parameters vary how a province realises the
+accepted watershed; they do not move it.
 
 Each registered layer has an explicit review lifecycle: `Planned` means no
 usable source exists, `Blockout` means the source can be compiled and judged but
@@ -303,12 +312,30 @@ trapped inside it.
 
 ## 9. Authoring and acceptance loop
 
-1. Edit atlas metadata or a registered source layer.
-2. Audit dimensions, palettes, profile references and coordinates.
+The current terrain-first milestone has two nested loops.
+
+The inner visual loop is intentionally bounded and direct: normal startup builds
+a moving 1,536-block window through the legacy `Terrain` and renderer, with accepted atlas
+elevation and province intent substituted only at the planner boundary. Judge
+local terraces, broken edges, shores, underwater continuation, water and ink
+there. Do not run a 192-sector batch for a local visual iteration.
+
+For a terrain rule:
+
+1. Edit atlas metadata, a registered source layer or the bounded old-terrain
+   adapter; never patch generated window data.
+2. Build and audit dimensions, palettes and global-coordinate determinism.
 3. Preview the complete atlas with its 16 × 12 sector grid and province overlay.
-4. Compile only affected sectors plus their seam aprons.
-5. Inspect the domain in the game at walking distance and the fixed far cameras.
-6. Accept or revise the authored source; never patch the derived sector.
+4. Start or Shift-click representative mountain, cliff, river, lake, coast, fen,
+   bloom and drowned-shallows addresses through normal play.
+5. Inspect walking, wide and far views, then cross a window boundary and revisit
+   the same address to expose coordinate drift.
+6. Capture only the representative views affected by the change. A compiler
+   batch is an optional storage diagnostic, never the visual iteration loop.
+
+Every window is disposable. Revisiting an address regenerates it from the same
+accepted maps and global terrain fields, while authored sites remain at permanent
+coordinates.
 
 The macro map passes when the province masses, drowned south, route grain and
 intentional empty intervals read without labels. A sector passes when its seams
@@ -325,6 +352,19 @@ cannot prove the current authored plan.
 ---
 
 ## 10. Current status
+
+On 2026-08-30 the author made complete production terrain the active milestone.
+The accepted land, elevation, water and region paintings own macro geography.
+Normal startup now samples them through `ProductionTerrainGuide` into moving,
+sector-aligned 1,536-block windows while the original terrain system directly owns local terrace,
+edge, shore, underwater, vegetation, material, water and ink construction.
+Sites with `Production` or `Accepted` topology status overlay that world through
+one generic terrain-relative pass; Bloom Grove Court is the first. The full atlas
+map, Shift-click travel and automatic neighbouring-window handoff use the same
+path; an east replacement retained the exact current landing surface in live
+runtime evidence. Compiler 27 remains a historical mechanical baseline reachable
+through `--compiled-atlas`. Extended traversal/collision/swimming and visual
+quality remain unaccepted.
 
 The three reference maps are tracked. The exact-registration land and elevation
 images, with sea level 40, were accepted by the author on 2026-08-27 as the L0
@@ -351,44 +391,95 @@ registered `water.png` and `region.png` were accepted by the author on 2026-08-2
 Their exact prompt set and normalization record live beside them in
 `world-new/map/GENERATED.md`; the generated proposals themselves are not canon.
 
-Compiler version 4 consumes land, elevation, water and region, blends
-profile-bounded relief in global coordinates, shapes floodplains and banks, and
-emits the `PTFLSEC2` artifact plus PNG. Each cell carries terrain/bed height,
-optional absolute water-surface height, compiled land, authored water value,
-hydrology class, primary profile, secondary profile and secondary weight. Region
-transitions use a deterministic coarse distance field expanded beyond the sector
-by the largest declared transition, with a 96-block continuous modulation limited
-to 24 blocks so the eight-block source pixels do not become visible bands.
+The latest complete mechanically verified batch uses compiler version 27. It
+consumes land, elevation, water and region and emits a `PTFLSEC2` artifact plus
+PNG. Each cell carries terrain/bed height, optional
+absolute water-surface height, compiled land, authored water value, hydrology
+class, primary and secondary profile plus weight, cap/cliff/shore class, slope,
+aspect, curvature and wetness. Region transitions still use a deterministic
+coarse distance field expanded beyond the sector by the largest declared
+transition, with 96-block continuous modulation limited to 24 blocks so the
+eight-block source pixels do not become visible bands.
+
+Natural height now preserves the accepted macro geography while resolving each
+profile through a globally registered cell lattice and bounded noise bands.
+Non-wind-scoured profiles form continuous, slope-bound contour shoulders;
+wind-scoured profiles add a fixed-angle crossing anisotropic ridge network. A
+sparse macro front contributes three synchronous, noise-broken toe ledges rather
+than independent stamps. One mode pass and one despeckle pass clean the natural
+field inside a 40-cell transient support border before hydrology; the registered
+bank response is then reapplied so cleanup does not blur the final bank. Profile
+selection resolves from province, elevation, water, slope and low-frequency
+patch fields in global coordinates.
 
 Enclosed authored water bodies receive altitude from their surrounding accepted
-elevation; generated permanent-water cores follow a five-source-pixel local
-valley guide. The floodplain and bank passes lower terrain toward that guide
-before terrace quantization. A channel surface is also constrained below the
-locally realised valley, so profile relief cannot leave compiled land submerged.
-Sectors 0,0, 4,2, 6,4, 8,8 and 15,11 rebuild to
-stable hashes. Every independently compiled east/south neighbor that exists
-matched all 39,168 overlapping apron cells per edge, including every new field.
-The coarse atlas-wide water-body label is authoring-time source metadata, not a
-continent-scale block array.
+elevation; permanent-water cores follow a bilinearly interpolated local valley
+guide that grades toward the ocean. Ordinary banks converge toward their profile
+targets from either side unless `preserveCutRise` protects a genuine authored
+scarp. Completed sectors repair and then reject any dry cardinal boundary below
+its adjacent water surface. Connected ordinary water is measured across core
+ownership and its persisted east/south apron; wet-to-wet one-block height changes
+are rendered with two-sided vertical water curtains while shore edges remain
+terrain-owned. The coarse atlas-wide water-body label is authoring-time source
+metadata, not a continent-scale block array.
+
+`AtlasBatchAuthoring` and the `compile-atlas`/`verify-atlas` commands can build a
+resumable 192-sector manifest, coverage composites and all 356 neighbour seams.
+Compiler 27 completed that whole-atlas gate with source fingerprint
+`a9c535796c83271a06d091691184d1369401b0876ff1fc3b42b3b69542d458a3` and
+manifest `44a9b2033bd10fa879de0aa18b100ec84d866c8e17dc9d00cc49671e33c350b0`.
+Across all 192 sectors the hydrology audit measured 95,291,392 wet/wet edges,
+329,331 stepped edges, severe `0`, max step `1@635,329`, submerged dry `0`,
+and cross-sector invariant `0`. All 180 horizontal and 176 vertical seams
+matched across 13,943,808 overlap cells with mismatches `0`. An independent
+`verify-atlas` pass rebuilt all 192 sectors deterministically and compared
+7,050,240 horizontal seam cells, 6,893,568 vertical seam cells and 127,844,352
+repeat-build cells exactly. The historical compiler-16 batch remains recorded in
+[the terrain building-knowledge entry](../building-knowledge/terrain/production-atlas-relief-hydrology-and-wilderness.md).
+That is mechanical continent-wide evidence, not visual acceptance. Explicit
+reach direction and width, asymmetric banks, authored pools/cascades, persistent
+talus/scree fields, broad profile-family capture review and reference-level
+visual quality remain open. Those gaps are derived terrain and review work, not
+new authored geography.
 
 The strict artifact reader rejects old compiler versions, stale source
 fingerprints, malformed dimensions and invalid cell payloads. `review-sector`
 materialises one artifact plus apron into a sector-local `VoxelGrid` at its true
 global atlas origin, resolves profile surface IDs, streams the ordinary voxel
 and ink meshes, and renders all compiled water elevations through the existing
-water shader. `capture-sector` judges the same window at four fixed distances.
-Mountain, confluence and drowned-south windows have been inspected in the game;
-the legacy 3,456-square runtime also passed its fixed hero capture after the
-shared material construction was extracted.
+water shader and height-step curtains. `capture-sector` judges the same window at
+play, near, wide, reverse and far views. Current compiler-27 snow-front,
+highland, dry-scarp and river far captures plus the normal-start comparison set
+under `/tmp/petalfell-v27-*` were inspected on 2026-08-30. They show that the
+current terrain exists in the review and ordinary runtime paths, but broad
+terraces, sparse wilderness, flat banks, materials and final reference parity
+remain visually open. This is agent visual review, not author acceptance. The
+legacy 3,456-square runtime also passed its fixed hero capture after shared
+material construction was extracted.
+
+Ordinary atlas wilderness is now data-backed per vegetation and boulder set. It
+enumerates globally anchored candidate lattices, uses independent position,
+acceptance and shape salts, sorts candidates deterministically, resolves the same
+profile as the rendered cap, and filters water, shore, slope, wetness, local
+height and occupied voxels. Domain-plan and reference-site review paths reject
+the full conservative canopy or boulder footprint, while authored reclamation is
+a separate explicitly permitted pass. A targeted exclusion test and an
+atlas-wide wilderness seam matrix remain open.
 
 Culture, abandonment and wilderness images remain planned. Normal startup now
-opens a fixed 2×2/four-sector production-atlas mosaic at Bloom Grove Court with
-the player, collision and ordinary chunk streaming inside that mosaic; the old
-3,456-square generated world is available only through `--legacy-world`.
-Explicit sector/domain/site review and capture modes remain nonplayable review
-surfaces. Dynamic handoff to arbitrary neighbouring mosaics, persistent
-route/site/navigation output, an accepted wilderness-density source and
-multi-elevation planar reflections do not yet exist. `sample-atlas <x,z>`
+generates a bounded 2×2-sector-sized production terrain window at Bloom Grove
+Court with the player, collision and ordinary chunk streaming; the old 3,456-square
+generated world is available only through `--legacy-world`, and the historical
+compiled mosaic through `--compiled-atlas`. The production map can synchronously
+regenerate that edge-clamped window at any in-bounds Shift-click address, and
+ordinary movement requests an exact neighbouring cardinal or diagonal 2×2
+window before the current stream circle reaches an unsafe edge.
+Headless map, landing and walking-planner checks pass; live post-swap input,
+collision and swimming remain unreviewed. The full continent is never loaded as
+one runtime array or mosaic. Explicit sector/domain/site review and capture modes
+remain nonplayable review surfaces. Persistent route/site/navigation output, an
+accepted wilderness-density source and multi-elevation planar reflections do not
+yet exist. `sample-atlas <x,z>`
 compiles one addressed source point on demand so authored absolute platform
 levels can be chosen against deterministic terrain rather than the grayscale
 map.

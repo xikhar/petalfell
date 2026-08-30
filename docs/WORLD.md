@@ -345,11 +345,14 @@ reading of the selected macro-map references. Exact coastlines, province borders
 and names remain authored working material; generated labels in the references
 are not canon. [ATLAS.md](ATLAS.md) owns their physical blockout and formats.
 
-The first four-site southern gateway domain now has permanent production-atlas
-coordinates at the central delta threshold. Its gate and side precincts occupy
-the last coherent shelf; its processional axis descends through a water causeway
-to a local authored segment of the drowned Strand, while the Spine continues
-north. This is the first connected fragment, not the complete network: Chapter 1
-still needs the remaining 26–56 site envelopes and the full Spine, Strand, quarry
-and Fen graph. See
-[ROADMAP.md](ROADMAP.md) §3.
+The first southern gateway domain has permanent production-atlas coordinates at
+the central delta threshold. Its former four invented site identities were a
+tooling fixture, not four places in the story, and were retired on 30 August
+2026. The domain now owns one measured district,
+`shallows-gate-and-causeway`, which reconstructs `reference-1.png` as a single
+gate, side-precinct, cliff and causeway composition. Its processional axis joins
+a local authored segment of the drowned Strand in the south and the Spine in
+the north. This is the first connected fragment, not the complete network: the
+remaining site allocation and full Spine, Strand, quarry and Fen graph stay
+paused until the two-site playable-world milestone in
+[ROADMAP.md](ROADMAP.md) §3 is working.

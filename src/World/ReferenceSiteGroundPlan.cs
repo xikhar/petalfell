@@ -123,8 +123,19 @@ public sealed class ReferenceSiteGroundPlan
 				errors.Add($"terrain '{terrain.Id}' surfaceY is required");
 			if (string.IsNullOrWhiteSpace(terrain.Material))
 				errors.Add($"terrain '{terrain.Id}' material is required");
-			if (terrain.WriteMode is not ("preserve-atlas" or "author-surface"))
-				errors.Add($"terrain '{terrain.Id}' writeMode must be 'preserve-atlas' or 'author-surface'");
+			if (terrain.WriteMode is not ("preserve-atlas" or "author-surface" or "author-water"))
+				errors.Add($"terrain '{terrain.Id}' writeMode must be 'preserve-atlas', 'author-surface' or 'author-water'");
+			if (terrain.WriteMode == "author-water")
+			{
+				if (!string.Equals(terrain.Material, "atlas-water", StringComparison.Ordinal))
+					errors.Add($"authored water terrain '{terrain.Id}' material must be 'atlas-water'");
+				if (!terrain.BedY.HasValue)
+					errors.Add($"authored water terrain '{terrain.Id}' bedY is required");
+				else if (terrain.SurfaceY.HasValue && terrain.BedY.Value >= terrain.SurfaceY.Value)
+					errors.Add($"authored water terrain '{terrain.Id}' bedY must be below surfaceY");
+			}
+			else if (terrain.BedY.HasValue)
+				errors.Add($"dry/preserved terrain '{terrain.Id}' may not declare water bedY");
 
 			bool hasFootprint = terrain.Footprint?.Count > 0;
 			bool hasPolygon = terrain.Polygon?.Count > 0;
@@ -230,13 +241,30 @@ public sealed class ReferenceSiteGroundPlan
 			errors.Add("coordinateContract is required");
 			return;
 		}
-		if (!CoordinateContract.OneCellIsOneVoxel)
-			errors.Add("coordinateContract.oneCellIsOneVoxel must be true");
 		if (!CoordinateContract.RuntimePlanScale.HasValue ||
-		    Math.Abs(CoordinateContract.RuntimePlanScale.Value - 1d) > double.Epsilon)
-			errors.Add("coordinateContract.runtimePlanScale must be exactly 1");
-		if (CoordinateContract.RuntimeMirrorX is not true)
-			errors.Add("coordinateContract.runtimeMirrorX must be true for the locked atlas write transform");
+		    CoordinateContract.RuntimePlanScale.Value < 1d ||
+		    CoordinateContract.RuntimePlanScale.Value > 7d ||
+		    Math.Abs(CoordinateContract.RuntimePlanScale.Value -
+		             Math.Round(CoordinateContract.RuntimePlanScale.Value)) > double.Epsilon ||
+		    (int)Math.Round(CoordinateContract.RuntimePlanScale.Value) % 2 == 0)
+			errors.Add("coordinateContract.runtimePlanScale must be an odd integer from 1 through 7");
+		else
+		{
+			int scale = (int)Math.Round(CoordinateContract.RuntimePlanScale.Value);
+			if (scale != site.RuntimePlanScale)
+				errors.Add($"coordinateContract.runtimePlanScale {scale} does not match owning site scale {site.RuntimePlanScale}");
+			if (CoordinateContract.OneCellIsOneVoxel != (scale == 1))
+				errors.Add(scale == 1
+					? "coordinateContract.oneCellIsOneVoxel must be true at runtimePlanScale 1"
+					: "coordinateContract.oneCellIsOneVoxel must be false when one measured cell expands to several runtime voxels");
+		}
+		// Mirroring is a solved property of each source registration, not a shared
+		// atlas convention. Bloom's overhead requires X reflection; Reference 1's
+		// calibrated top/source pair explicitly does not. Requiring an authored bool
+		// catches an unresolved transform without silently forcing either site into
+		// the other source's quadrant.
+		if (!CoordinateContract.RuntimeMirrorX.HasValue)
+			errors.Add("coordinateContract.runtimeMirrorX must be an explicit boolean for the locked atlas write transform");
 		if (CoordinateContract.Origin == null ||
 		    CoordinateContract.Origin.X != 0 || CoordinateContract.Origin.Z != 0)
 			errors.Add("coordinateContract.origin must be the exact local origin 0,0");
@@ -692,6 +720,11 @@ public sealed class ReferenceGroundPlanTerrain
 	public string Id { get; set; } = "";
 	public string Role { get; set; } = "";
 	public int? SurfaceY { get; set; }
+	/// <summary>
+	/// Top of the solid bed for an author-water shape, in the same site-local
+	/// VoxelGrid.Top coordinate as SurfaceY. It is data, not a generated depth.
+	/// </summary>
+	public int? BedY { get; set; }
 	public string Material { get; set; } = "";
 	public string WriteMode { get; set; } = "";
 	public List<int> Footprint { get; set; } = new();

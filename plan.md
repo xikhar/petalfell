@@ -1349,11 +1349,20 @@ These phases describe outcomes rather than implementation procedures.
 ### Phase 2 — Reusable World Foundation
 
 - Define the map and chapter content structure.
-- Author and validate the complete significant-site and major-route topology before producing more isolated site geometry.
+- Finish the deterministic sector-built terrain realization for the complete
+  authored atlas before resuming broad content allocation: all accepted
+  elevation, hydrology and biome masses must become playable mountains, cliffs,
+  terraces, rivers, lakes, coasts and wilderness without global arrays or seams.
+- Preserve the existing Bloom Grove Court transcription, then author and validate
+  the permanent location and connections for the supplied `reference-1` bridge,
+  cliff and gate before building that second site. Complete significant-site and
+  major-route topology resumes after this two-site playable-world milestone.
 - Establish fixed geography combined with procedural natural infill.
 - Support large-region loading, unloading, persistence, and revisiting.
 - Establish terrain, biome, road, settlement, and landmark vocabularies.
-- Create one connected representative domain rather than a disconnected content showcase.
+- Make the production map, Shift-click teleport and tilde developer controls work
+  across the atlas runtime so the two reconstructed sites are not disconnected
+  review showcases.
 
 ### Phase 3 — Core Exploration Gameplay
 

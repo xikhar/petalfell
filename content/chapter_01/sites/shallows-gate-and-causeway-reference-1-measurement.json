@@ -1,0 +1,395 @@
+{
+  "version": 1,
+  "kind": "source-measurement-plan",
+  "siteId": "shallows-gate-and-causeway",
+  "primaryReferencePath": "res://world-new/reference-1.png",
+  "primarySourceSha256": "be660ca1329022cfb15c40b21390f0813e829fe4f718215230a0458103c581c9",
+  "overheadReferencePath": "res://world-new/reference-1-top.png",
+  "overheadSourceSha256": "2c2a32995758cf1c8a2e6a0f3e60b73566f382c570c023c68414eab8ce818534",
+  "basis": "This is a source-facing horizontal measurement layer, not an implementation blueprint. The overhead source owns visible X/Z relationships; reference-1.png owns vertical silhouette, occlusion, damage, materials, lighting, and final acceptance. Component envelopes identify separately transcribed source masses and are never permission to fill an entire rectangle.",
+  "coordinateContract": {
+    "plotView": "source-facing",
+    "oneCellIsOneVoxel": true,
+    "sourceWidthPixels": 1254,
+    "sourceHeightPixels": 1254,
+    "origin": { "x": 0, "z": 0 },
+    "originPixel": { "u": 665.0, "v": 456.0 },
+    "pixelsPerVoxel": 12.5,
+    "sourceTransform": {
+      "u": "665 + 12.5*x",
+      "v": "456 + 12.5*z"
+    },
+    "positiveX": "image-right/east across the bridge",
+    "positiveZ": "image-bottom/south toward the foreground landing",
+    "playerCell": [0, 20],
+    "primaryMasonryBounds": [-30, -20, 34, 43],
+    "broaderEvidenceBounds": [-48, -28, 47, 62],
+    "runtimeTransformStatus": "unresolved",
+    "verticalDatum": "bridge-and-gate-threshold surface is provisional local Y=0; all vertical values remain candidate until the locked isometric blockout is overlaid"
+  },
+  "registrationLandmarks": [
+    {
+      "id": "gate-bridge-threshold-origin",
+      "sourcePixel": [665.0, 456.0],
+      "planPoint": [0.0, 0.0],
+      "kind": "ground-centre",
+      "maxResidualPixels": 1.0
+    },
+    {
+      "id": "traveller-centre",
+      "sourcePixel": [667.0, 703.0],
+      "planPoint": [0.0, 20.0],
+      "kind": "ground-centre",
+      "maxResidualPixels": 4.0
+    },
+    {
+      "id": "causeway-southwest-deck-edge",
+      "sourcePixel": [571.0, 912.0],
+      "planPoint": [-7.5, 36.5],
+      "kind": "ground-boundary",
+      "maxResidualPixels": 1.0
+    },
+    {
+      "id": "causeway-southeast-deck-edge",
+      "sourcePixel": [759.0, 912.0],
+      "planPoint": [7.5, 36.5],
+      "kind": "ground-boundary",
+      "maxResidualPixels": 1.0
+    },
+    {
+      "id": "south-stair-lower-west-edge",
+      "sourcePixel": [621.0, 987.0],
+      "planPoint": [-3.5, 42.5],
+      "kind": "ground-boundary",
+      "maxResidualPixels": 1.0
+    },
+    {
+      "id": "south-stair-lower-east-edge",
+      "sourcePixel": [698.0, 987.0],
+      "planPoint": [2.5, 42.5],
+      "kind": "ground-boundary",
+      "maxResidualPixels": 2.0
+    },
+    {
+      "id": "west-precinct-outer-survivor",
+      "sourcePixel": [290.0, 606.0],
+      "planPoint": [-30.0, 12.0],
+      "kind": "masonry-centre",
+      "maxResidualPixels": 1.0
+    },
+    {
+      "id": "east-side-stair-outer-toe",
+      "sourcePixel": [1090.0, 444.0],
+      "planPoint": [34.0, -1.0],
+      "kind": "ground-boundary",
+      "maxResidualPixels": 1.0
+    }
+  ],
+  "terrainRegions": [
+    {
+      "id": "west-cliff-shelf",
+      "role": "site-owned-cliff-and-ruin-shelf",
+      "polygon": [[-35,-17],[-11,-17],[-11,-2],[-13,-2],[-13,14],[-19,14],[-19,17],[-31,17],[-31,13],[-35,13]],
+      "provisionalSurfaceY": 0,
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "gate-threshold-shelf",
+      "role": "gate-and-threshold-support",
+      "polygon": [[-13,-21],[13,-21],[13,-2],[11,-2],[11,4],[-11,4],[-11,-2],[-13,-2]],
+      "provisionalSurfaceY": 0,
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "east-lower-court",
+      "role": "site-owned-lower-ruin-court",
+      "polygon": [[10,-7],[35,-7],[35,2],[33,2],[33,16],[29,16],[29,19],[13,19],[13,15],[10,15]],
+      "provisionalSurfaceY": 0,
+      "certainty": "candidate/source-top-and-v5-correction",
+      "notes": "The source stair toe and east precinct footprint require the local-0 court to survive from z=-7 southward. V5 proved the former later y=8 painter erased 597 of its 679 authored cells."
+    },
+    {
+      "id": "east-upper-plateau",
+      "role": "site-owned-upper-north-ruin-plateau",
+      "polygon": [[11,-20],[36,-20],[36,-10],[35,-10],[35,-7],[11,-7]],
+      "provisionalSurfaceY": 8,
+      "certainty": "candidate/locked-overlay",
+      "notes": "The local-8 interpretation is restricted to cells north of the stair-top split at z=-8 and the exact upper landing; it no longer elevates the southern east precinct."
+    },
+    {
+      "id": "south-landing",
+      "role": "lower-processional-landing-and-connected-southern-approach",
+      "polygon": [[-11,43],[10,43],[10,45],[8,45],[8,48],[6,48],[6,54],[4,54],[4,58],[7,58],[7,62],[-13,62],[-13,59],[-18,59],[-18,56],[-21,56],[-21,51],[-18,51],[-18,48],[-14,48],[-14,45],[-11,45]],
+      "provisionalSurfaceY": -6,
+      "certainty": "candidate/source-top-and-v5-correction",
+      "notes": "The exact six-rise stair landing remains measured. The wider irregular continuation is a P1 correction from the source top and v5 negative capture: it reaches the southern evidence edge and stays disjoint from the unrelated local-0 east shoreline anchors."
+    },
+    {
+      "id": "water-and-drop-intervention-envelope",
+      "role": "irregular-gorge-not-a-rectangular-excavation",
+      "polygon": [[-45,-5],[-35,-5],[-35,14],[-31,14],[-31,18],[-15,18],[-15,14],[-9,14],[-9,37],[-14,37],[-14,46],[-8,46],[-8,55],[8,55],[8,46],[14,46],[14,37],[10,37],[10,18],[14,18],[14,19],[29,19],[29,16],[35,16],[35,-5],[45,-5],[45,45],[34,45],[34,55],[17,55],[17,62],[-18,62],[-18,55],[-35,55],[-35,45],[-45,45]],
+      "provisionalSurfaceY": -22,
+      "certainty": "candidate"
+    },
+    {
+      "id": "west-outer-shelf-continuation",
+      "role": "source-visible-irregular-dry-shelf-continuation",
+      "polygon": [[-48,-7],[-39,-7],[-39,-5],[-34,-5],[-34,-1],[-31,-1],[-31,8],[-34,8],[-34,12],[-40,12],[-40,14],[-48,14]],
+      "provisionalSurfaceY": 0,
+      "certainty": "observed/source-measured",
+      "notes": "Registered top-source trace of the substantial west dry shelf around tree anchor (-37,3), bounded to x=-48..-31,z=-7..14. It replaces the rejected isolated 3x3 tree-base pedestal."
+    },
+    {
+      "id": "east-middle-shelf-continuation",
+      "role": "source-visible-irregular-dry-shelf-continuation",
+      "polygon": [[35,6],[47,6],[47,24],[39,24],[39,22],[34,22],[34,19],[29,19],[29,15],[33,15],[33,10],[35,10]],
+      "provisionalSurfaceY": 0,
+      "certainty": "observed/source-measured",
+      "notes": "Registered top-source trace of the east middle dry shelf around tree anchor (35,17), bounded to x=29..47,z=6..24. It replaces the rejected isolated 3x3 tree-base pedestal."
+    },
+    {
+      "id": "south-east-shoreline-continuation",
+      "role": "source-visible-irregular-dry-shoreline-continuation",
+      "polygon": [[7,49],[9,49],[9,46],[14,46],[14,43],[22,43],[22,45],[34,45],[34,47],[38,47],[38,50],[43,50],[43,54],[47,54],[47,62],[7,62]],
+      "provisionalSurfaceY": 0,
+      "certainty": "observed/source-measured",
+      "notes": "Registered top-source trace of the connected south/east shoreline around tree anchors (10,52), (18,49), and (29,48), bounded to x=7..47,z=43..62. It replaces three rejected isolated 3x3 tree-base pedestals."
+    },
+    {
+      "id": "far-east-shelf-continuation",
+      "role": "source-visible-irregular-dry-shelf-continuation",
+      "polygon": [[40,32],[47,32],[47,56],[43,56],[43,53],[38,53],[38,49],[34,49],[34,45],[31,45],[31,39],[35,39],[35,35],[40,35]],
+      "provisionalSurfaceY": 0,
+      "certainty": "observed/source-measured",
+      "notes": "Registered top-source trace of the far-east dry shelf around tree anchor (42,43), bounded to x=31..47,z=32..56. It replaces the rejected isolated 3x3 tree-base pedestal and overlaps the measured shoreline where the source shows one connected land mass."
+    }
+  ],
+  "components": [
+    {
+      "id": "gate-ground-footprint",
+      "role": "megalithic-gatehouse-ground-envelope",
+      "bounds": [-11,-18,11,-1],
+      "measuredSize": [23,18],
+      "overlayLabel": "GATE 23x18",
+      "certainty": "observed/source-measured",
+      "notes": "Envelope only. Keep the central passage open and transcribe west/east/rear masses separately."
+    },
+    {
+      "id": "gate-elevated-roof-projection",
+      "role": "elevated-roof-and-overhang-projection",
+      "bounds": [-12,-20,12,-8],
+      "measuredSize": [25,13],
+      "overlayLabel": "ROOF 25x13",
+      "certainty": "observed/source-measured",
+      "notes": "Top projection includes overhang and height parallax; it is not the ground footprint."
+    },
+    {
+      "id": "gate-rear-spanning-mass",
+      "role": "connected-gatehouse-mass",
+      "bounds": [-11,-18,11,-9],
+      "measuredSize": [23,10],
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "gate-west-front-mass",
+      "role": "connected-gatehouse-mass",
+      "bounds": [-11,-8,-4,-1],
+      "measuredSize": [8,8],
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "gate-east-front-mass",
+      "role": "connected-gatehouse-mass",
+      "bounds": [4,-8,11,-1],
+      "measuredSize": [8,8],
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "gate-central-passage",
+      "role": "keep-open-passage",
+      "bounds": [-3,-8,3,0],
+      "measuredSize": [7,9],
+      "overlayLabel": "PASSAGE 7x9",
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "gate-hidden-passage-continuation",
+      "role": "minimum-conservative-hidden-passage-continuation",
+      "bounds": [-3,-18,3,-9],
+      "measuredSize": [7,10],
+      "certainty": "candidate",
+      "notes": "The primary isometric source shows daylight and an unobstructed processional path continuing behind the overhead-measured 7x9 portal. The top source cannot own the hidden rear depth, so this is only the minimum conservative continuation needed to prevent the builder from sealing the gate."
+    },
+    {
+      "id": "gate-west-buttress-group",
+      "role": "attached-buttress-envelope",
+      "bounds": [-13,-17,-9,-1],
+      "measuredSize": [5,17],
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "gate-east-buttress-group",
+      "role": "attached-buttress-envelope",
+      "bounds": [9,-17,13,-1],
+      "measuredSize": [5,17],
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "causeway-deck",
+      "role": "massive-causeway-slab",
+      "bounds": [-7,0,7,36],
+      "measuredSize": [15,37],
+      "overlayLabel": "CAUSEWAY 15x37",
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "causeway-clear-processional-axis",
+      "role": "keep-open-deck",
+      "bounds": [-6,0,6,36],
+      "measuredSize": [13,37],
+      "certainty": "observed/source-measured",
+      "notes": "Sparse deliberate plinths and rubble may interrupt individual cells; no random pillar field."
+    },
+    {
+      "id": "causeway-west-parapet",
+      "role": "connected-parapet",
+      "bounds": [-7,1,-7,36],
+      "measuredSize": [1,36],
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "causeway-east-parapet",
+      "role": "connected-parapet",
+      "bounds": [7,1,7,36],
+      "measuredSize": [1,36],
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "causeway-west-support-envelope",
+      "role": "submerged-and-side-support-envelope",
+      "bounds": [-9,3,-7,35],
+      "measuredSize": [3,33],
+      "certainty": "observed/source-measured",
+      "notes": "Not a continuous-fill instruction; the isometric source owns the separate piers and wall breaks."
+    },
+    {
+      "id": "causeway-east-support-envelope",
+      "role": "submerged-and-side-support-envelope",
+      "bounds": [7,3,9,35],
+      "measuredSize": [3,33],
+      "certainty": "observed/source-measured",
+      "notes": "Not a continuous-fill instruction; the isometric source owns the separate piers and wall breaks."
+    },
+    {
+      "id": "causeway-south-abutment",
+      "role": "connected-abutment",
+      "bounds": [-9,34,9,37],
+      "measuredSize": [19,4],
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "south-processional-stair",
+      "role": "six-rise-stair",
+      "bounds": [-3,36,2,42],
+      "measuredSize": [6,7],
+      "overlayLabel": "SOUTH STAIR 6x7",
+      "certainty": "observed/source-measured",
+      "notes": "Ascends north from provisional Y=-6 at z=42 to deck Y=0 at z=36."
+    },
+    {
+      "id": "west-precinct-envelope",
+      "role": "dense-broken-precinct",
+      "bounds": [-30,-12,-11,14],
+      "measuredSize": [20,27],
+      "overlayLabel": "WEST PRECINCT",
+      "certainty": "observed/source-measured",
+      "notes": "Envelope groups several separate ranges and rubble courts; never fill it as one platform."
+    },
+    {
+      "id": "west-inner-cliff-range",
+      "role": "connected-wall-and-rib-envelope",
+      "bounds": [-16,-4,-13,13],
+      "measuredSize": [4,18],
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "west-middle-parallel-range",
+      "role": "connected-wall-and-colonnade-envelope",
+      "bounds": [-22,-5,-18,12],
+      "measuredSize": [5,18],
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "west-outer-broken-range",
+      "role": "broken-wall-and-survivor-envelope",
+      "bounds": [-30,-5,-23,12],
+      "measuredSize": [8,18],
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "west-north-rib-group",
+      "role": "attached-rib-and-rubble-envelope",
+      "bounds": [-20,-12,-13,-5],
+      "measuredSize": [8,8],
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "east-precinct-envelope",
+      "role": "cleaner-broken-precinct-and-side-stair",
+      "bounds": [12,-20,34,18],
+      "measuredSize": [23,39],
+      "overlayLabel": "EAST PRECINCT",
+      "certainty": "observed/source-measured",
+      "notes": "Envelope groups separate ranges, an upper ruin, cliff ribs, and the remote stair."
+    },
+    {
+      "id": "east-inner-rib-field",
+      "role": "attached-rib-envelope",
+      "bounds": [12,-3,20,15],
+      "measuredSize": [9,19],
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "east-outer-broken-range",
+      "role": "connected-wall-and-rib-envelope",
+      "bounds": [20,-2,29,13],
+      "measuredSize": [10,16],
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "east-north-ruin-group",
+      "role": "broken-room-and-survivor-envelope",
+      "bounds": [15,-18,28,-7],
+      "measuredSize": [14,12],
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "east-side-stair",
+      "role": "secondary-eight-rise-stair-candidate",
+      "bounds": [30,-9,34,0],
+      "measuredSize": [5,10],
+      "overlayLabel": "EAST STAIR",
+      "certainty": "candidate",
+      "notes": "Horizontal envelope is source-measured; eight rises and endpoint Y values require the locked isometric blockout."
+    }
+  ],
+  "detailLandmarks": [
+    { "id": "threshold-glyph", "cell": [0,4], "role": "paving-mark" },
+    { "id": "north-deck-plinth", "cell": [-2,8], "role": "deliberate-low-mass" },
+    { "id": "mid-deck-rubble", "cell": [2,12], "role": "small-rubble-cluster" },
+    { "id": "traveller", "cell": [0,20], "role": "scale-anchor" },
+    { "id": "south-deck-east-post", "cell": [3,27], "role": "deliberate-low-mass" },
+    { "id": "west-precinct-outer-survivor", "cell": [-30,12], "role": "remote-registration-anchor" },
+    { "id": "east-side-stair-toe", "cell": [34,-1], "role": "remote-registration-anchor" }
+  ],
+  "surroundingTreeAnchors": [
+    [-15,-24],[-4,-25],[11,-25],[20,-23],[27,-18],[-14,-12],[-24,-9],[-35,-5],[-37,3],[-28,9],[38,-6],[34,8],[35,17],[-7,50],[1,55],[10,52],[18,49],[29,48],[35,56],[42,43]
+  ],
+  "uncertainties": [
+    "The top view is supporting evidence rather than an orthographic CAD drawing; elevated roof and tall-survivor projections carry height parallax.",
+    "Runtime rotation and reflection are intentionally unresolved; no transform is inferred from Reference 10.",
+    "The provisional Y datum, side-shelf levels, cliff drop, water surface, east stair rise count, gate course heights, bridge underside, and submerged support bases require the locked isometric silhouette blockout.",
+    "West and east precinct rectangles are component envelopes. Their internal wall cells, openings, breaks, rubble, and damage must be traced separately before implementation.",
+    "Crop-edge terrain and tree anchors are observational context, not permission to overwrite ordinary atlas terrain outside the measured intervention boundary."
+  ]
+}

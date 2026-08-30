@@ -61,6 +61,10 @@ public static class WorldMaterials
 		material.SetShaderParameter("sun_dir", Palette.SunDir);
 		material.SetShaderParameter("plane_y", waterLevel);
 		material.SetShaderParameter("surface_from_mesh", surfaceFromMesh);
+		// Atlas water differs only in where its surface position comes from. Its
+		// multi-height tops and step curtains still use the legacy absorption,
+		// refraction, caustics and moving-sheet response; overriding those values
+		// here once collapsed every column into one opaque periwinkle stop.
 		// A review window has no single reflection plane. Keep the real water's
 		// sky response while the multi-plane reflection compositor remains future work.
 		if (!reflectionAvailable) material.SetShaderParameter("reflect_mix", 0f);

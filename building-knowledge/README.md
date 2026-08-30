@@ -42,10 +42,14 @@ For any reference-site plan, builder, material, or comparison-tool change:
 | [Reference measurement and coordinate calibration](workflows/reference-measurement-and-coordinate-calibration.md) | Turning source pixels and a locked camera into one integer voxel frame | Reference 10 proven; adaptable with fresh calibration |
 | [Plan-first voxel transcription](workflows/plan-first-voxel-transcription.md) | Authoring topology before vertical detail and keeping plan/runtime aligned | Reference-site ground plans v2 |
 | [Block-by-block structures and square shafts](structures/block-by-block-structures-and-square-shafts.md) | Unique walls, arches, stairs, rubble, and constant-section survivors | Reference 10 proven constraints |
+| [Production atlas relief, hydrology, and wilderness](terrain/production-atlas-relief-hydrology-and-wilderness.md) | Deterministic sector relief, land-aware elevation, registered banks, stepped-water closure, wilderness ownership, and seam checks | Compiler 27 terrain/hydrology mechanically verified across 192 sectors and 356 seams; representative current captures inspected, but author acceptance and atlas-wide wilderness proof remain open |
+| [Production map-guided terrain runtime](terrain/production-map-guided-terrain-runtime.md) | Fast bounded production terrain using accepted macro maps and the proven low-level terrain/water grammar | Generic status-gated site overlay mechanically verified for promoted Bloom and unpromoted Shallows; river and Bloom integration inspected; author acceptance open |
 | [Terrain and detached slab integration](terrain/terrain-and-detached-slab-integration.md) | Making site ground part of the terrain without rings or a stamped pad | Reference 10 active reconstruction |
 | [Material and weathering breakup](surfaces/material-and-weathering-breakup.md) | Macro colour placement plus existing fine stone weathering | Existing voxel material path; Reference 10 application |
 | [Capture, overlay, and acceptance](rendering/capture-overlay-and-acceptance.md) | Fixed isometric/top comparisons and multi-scale/rotation review | Current reference-site review rig |
+| [Time-responsive ink and high-key lighting](rendering/time-responsive-ink-and-high-key-lighting.md) | Rejected internal-softness/night-ink experiment and its historical evidence | Superseded; do not reapply |
 | [Bloom Grove Court evidence ledger](sites/bloom-grove-court.md) | Site-specific constraints, rejected readings, and current evidence gaps | Reference 10 only |
+| [Shallows Gate and Causeway evidence ledger](sites/shallows-gate-and-causeway.md) | Reference 1 source calibration, measured plan hierarchy, placement hypothesis, and rejected fixture readings | Reference 1 only; source audit before implementation |
 
 Put new reusable methods under `workflows/`, `terrain/`, `structures/`,
 `surfaces/`, or `rendering/`. Put per-site evidence and correction history under

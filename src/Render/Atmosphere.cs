@@ -186,10 +186,10 @@ public static class Atmosphere
 			// The references barely have cast shadows: form is carried by the
 			// occlusion and the face ramp, and a full-strength shadow under
 			// every canopy reads as a hole punched in the meadow.
-			ShadowOpacity = 0.74f,
+			ShadowOpacity = 0.60f,
 			ShadowBias = 0.035f,
 			ShadowNormalBias = 1.4f,
-			ShadowBlur = 3.4f,
+			ShadowBlur = 5.20f,
 			// PCSS creates grain and enormous penumbras at the long isometric camera
 			// distance. DayCycle softens overcast shadows with filtered blur instead.
 			LightAngularDistance = 0f,

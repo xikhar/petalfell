@@ -87,12 +87,19 @@ public sealed class Terrain
 	private readonly List<Disc> _discs = new();
 	private readonly Noise2D _nWarp, _nRiver, _nRock, _nTone, _nEdge, _nLedge, _nFine, _nLake, _nSand;
 	private readonly Rng _rng;
+	private readonly int _seed;
+	private readonly AtlasLegacyTerrainGrammar _productionGrammar;
+	private float GlobalX(float localX) => Plan.AtlasGuide?.GlobalX(localX) ?? localX;
+	private float GlobalZ(float localZ) => Plan.AtlasGuide?.GlobalZ(localZ) ?? localZ;
 
-	public Terrain(int seed, int size, Planner plan)
+	public Terrain(int seed, int size, Planner plan, bool terrainOnly = false)
 	{
 		Size = size;
 		Plan = plan;
-		Grid = new VoxelGrid(size, Height, seed);
+		Grid = new VoxelGrid(size,
+			plan.AtlasGuide != null ? AtlasSectorWindow.AuthoredRuntimeHeight : Height,
+			seed,
+			plan.AtlasGuide?.OriginX ?? 0, plan.AtlasGuide?.OriginZ ?? 0);
 		Level = new short[size * size];
 		Land = new byte[size * size];
 		RiverDist = new float[size * size];
@@ -103,6 +110,8 @@ public sealed class Terrain
 		Wet = new byte[size * size];
 
 		_rng = new Rng(seed);
+		_seed = seed;
+		_productionGrammar = plan.AtlasGuide == null ? null : new AtlasLegacyTerrainGrammar(seed);
 		_nWarp = new Noise2D(seed + 5);
 		_nRiver = new Noise2D(seed + 3);
 		_nRock = new Noise2D(seed + 4);
@@ -136,10 +145,15 @@ public sealed class Terrain
 		Array.Copy(lev, Level, lev.Length);
 		Stage("filter");
 
-		RasteriseWater();
-		CarveChannels();
-		CarveLake();
-		Beaches();
+		if (Plan.AtlasGuide != null)
+			ApplyProductionHydrology();
+		else
+		{
+			RasteriseWater();
+			CarveChannels();
+			CarveLake();
+			Beaches();
+		}
 
 		// Water edges are already cell-quantised. Only remove residual isolated
 		// islands; a mode filter here would iron the bank flat.
@@ -172,7 +186,14 @@ public sealed class Terrain
 			// topology. The old settlement/landmark search remains available only to
 			// legacy sandbox maps; letting both paths run would make map.json look
 			// authoritative while filling the gaps with seed-chosen content.
-			if (Plan.Definition.CanonicalWorld != null)
+			if (terrainOnly)
+			{
+				Sites = new List<SettlementSite>();
+				Marks = new List<Landmark>();
+				Stage("sites");
+				Roads = RoadNetwork.Empty(size);
+			}
+			else if (Plan.Definition.CanonicalWorld != null)
 			{
 				Sites = new List<SettlementSite>();
 				Marks = new List<Landmark>();
@@ -199,6 +220,16 @@ public sealed class Terrain
 		Stage("columns");
 	}
 
+	/// <summary>Refresh gameplay height/land fields after an authored site reshapes columns.</summary>
+	public void SyncAuthoredTerrain()
+	{
+		for (int i = 0; i < Level.Length; i++)
+		{
+			Level[i] = Grid.Top[i];
+			Land[i] = (byte)(Level[i] > Sea ? 1 : 0);
+		}
+	}
+
 	/* ================================================================
 	 * 1. Contour composition
 	 * ================================================================
@@ -209,6 +240,10 @@ public sealed class Terrain
 	 * edges coincide, which is a decision rather than an accident. */
 	private void BuildDiscs()
 	{
+		// Production windows query the same extracted legacy primitive directly in
+		// atlas coordinates. Rebuilding this local RNG catalogue in every moving
+		// window would slide the rooms underneath the player at each handoff.
+		if (_productionGrammar != null) return;
 		// Every length below was authored against a 192-block world and is
 		// frozen at the 256-block tuning. A mountain stays a mountain and a
 		// shelf stays a shelf; feature COUNTS scale with area instead.
@@ -278,7 +313,8 @@ public sealed class Terrain
 	{
 		float x = MathF.Floor(x0 / EdgeGrid) * EdgeGrid + EdgeGrid * 0.5f;
 		float z = MathF.Floor(z0 / EdgeGrid) * EdgeGrid + EdgeGrid * 0.5f;
-		float w = (_nWarp.Fbm01((x + d.O) * d.WFreq, (z + d.O) * d.WFreq, 3) - 0.5f) * 2f * d.WAmp;
+		float w = (_nWarp.Fbm01((GlobalX(x) + d.O) * d.WFreq,
+			(GlobalZ(z) + d.O) * d.WFreq, 3) - 0.5f) * 2f * d.WAmp;
 		float dx = (x - d.Cx) / d.Ax, dz = (z - d.Cz) / d.Az;
 		float dist = MathF.Sqrt(dx * dx + dz * dz) + w;
 		return (1f - Rng.Smoothstep(d.R - 1f, d.R + 1f, dist)) * d.Sign;
@@ -339,7 +375,12 @@ public sealed class Terrain
 
 				// Elevation is centred exactly where the authored valley floor sits.
 				// Omitting -0.34 lifted the median region almost four whole terraces.
-				float sum = (Plan.ElevationAt(wx, wz) - 0.34f) * MacroRelief;
+				float authoredElevation = Plan.ElevationAt(wx, wz);
+				float sum = (authoredElevation - 0.34f) * MacroRelief;
+				if (_productionGrammar != null)
+					sum += _productionGrammar.TerraceOffsetAt(
+						(int)MathF.Floor(GlobalX(wx)), (int)MathF.Floor(GlobalZ(wz)),
+						authoredElevation);
 
 				int bx0 = Rng.ClampI((int)(wx / Bucket) - rings, 0, bw - 1);
 				int bx1 = Rng.ClampI((int)(wx / Bucket) + rings, 0, bw - 1);
@@ -362,15 +403,19 @@ public sealed class Terrain
 
 				int h = Base + Step * (int)MathF.Floor(sum + 0.5f);
 
-				// The island terminates in a plinth that vanishes into the haze.
-				float rx = wx - centreX, rz = wz - centreZ;
-				float r = MathF.Sqrt(rx * rx + rz * rz);
-				float R = Plan.RimRadius(wx, wz);
-				const float K = 256f / 192f;
-				if (r > R - 20f * K) h = Math.Min(h, Base + Step);
-				if (r > R - 9f * K) h = Math.Min(h, Base);
-				if (r > R)
-					h = Math.Max(1, (int)MathF.Floor(Sea - 5f - Rng.Smoothstep(R, R + 26f * K, r) * 3f + 0.5f));
+				// The local atlas demo is a window into the continent, not another
+				// circular island. Only the legacy fixture owns this radial boundary.
+				if (Plan.AtlasGuide == null)
+				{
+					float rx = wx - centreX, rz = wz - centreZ;
+					float r = MathF.Sqrt(rx * rx + rz * rz);
+					float R = Plan.RimRadius(wx, wz);
+					const float K = 256f / 192f;
+					if (r > R - 20f * K) h = Math.Min(h, Base + Step);
+					if (r > R - 9f * K) h = Math.Min(h, Base);
+					if (r > R)
+						h = Math.Max(1, (int)MathF.Floor(Sea - 5f - Rng.Smoothstep(R, R + 26f * K, r) * 3f + 0.5f));
+				}
 
 				cellLevel[cz * cw + cx] = (short)Rng.ClampI(h, 2, Height - 12);
 			}
@@ -398,7 +443,8 @@ public sealed class Terrain
 			if (Land[i] == 0 || TerrainShape.RiseAbove(ledged, Size, x, z) < Step * 2) continue;
 			float qx = MathF.Floor(x / (float)EdgeGrid) * EdgeGrid + EdgeGrid * 0.5f;
 			float qz = MathF.Floor(z / (float)EdgeGrid) * EdgeGrid + EdgeGrid * 0.5f;
-			if (_nLedge.Fbm(qx * 0.035f, qz * 0.035f, 2) < 0.10f) continue;
+			if (_nLedge.Fbm(GlobalX(qx) * 0.035f,
+				GlobalZ(qz) * 0.035f, 2) < 0.10f) continue;
 			ledged[i] += Step;
 		}
 		Array.Copy(ledged, Level, ledged.Length);
@@ -445,6 +491,109 @@ public sealed class Terrain
 	}
 
 	/// <summary>
+	/// Realise accepted continent hydrology with the old water grammar. The map
+	/// is sampled on the six-block terrain lattice and displaced by a continuous
+	/// atlas-space field; legacy bank courses and underwater shelves own the
+	/// final block shape instead of tracing source pixels literally.
+	/// </summary>
+	private void ApplyProductionHydrology()
+	{
+		Array.Fill(RiverDist, float.MaxValue);
+		var wetGuide = new bool[Size * Size];
+		var oceanGuide = new bool[Size * Size];
+		int cellW = (Size + EdgeGrid - 1) / EdgeGrid;
+		for (int cz = 0; cz < cellW; cz++)
+		for (int cx = 0; cx < cellW; cx++)
+		{
+			float qx = Math.Min(Size - .5f, cx * EdgeGrid + EdgeGrid * .5f);
+			float qz = Math.Min(Size - .5f, cz * EdgeGrid + EdgeGrid * .5f);
+			float gx = GlobalX(qx), gz = GlobalZ(qz);
+			float wx = _nEdge.Fbm(gx * .011f + 137f, gz * .011f + 41f, 3) * 10f;
+			float wz = _nEdge.Fbm(gx * .011f - 83f, gz * .011f + 211f, 3) * 10f;
+			bool wet = Plan.AtlasGuide.AuthoredWetAt(qx + wx, qz + wz);
+			bool ocean = Plan.AtlasGuide.LandAt(qx + wx, qz + wz) < .5f;
+			int x0 = cx * EdgeGrid, z0 = cz * EdgeGrid;
+			for (int z = z0; z < Math.Min(Size, z0 + EdgeGrid); z++)
+			for (int x = x0; x < Math.Min(Size, x0 + EdgeGrid); x++)
+			{
+				int i = z * Size + x;
+				wetGuide[i] = wet;
+				oceanGuide[i] = ocean;
+			}
+		}
+
+		int[] toWet = DistanceTo(wetGuide, target: true, 32);
+		int[] toDry = DistanceTo(wetGuide, target: false, 32);
+		for (int z = 0; z < Size; z++)
+		for (int x = 0; x < Size; x++)
+		{
+			int i = z * Size + x;
+			if (wetGuide[i])
+			{
+				float deep = Rng.Smoothstep(0f, oceanGuide[i] ? 26f : 18f, toDry[i]);
+				float gx = GlobalX(x), gz = GlobalZ(z);
+				float trench = MathF.Max(_nLake.Fbm(gx * .024f + 300f, gz * .024f, 3), 0f);
+				int bed = Sea - 1
+					- (int)MathF.Floor((deep * 14f + deep * trench * 22f) / Step + .5f) * Step
+					+ CellStep(x, z, 21, .16f, .16f, EdgeGrid * 2) * Step
+					+ (CellHash(x, z, 22, EdgeGrid * 4) < .10f ? Step : 0);
+				Level[i] = (short)Math.Max(1, Math.Min(Level[i], bed));
+				Land[i] = 0;
+				Wet[i] = 1;
+				continue;
+			}
+
+			int gap = toWet[i];
+			if (gap > 20) continue;
+			float gxDry = GlobalX(x), gzDry = GlobalZ(z);
+			bool inlandWater = Plan.AtlasGuide.LandAt(x, z) >= .5f;
+			if (inlandWater)
+			{
+				float bank = _nLake.Fbm(gxDry * .021f + 90f, gzDry * .021f, 2);
+				if (bank > .10f)
+					Level[i] = (short)Math.Min(Level[i],
+						Sea + 1 + (int)MathF.Floor(Math.Max(gap - 1, 0) / 8f) * Step);
+			}
+			else
+			{
+				if (gap > 14 || _nEdge.Fbm(gxDry * .014f + 200f, gzDry * .014f, 2) < .14f)
+					continue;
+				Level[i] = (short)Math.Min(Level[i], Sea + (int)MathF.Floor(gap / 6f) * Step);
+				if (1f - Rng.Smoothstep(0f, 9f, gap) > .30f) Wet[i] = 1;
+				if (Level[i] <= Sea) Land[i] = 0;
+			}
+		}
+	}
+
+	private int[] DistanceTo(bool[] mask, bool target, int cap)
+	{
+		int n = mask.Length;
+		var distance = new int[n];
+		Array.Fill(distance, cap + 1);
+		var queue = new int[n];
+		int read = 0, write = 0;
+		for (int i = 0; i < n; i++)
+			if (mask[i] == target) { distance[i] = 0; queue[write++] = i; }
+		while (read < write)
+		{
+			int i = queue[read++], d = distance[i];
+			if (d >= cap) continue;
+			int x = i % Size, z = i / Size;
+			void Visit(int next)
+			{
+				if (distance[next] <= d + 1) return;
+				distance[next] = d + 1;
+				queue[write++] = next;
+			}
+			if (x > 0) Visit(i - 1);
+			if (x + 1 < Size) Visit(i + 1);
+			if (z > 0) Visit(i - Size);
+			if (z + 1 < Size) Visit(i + Size);
+		}
+		return distance;
+	}
+
+	/// <summary>
 	/// Distance to the nearest channel centreline, and the channel half-width
 	/// there. Keeping width in a field rather than recomputing it per column is
 	/// what lets pools and narrows exist without the bank test disagreeing with
@@ -471,7 +620,8 @@ public sealed class Terrain
 			{
 				float t = i / (float)Math.Max(1, pts.Count - 1);
 				float w = (ch.Order == 0 ? 3.2f + t * 5.4f : 2.2f + t * 2.6f) * K;
-				w += _nRiver.Fbm(pts[i].x * 0.020f, pts[i].z * 0.020f, 2) * 1.6f * K;
+				w += _nRiver.Fbm(GlobalX(pts[i].x) * 0.020f,
+					GlobalZ(pts[i].z) * 0.020f, 2) * 1.6f * K;
 
 				var a = pts[Math.Max(0, i - 9)];
 				var b = pts[Math.Min(pts.Count - 1, i + 9)];
@@ -571,7 +721,8 @@ public sealed class Terrain
 			float wet = 1f - Rng.Smoothstep(0f, 8f, edge);
 			if (wet > 0.30f) Wet[i] = 1;
 
-			float pool = MathF.Max(_nRiver.Fbm(qx * 0.030f + 60f, qz * 0.030f, 3), 0f);
+			float pool = MathF.Max(_nRiver.Fbm(GlobalX(qx) * 0.030f + 60f,
+				GlobalZ(qz) * 0.030f, 3), 0f);
 			float wide = Rng.Clamp((RiverHalf[i] / K - 3.5f) / 6f, 0f, 1f);
 			float sink = MathF.Min(4f + pool * 12f + wide * 9f, 16f);
 			int bed = Sea - (int)MathF.Floor(sink / Step + 0.5f) * Step;
@@ -585,7 +736,8 @@ public sealed class Terrain
 				continue;
 			}
 
-			float beach = _nRiver.Fbm(x * 0.016f + 40f, z * 0.016f, 2) + RiverSide[i] * 0.10f;
+			float beach = _nRiver.Fbm(GlobalX(x) * 0.016f + 40f,
+				GlobalZ(z) * 0.016f, 2) + RiverSide[i] * 0.10f;
 			if (beach > 0.20f)
 				Level[i] = (short)Math.Min(Level[i], Sea + 1 + (int)MathF.Floor(MathF.Max(edgeCell, 0f) / 7f) * Step);
 		}
@@ -611,7 +763,8 @@ public sealed class Terrain
 			{
 				float dx = (x - lake.Cx) / ax, dz = (z - lake.Cz) / az;
 				return MathF.Sqrt(dx * dx + dz * dz) - lake.Radius
-				     - _nLake.Fbm(x * 0.017f + offset, z * 0.017f, 3) * 10f * K;
+				     - _nLake.Fbm(GlobalX(x) * 0.017f + offset,
+					     GlobalZ(z) * 0.017f, 3) * 10f * K;
 			}
 
 			for (int z = z0; z <= z1; z++)
@@ -629,7 +782,8 @@ public sealed class Terrain
 				if (dCell <= 0f)
 				{
 					float deep = 1f - Rng.Smoothstep(-lake.Radius * 0.34f, 0f, dCell);
-					float trench = MathF.Max(_nLake.Fbm(qx * 0.024f + 300f, qz * 0.024f, 3), 0f);
+					float trench = MathF.Max(_nLake.Fbm(GlobalX(qx) * 0.024f + 300f,
+						GlobalZ(qz) * 0.024f, 3), 0f);
 					int h = Sea - 1
 					      - (int)MathF.Floor((deep * 14f + deep * trench * 22f) / Step + 0.5f) * Step
 					      + CellStep(x, z, 21, 0.16f, 0.16f, Jq) * Step
@@ -639,26 +793,27 @@ public sealed class Terrain
 					continue;
 				}
 
-				float bank = _nLake.Fbm(x * 0.021f + 90f, z * 0.021f, 2);
+				float bank = _nLake.Fbm(GlobalX(x) * 0.021f + 90f,
+					GlobalZ(z) * 0.021f, 2);
 				if (bank > 0.10f)
 					Level[i] = (short)Math.Min(Level[i], Sea + 1 + (int)MathF.Floor(MathF.Max(dCell, 0f) / 8f) * Step);
 			}
 		}
 	}
 
-	private static float CellHash(int x, int z, int salt, int grid)
+	private float CellHash(int x, int z, int salt, int grid)
 	{
 		unchecked
 		{
-			int cx = (int)MathF.Floor(x / (float)grid);
-			int cz = (int)MathF.Floor(z / (float)grid);
+			int cx = (int)MathF.Floor(GlobalX(x) / grid);
+			int cz = (int)MathF.Floor(GlobalZ(z) / grid);
 			uint h = (uint)(cx * 374761393 + cz * 668265263 + salt * 1442695040);
 			h = (h ^ (h >> 13)) * 1274126177u;
 			return (h ^ (h >> 16)) / 4294967296f;
 		}
 	}
 
-	private static int CellStep(int x, int z, int salt, float up, float down, int grid)
+	private int CellStep(int x, int z, int salt, float up, float down, int grid)
 	{
 		float a = CellHash(x, z, salt, grid);
 		if (a < up) return 1;
@@ -669,6 +824,7 @@ public sealed class Terrain
 	/// <summary>Carve only selected stretches of the outer rim into beaches.</summary>
 	private void Beaches()
 	{
+		if (Plan.AtlasGuide != null) return;
 		float centreX = Plan.Definition.Boundary.Centre.X * Size;
 		float centreZ = Plan.Definition.Boundary.Centre.Z * Size;
 		for (int z = 0; z < Size; z++)
@@ -681,7 +837,8 @@ public sealed class Terrain
 			float rim = Plan.RimRadius(x, z);
 			float gap = rim - r;
 			if (gap > 14f) continue;
-			if (_nEdge.Fbm(x * 0.014f + 200f, z * 0.014f, 2) < 0.14f) continue;
+			if (_nEdge.Fbm(GlobalX(x) * 0.014f + 200f,
+				GlobalZ(z) * 0.014f, 2) < 0.14f) continue;
 
 			float qx = MathF.Floor(x / (float)EdgeGrid) * EdgeGrid + EdgeGrid * 0.5f;
 			float qz = MathF.Floor(z / (float)EdgeGrid) * EdgeGrid + EdgeGrid * 0.5f;
@@ -737,35 +894,56 @@ public sealed class Terrain
 			return h > Sea + 1;
 		}
 
-		for (int gz = spacing; gz < Size - spacing; gz += spacing)
-		for (int gx = spacing; gx < Size - spacing; gx += spacing)
+		int originX = Grid.OriginX;
+		int originZ = Grid.OriginZ;
+		int firstGlobalX = Plan.AtlasGuide == null ? spacing
+			: (int)MathF.Ceiling((originX + spacing) / (float)spacing) * spacing;
+		int firstGlobalZ = Plan.AtlasGuide == null ? spacing
+			: (int)MathF.Ceiling((originZ + spacing) / (float)spacing) * spacing;
+		for (int globalZ = firstGlobalZ; globalZ < originZ + Size - spacing; globalZ += spacing)
+		for (int globalX = firstGlobalX; globalX < originX + Size - spacing; globalX += spacing)
 		{
-			if (_rng.Chance(0.30f)) continue;
-			int cx = gx + _rng.RangeInt(-5, 5);
-			int cz = gz + _rng.RangeInt(-5, 5);
-			if (Plan.Definition.ReservesNaturalDetail(cx / (float)Size, cz / (float)Size, 5f / Size)) continue;
+			Rng rng = Plan.AtlasGuide == null ? _rng :
+				new Rng(unchecked(_seed ^ StableCellSeed(globalX / spacing,
+					globalZ / spacing, 0x4217)));
+			if (rng.Chance(0.30f)) continue;
+			int cx = globalX - originX + rng.RangeInt(-5, 5);
+			int cz = globalZ - originZ + rng.RangeInt(-5, 5);
+			if (Plan.AtlasGuide == null &&
+			    Plan.Definition.ReservesNaturalDetail(cx / (float)Size,
+				    cz / (float)Size, 5f / Size)) continue;
 			if (!FlatAround(cx, cz, 4)) continue;
-			float kind = _rng.Next();
+			float kind = rng.Next();
 			if (kind < 0.34f)
 			{
-				Blob(mask, cx, cz, _rng.RangeInt(1, 2), _rng.RangeInt(1, 3), 1, 1);
+				Blob(mask, cx, cz, rng.RangeInt(1, 2), rng.RangeInt(1, 3), 1, 1);
 			}
 			else if (kind < 0.78f)
 			{
-				float radius = _rng.Range(1.6f, 2.8f);
+				float radius = rng.Range(1.6f, 2.8f);
 				RoundRock(mask, cx, cz, radius, 1, 1);
-				RoundRock(mask, cx + _rng.RangeInt(-1, 1), cz + _rng.RangeInt(-1, 1),
+				RoundRock(mask, cx + rng.RangeInt(-1, 1), cz + rng.RangeInt(-1, 1),
 					radius * 0.55f, 1, 2);
 			}
 			else
 			{
-				Blob(mask, cx, cz, _rng.RangeInt(0, 1), 0, _rng.RangeInt(3, 4), 2);
-				if (_rng.Chance(0.60f))
-					Blob(mask, cx + _rng.RangeInt(2, 3), cz + _rng.RangeInt(-1, 1),
-						0, 0, _rng.RangeInt(1, 2), 2);
+				Blob(mask, cx, cz, rng.RangeInt(0, 1), 0, rng.RangeInt(3, 4), 2);
+				if (rng.Chance(0.60f))
+					Blob(mask, cx + rng.RangeInt(2, 3), cz + rng.RangeInt(-1, 1),
+						0, 0, rng.RangeInt(1, 2), 2);
 			}
 		}
 		return mask;
+	}
+
+	private static int StableCellSeed(int x, int z, int salt)
+	{
+		unchecked
+		{
+			uint h = (uint)(x * 374761393 + z * 668265263 + salt * 1442695040);
+			h = (h ^ (h >> 13)) * 1274126177u;
+			return (int)(h ^ (h >> 16));
+		}
 	}
 
 	private void Blob(byte[] mask, int cx, int cz, int wx, int wz, int rise, byte tone)
@@ -816,13 +994,14 @@ public sealed class Terrain
 			int h = Level[i];
 			if (h < 1) h = 1;
 			int drop = TerrainShape.DropBelow(Level, Size, x, z);
-			float jitter = _nFine.Fbm(x * 0.13f, z * 0.13f, 2) * 0.055f;
-			float rockField = _nRock.Fbm(x * 0.0082f, z * 0.0082f, 3) + jitter
+			float gx = GlobalX(x), gz = GlobalZ(z);
+			float jitter = _nFine.Fbm(gx * 0.13f, gz * 0.13f, 2) * 0.055f;
+			float rockField = _nRock.Fbm(gx * 0.0082f, gz * 0.0082f, 3) + jitter
 			                + Rng.Smoothstep(Base + Step * 4, Base + Step * 7, h) * 0.34f
 			                + Rng.Smoothstep(Step, Step * 3f, drop) * 0.10f;
 			float sandField = 1f - Rng.Smoothstep(0f, 6f, RiverDist[i] - RiverHalf[i]);
 			var biome = Plan.RegionAt(x, z).Biome;
-			float tone = _nTone.Fbm(x * 0.0115f + 90f, z * 0.0115f + 12f, 2) + jitter;
+			float tone = _nTone.Fbm(gx * 0.0115f + 90f, gz * 0.0115f + 12f, 2) + jitter;
 
 			byte cap;
 			if (Land[i] == 0) cap = Palette.SAND;
@@ -834,7 +1013,7 @@ public sealed class Terrain
 			else if (biome == Biome.Highland && rockField > 0.16f)
 				cap = tone > 0.08f ? Palette.STONE_PALE : Palette.SCREE;
 			else if (rockField > 0.42f)
-				cap = _nRock.Fbm(x * 0.03f + 9f, z * 0.03f, 2) > 0f
+				cap = _nRock.Fbm(gx * 0.03f + 9f, gz * 0.03f, 2) > 0f
 					? Palette.STONE : Palette.STONE_PALE;
 			else
 			{

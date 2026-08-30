@@ -57,6 +57,7 @@ public sealed class Planner
 
 	public readonly int Size;
 	public readonly MapDefinition Definition;
+	public readonly ProductionTerrainGuide AtlasGuide;
 	public readonly int CellW;
 	public readonly List<Region> Regions = new();
 	public readonly int[] CellRegion;
@@ -74,11 +75,17 @@ public sealed class Planner
 	private readonly Noise2D _nEdge;
 	private readonly Noise2D _nWander;
 	private readonly Noise2D _nRim;
+	private readonly Noise2D _nAtlasAbandonment;
+	private readonly Region[] _atlasBiomeRegions;
 
-	public Planner(int seed, int size, MapDefinition definition)
+	private float GlobalX(float localX) => AtlasGuide?.GlobalX(localX) ?? localX;
+	private float GlobalZ(float localZ) => AtlasGuide?.GlobalZ(localZ) ?? localZ;
+
+	public Planner(int seed, int size, MapDefinition definition, ProductionTerrainGuide atlasGuide = null)
 	{
 		Size = size;
 		Definition = definition ?? throw new ArgumentNullException(nameof(definition));
+		AtlasGuide = atlasGuide;
 		CellW = (int)MathF.Ceiling(size / (float)Cell);
 		CellRegion = new int[CellW * CellW];
 		CellBiome = new byte[CellW * CellW];
@@ -93,6 +100,17 @@ public sealed class Planner
 		_nEdge = new Noise2D(seed + 44);
 		_nWander = new Noise2D(seed + 45);
 		_nRim = new Noise2D(seed + 7);
+		_nAtlasAbandonment = new Noise2D(seed + 61);
+		_atlasBiomeRegions = new Region[Enum.GetValues<Biome>().Length];
+		for (int i = 0; i < _atlasBiomeRegions.Length; i++)
+			_atlasBiomeRegions[i] = new Region
+			{
+				Id = i,
+				Biome = (Biome)i,
+				Elevation = .5f,
+				Abandonment = .7f,
+				Seed = unchecked((uint)(seed ^ (i * unchecked((int)0x85ebca6bu)))),
+			};
 
 		PlaceRegions(rng);
 		SampleFields(seed, nTemp, nMoist, nMagic);
@@ -157,6 +175,22 @@ public sealed class Planner
 		foreach (var r in Regions)
 		{
 			float nx = r.Cx / Size, nz = r.Cz / Size;
+			if (AtlasGuide != null)
+			{
+				// The production map replaces only the old macro field. The complete
+				// low-level legacy generator below Planner stays untouched.
+				r.Elevation = AtlasGuide.ElevationAt(r.Cx, r.Cz);
+				float gx = GlobalX(r.Cx), gz = GlobalZ(r.Cz);
+				r.Temperature = Rng.Clamp(0.5f +
+					nTemp.Fbm(gx / FeatureTemperature, gz / FeatureTemperature, 3), 0f, 1f);
+				r.Moisture = Rng.Clamp(0.5f +
+					nMoist.Fbm(gx / FeatureMoisture, gz / FeatureMoisture, 3), 0f, 1f);
+				r.Magic = Rng.Clamp(0.5f +
+					nMagic.Fbm(gx / FeatureMagic, gz / FeatureMagic, 2), 0f, 1f);
+				r.Biome = AtlasGuide.BiomeAt(r.Cx, r.Cz);
+				r.Seed = unchecked((uint)(seed ^ (r.Id * unchecked((int)0x85ebca6bu))));
+				continue;
+			}
 			float rim = Definition.BoundaryDistance(nx, nz);
 			r.Elevation = Rng.Clamp(0.94f - rim * 0.70f +
 				_nEdge.Fbm(r.Cx / FeatureElevation, r.Cz / FeatureElevation, 3) * 0.42f, 0f, 1f);
@@ -261,7 +295,7 @@ public sealed class Planner
 				_ => 0f,
 			};
 
-			age += nAge.Fbm(r.Cx / 260f, r.Cz / 260f, 3) * 0.26f;
+			age += nAge.Fbm(GlobalX(r.Cx) / 260f, GlobalZ(r.Cz) / 260f, 3) * 0.26f;
 			r.Abandonment = Rng.Clamp(age, 0f, 1f);
 		}
 	}
@@ -289,6 +323,26 @@ public sealed class Planner
 	/// <summary>How long ago this ground was given up, 0 still held to 1 long gone.</summary>
 	public float AbandonmentAt(float x, float z)
 	{
+		if (AtlasGuide != null)
+		{
+			float elevation = AtlasGuide.ElevationAt(x, z);
+			Biome biome = AtlasGuide.BiomeAt(x, z);
+			float age = .42f + elevation * .34f + biome switch
+			{
+				Biome.Meadow => -.16f,
+				Biome.Plains => -.12f,
+				Biome.Shore => -.18f,
+				Biome.Forest => -.02f,
+				Biome.Sakura => .02f,
+				Biome.Highland => .12f,
+				Biome.Wetland => .16f,
+				Biome.SnowyHills => .20f,
+				_ => 0f,
+			};
+			age += _nAtlasAbandonment.Fbm(GlobalX(x) / 260f,
+				GlobalZ(z) / 260f, 3) * .26f;
+			return Rng.Clamp(age, 0f, 1f);
+		}
 		float fx = Rng.Clamp(x / Cell - 0.5f, 0f, CellW - 1.001f);
 		float fz = Rng.Clamp(z / Cell - 0.5f, 0f, CellW - 1.001f);
 		int x0 = (int)MathF.Floor(fx), z0 = (int)MathF.Floor(fz);
@@ -324,8 +378,9 @@ public sealed class Planner
 		for (int cx = 0; cx < CellW; cx++)
 		{
 			float wx = (cx + 0.5f) * Cell, wz = (cz + 0.5f) * Cell;
-			float qx = wx + _nEdge.Fbm(wx * 0.006f, wz * 0.006f, 3) * warp;
-			float qz = wz + _nEdge.Fbm(wx * 0.006f + 19f, wz * 0.006f + 7f, 3) * warp;
+			float gx = GlobalX(wx), gz = GlobalZ(wz);
+			float qx = wx + _nEdge.Fbm(gx * 0.006f, gz * 0.006f, 3) * warp;
+			float qz = wz + _nEdge.Fbm(gx * 0.006f + 19f, gz * 0.006f + 7f, 3) * warp;
 			var candidates = Nearby(qx, qz, 1, scratch);
 			Region best = candidates[0];
 			float bestD = float.MaxValue;
@@ -375,6 +430,7 @@ public sealed class Planner
 
 	public float ElevationAt(float x, float z)
 	{
+		if (AtlasGuide != null) return AtlasGuide.ElevationAt(x, z);
 		float fx = Rng.Clamp(x / Cell - 0.5f, 0f, CellW - 1.001f);
 		float fz = Rng.Clamp(z / Cell - 0.5f, 0f, CellW - 1.001f);
 		int x0 = (int)MathF.Floor(fx), z0 = (int)MathF.Floor(fz);
@@ -388,6 +444,11 @@ public sealed class Planner
 
 	public Region RegionAt(float x, float z)
 	{
+		if (AtlasGuide != null)
+		{
+			Biome biome = AtlasGuide.BiomeAt(x, z);
+			return _atlasBiomeRegions[(int)biome];
+		}
 		int cx = Rng.ClampI((int)MathF.Floor(x / Cell), 0, CellW - 1);
 		int cz = Rng.ClampI((int)MathF.Floor(z / Cell), 0, CellW - 1);
 		return Regions[CellRegion[cz * CellW + cx]];
@@ -451,7 +512,7 @@ public sealed class Planner
 				float dx = MathF.Cos(angle), dz = MathF.Sin(angle);
 				float nx = x + dx * step, nz = z + dz * step;
 				float e = ElevationAt(nx, nz)
-				        + _nWander.Fbm(nx * 0.020f, nz * 0.020f, 2) * 0.030f
+				        + _nWander.Fbm(GlobalX(nx) * 0.020f, GlobalZ(nz) * 0.020f, 2) * 0.030f
 				        + Math.Abs(k) * 0.004f;
 				if (e < best) { best = e; bx = dx; bz = dz; }
 			}

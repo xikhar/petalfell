@@ -19,10 +19,10 @@ proceed as decided.
 | **Map identity** | One canonical world, authored once. Not re-generated from a seed. |
 | **Production extent** | 12,288 × 9,216 × 192 blocks, compiled as a 16 × 12 grid of deterministic 768-block sectors. The old 3,456-square generated world is legacy diagnostics, not the production map. |
 | **Site count** | 30–60 sites for Chapter 1, mixed: a few great districts, more precincts, many small marks. |
-| **Current starting point** | Paint and validate the production atlas, then place every significant site and route before producing more site geometry. |
+| **Current starting point** | The fast moving-window full-atlas runtime is the production foundation for terrain and every new site. The four accepted maps own macro intent and the proven old-world primitives own local construction. Bloom Grove Court is promoted to `Production`; build and review `reference-1` as `Blockout`, then promote it onto this same world without creating a second terrain path. |
 | **Hero-site composition** | Faithful measured reconstruction of one supplied `world-new/reference-*.png`, placed at a compatible authored atlas location. No original or blended hero-site designs for now. |
 | **Reconstruction implementation** | One site-owned explicit voxel blueprint per reference. No shared architectural kit or procedural tower, pillar, stair, portal, damage or dressing builder inside the measured footprint. |
-| **Normal startup** | A fixed four-sector production-atlas mosaic at the active reconstruction, with collision, the player and ordinary chunk streaming inside that mosaic. Dynamic handoff to arbitrary neighbouring mosaics remains unbuilt. The old 3,456 generated world is legacy diagnostic mode only. |
+| **Current normal startup** | A moving 1,536-block window exposes the complete production map. It generates the proven terrain/water/runtime grammar at permanent global coordinates, begins at Bloom with Site 0, walks into neighbouring windows and supports full-map Shift-click travel. The same generic overlay realises every topology site whose status is `Production` or `Accepted`; lower statuses remain review-only. `--compiled-atlas` opens the earlier compiler runtime; `--legacy-world` opens the retired circular fixture. |
 | **Construction knowledge** | Evidence-scoped reconstruction methods live in [`building-knowledge/`](../building-knowledge/README.md). Agents read the relevant entries before building and update or supersede them in the same session when stronger evidence, a better method, or an author correction appears. The live reference always wins; only explicit author confirmation is `author-accepted`. |
 | **Coordinates** | Significant content uses stable absolute block coordinates and stable IDs. |
 | **Wilderness** | Deterministic procedural infill inside authored land, elevation, water, region, culture, abandonment and wilderness fields. Noise may vary a fact; it may not invent a major fact. |
@@ -38,13 +38,15 @@ The reasoning is in [ATLAS.md](ATLAS.md), [MAP_PIPELINE.md](MAP_PIPELINE.md)
 
 ## 2. What already exists and works
 
-Do not rebuild these. Full detail in [CURRENT_STATE.md](../CURRENT_STATE.md);
-the engineering rationale is in [ARCHITECTURE.md](../ARCHITECTURE.md).
+Reuse these mechanisms rather than replacing them wholesale. Their legacy-world
+implementations work; production-atlas realization and later visual calibration
+remain active. Full detail is in [CURRENT_STATE.md](../CURRENT_STATE.md); the
+engineering rationale is in [ARCHITECTURE.md](../ARCHITECTURE.md).
 
-- **Rendering.** Voxel and character shaders, the explicit ink edge graph, water
+- **Rendering mechanisms.** Voxel and character shaders, the explicit ink edge graph, water
   with reflection and refraction, sky, tonemapping and grade, a full day/night
   cycle with keyframed lighting.
-- **World substrate.** Derived voxel storage, chunk meshing and streaming,
+- **Legacy-world substrate and shared storage.** Derived voxel storage, chunk meshing and streaming,
   collision, terracing, rivers, lakes, beaches, biomes, vegetation, sub-voxel
   ground detail, fauna, roads, bridges.
 - **Footings.** Single-building cut-and-fill, plinths, talus, split-level plans,
@@ -52,10 +54,14 @@ the engineering rationale is in [ARCHITECTURE.md](../ARCHITECTURE.md).
 - **Reclamation.** The damp/shelter/aspect/age field, the material decay chain,
   and sub-voxel growth — moss, vines, ferns, thickets, saplings, rubble —
   rendered through the existing ground-detail mesh.
-- **Player, camera, navigation, dog, inventory, interaction, developer tools.**
+- **Player, camera, navigation, dog, inventory and interaction.** The map and
+  developer tools are complete in the legacy runtime and mechanically wired to
+  the production-atlas runtime; live post-handoff input/collision review remains
+  Slice G work.
 
-The low-level layer is considered done to a satisfactory standard. The work ahead
-is the large structural layer above it.
+The shared low-level mechanisms are considered done to a satisfactory standard.
+Their old global-array world is not evidence that production terrain, runtime
+handoff or reference-parity ink is complete.
 
 ---
 
@@ -93,6 +99,38 @@ is the large structural layer above it.
 > begins with `reference-10.png` in Bloom Reach, whose visible traveller gives an
 > unambiguous two-block scale. Normal game startup moves to this atlas runtime;
 > the old generated world is opt-in legacy diagnostics.
+>
+> **Terrain-first playable-world decision (author, 2026-08-30).** The existing
+> sector compiler proved deterministic storage, macro-source registration and
+> exact local seams, but its bilinear elevation plus profile noise is still a
+> blockout rather than the finished world. Before another site is built, finish
+> the complete 16 × 12 atlas terrain: preserve the accepted geography while
+> porting the legacy circular world's successful surface, broken-edge, terrace,
+> water-transition and material grammar into bounded global-coordinate sector
+> passes, and add the missing mountain, cliff, hydrology and biome responses.
+> Keep Bloom Grove Court in place. Then reconstruct the supplied
+> `reference-1.png` bridge/cliff/gate at a compatible permanent location; whole-
+> site acceptance of Bloom no longer blocks that second transcription. Next make
+> the atlas a continuous playable runtime with a production map, Shift-click
+> teleport and tilde developer controls. Only after those work does ink,
+> shading, material, lighting and day/night parity become the active pass. This
+> explicitly supersedes the previous order of completing every site envelope and
+> accepting Reference 10 before starting any second structural reference.
+
+> **Fast terrain iteration correction (author, 2026-08-30).** Do not rebuild and
+> verify the continent for every visual change. The accepted production map is a
+> macro guide; local ground, terraces, broken edges, shores, underwater terrain,
+> water and ink come directly from the proven legacy runtime. Normal startup is a
+> bounded map-guided production window. On the author's next correction this was
+> connected directly to the full atlas map and moving-window handoff; the runtime
+> must not fall back to a single crop or require a whole-atlas compile.
+>
+> **Production-foundation decision (author, 2026-08-30).** The resulting
+> map-guided old-terrain path is the starting base for the new map and all future
+> sites. A site is not hard-coded into that path: its canonical topology status
+> promotes it. `Production`/`Accepted` sites overlay the generated terrain at
+> permanent coordinates; `Planned`/`Blockout` sites remain isolated in review
+> tools until deliberately promoted.
 
 Each slice below leaves an artifact that the next one consumes.
 
@@ -131,7 +169,7 @@ six-province macro basis and profile contracts. The authoring tool audits and
 previews registered elevation, hydrology and categorical regions with the sector
 grid; old province polygons render only as faint allocation guides.
 
-### Slice C — Chapter 1 macro layers and topology ◐ started
+### Slice C — Chapter 1 macro layers and topology ◐ paused after the first fragment
 
 Paint the registered land, elevation, water, region, culture, abandonment and
 wilderness layers. Place all 30–60 site envelopes at permanent atlas coordinates.
@@ -157,39 +195,76 @@ local Strand and northbound Spine approach. The atlas audit checks its
 12,288 × 9,216 extent and province references; the domain preview overlays the
 accepted terrain/water/region layers and names its nine intersecting sectors.
 This completes only the first connected fragment. The remaining 26–56 sites and
-continent-scale Spine, Strand, quarry and Fen graph are still Slice C work.
+continent-scale Spine, Strand, quarry and Fen graph are still Slice C work, but
+the author paused that allocation on 2026-08-30 until the complete terrain and
+two-site playable-world milestone below is working.
 
-### Slice D — sector compiler and review window ◐ started
+### Slice D — complete production terrain and sector runtime ◐ active
 
-Compile L0/L1 sources and deterministic wilderness for one 768-block sector plus
-seam apron. Replace the current assumption that all two-dimensional terrain,
-road and biome arrays exist globally. Load and inspect an arbitrary atlas sector
-or small sector window without generating the whole continent.
+Realise the accepted L0/L1 sources as finished deterministic terrain without
+continent-sized arrays. Normal play now uses the original low-level terrain,
+water, material and vegetation system in moving 1,536-block windows. The atlas
+guide replaces only its old circular macro planner; every local feature samples
+absolute coordinates so walking and map travel regenerate the same place.
+Representative terrain and neighbour handoffs are the fast review loop. The
+historical 192-sector compiler remains an optional mechanical integration tool,
+not the normal runtime or prerequisite for a terrain screenshot.
 
 *Answers:* can the production scale exist without multi-gigabyte global state,
-and do independently built seams agree exactly?
+do independently built seams agree exactly, and does every biome, coast, river,
+mountain front, cliff and sudden level change read as deliberate terrain rather
+than bilinear source pixels with noise?
 
-*Status:* compiler version 4 emits a `PTFLSEC2` terrain artifact and PNG for any
-addressed sector. It derives primary/secondary profile weights across authored
-transition widths; compiles ocean, enclosed lakes and high-altitude river cores
-with absolute water surfaces and beds; and lowers profile-controlled floodplains
-and banks before terrace quantization without allowing local profile relief to
-submerge compiled land. Sector data validates its own profile,
-land, bed and surface invariants. Corner, boundary, mountain and drowned-south
-sectors rebuilt deterministically; every available independently compiled east/
-south edge matched all 39,168 overlap cells. A strict reader now loads current
-artifacts into a sector-local `VoxelGrid`; the runtime review window uses the
-ordinary chunk mesher, ink, atmosphere, grade and a multi-height water mesh at
-true atlas coordinates. Fixed captures have been inspected for mountain,
-confluence and drowned-south sectors. A review-only mosaic can now join a square
-set of those artifacts without changing their persistence boundary; the first
-domain uses sectors 7–9 in both axes. The active reconstruction now uses a
-collision-enabled player and ordinary chunk streaming over its four-sector atlas
-window. Dynamic handoff between arbitrary mosaics, multi-plane reflections and
-persistent road/site overlays remain outside the sector artifact, so the slice
-stays open.
+*Status:* the fast map-guided moving-window runtime is the current playable visual
+build. Bloom and a distant river address both generate without compiler artifacts;
+automatic east handoff retained the exact current surface. Full-map Shift-click
+travel is connected to the same builder. Compiler 27 remains the latest complete
+historical whole-atlas mechanical baseline. It emits a `PTFLSEC2` artifact
+and PNG for any addressed sector and resolves land-only elevation, profile
+transitions and altitude/slope/moisture profile choice. Its current relief
+grammar samples global profile-sized cell lattices and named noise fields,
+articulates non-wind slopes with signed contour shoulders, cuts the cold massif
+with two crossing wind-ridge families, and restricts large course changes to
+sparse macro fronts followed by three synchronous noise-broken toe ledges. A
+40-cell transient support border covers cleanup, ledges, shoreline reach and
+derived metrics before the persisted apron is cropped. No production relief
+pass authors circular or radial geography. Registered hydrology still owns
+ocean, enclosed lakes and permanent channels; ordinary banks converge from both
+directions while preserving authored macro cuts, sector validation rejects a
+dry cardinal boundary below adjacent water, and the review water mesh closes
+wet-to-wet one-block changes while leaving shores terrain-owned.
 
-### Slice E — first exact reference reconstruction
+Compiler 16 remains the historical first complete mechanically verified atlas
+baseline; its land-aware elevation, registered water guide, dry-bank invariant
+and full-batch evidence are preserved in
+[the terrain building-knowledge entry](../building-knowledge/terrain/production-atlas-relief-hydrology-and-wilderness.md).
+Compiler 27 now supersedes it as the current whole-atlas mechanical baseline.
+The resumable compiler-27 batch produced all 192 sectors under manifest
+`44a9b2033bd10fa879de0aa18b100ec84d866c8e17dc9d00cc49671e33c350b0`.
+Its atlas hydrology audit reports severe steps `0`, maximum wet/wet step `1`,
+submerged dry boundaries `0` and cross-sector invariant failures `0`. All 180
+horizontal and 176 vertical seams compare 13,943,808 overlap cells with zero
+mismatches. An independent rebuild compares 127,844,352 apron-bearing cells
+exactly. These are continent-wide mechanical facts, not a claim that terrain is
+finished or author-accepted.
+
+Normal terrain and vegetation use globally anchored candidates from the original
+system, with permanent reference footprints excluded before planting. The
+ordinary chunk mesher, collision, ink, atmosphere, grade and translucent moving
+water render the resulting `VoxelGrid` at its true atlas origin. Compiler-backed
+profile dressing and its strict artifact reader remain available only through
+the explicit integration/review path.
+
+The fixed compiler-27 snow, highland, scarp and river captures and normal-start
+captures have been inspected by the agent. They establish the current visual
+review boundary only: broad terraces, sparse surfaces, flat banks and
+reference-level terrain/material treatment remain open. There is no author
+acceptance, so Slice D is not finished. Also open are an atlas-wide wilderness
+matrix, targeted exclusion proof, persistent reach direction/width and
+talus/scree fields, author review, multi-plane reflections, and persistent
+road/site overlays outside the sector artifact.
+
+### Slice E — preserved first exact reference reconstruction ◐ carried baseline
 
 Reconstruct `world-new/reference-10.png` as a compact Bloom Reach grove court at
 the accepted dry meadow around `9800,4600`. Measure its visible player-scaled
@@ -202,7 +277,8 @@ footprint, not inside it.
 traveller establish the same scale, and does the site remain coherent at close,
 play, wide and far distances from all four 90-degree rotations?
 
-*Status:* active reconstruction; author acceptance remains open.
+*Status:* preserved and playable; whole-site author acceptance remains open, but
+the reconstruction pass is paused while Slice D is active.
 `bloom-grove-court` owns a unique `reference-10` voxel blueprint at `9800,4600`;
 it does not call the shared ruin kit or superseded domain blockout. Its strict
 one-cell-per-voxel ground plan currently owns the court levels, stairs, detached
@@ -222,8 +298,11 @@ southern approach whose y107/y108/y109 walkable surfaces make two rises into the
 y109 lower court. One-cell walls, shoulders, and stelae remain distinct from the
 2×2 pillar family. Source/runtime plan audits, the world audit, and
 `dotnet build --no-restore` pass for this revision.
-Normal startup opens the fixed collision-enabled four-sector atlas mosaic;
-`--legacy-world` is the only route to the old generated fixture. The current
+Normal startup opens the complete map through a bounded moving old-terrain window,
+overlays the site at its permanent coordinate, and uses the atlas map/walking
+handoff to regenerate neighbouring windows. The earlier compiler-backed mosaic
+remains available through `--compiled-atlas`. `--legacy-world` is the only
+route to the old circular fixture. The current
 evidence and remaining visual gaps are recorded without overstating acceptance
 in the [Bloom Grove Court knowledge ledger](../building-knowledge/sites/bloom-grove-court.md).
 The locked view remains the source's exact 1672×941 resolution, source-facing
@@ -234,20 +313,75 @@ far extent. The v16 locked-day, true-top, and four play-distance quarter-turn
 captures have been inspected for the stair-side subtraction, open wall passage,
 continuous 2×2 pillar foundations, and two-rise threshold. Those are
 claim-scoped findings; current close/wide/far coverage, whole-site fidelity,
-collision/playability review, and author acceptance remain open. No second
-structural reference starts before author acceptance.
+collision/playability review, and author acceptance remain open. The author's
+2026-08-30 terrain-first decision removed the former rule that a second
+structural reference must wait for Bloom's whole-site acceptance.
 
-### Slice F — local content compilation and partial regeneration
+### Slice F — `reference-1` bridge, cliff and gate reconstruction
 
-Compile authored sources into disposable terrain, road, structure, navigation
-and chunk artifacts. Rebuilding one site or domain must leave unrelated tile
-hashes unchanged.
+After Slice D passes, choose a compatible permanent cliff-and-water location and
+author the second site from `world-new/reference-1.png` plus its supplied top
+view. The long causeway, southern stair, submerged bridge supports, stepped cliff
+shelves, side precincts, rubble, vegetation exclusions and monumental north gate
+must be measured as one very large composition at player scale. Its site-owned
+terrain may adjust the chosen atlas landform inside the measured footprint; the
+ordinary compiler owns everything outside it. Locked top and source-isometric
+views plus four rotations and play/far distances are required.
 
-### Slice G — production
+### Slice G — continuous playable atlas, map and developer surfaces
 
-Author the remaining supplied references one connected site at a time, only
-after the author accepts the completed first site. Templates remain reserved for
-minor non-reference marks; they do not enter a reconstruction footprint.
+Provide deterministic neighbouring-sector handoff over the production atlas's
+bounded four-sector runtime. Render the in-game map against production
+terrain, show Bloom and the Reference 1 site at their permanent coordinates, and
+retain Shift-click teleport. Route the existing tilde developer controls—time of
+day, zoom and outline among them—through atlas runtime rather than leaving them
+available only in the legacy fixture.
+
+*Status:* map-triggered reload and bounded continuous walking handoff are
+mechanically built. The Bloom runtime opens a rectangular 12,288 × 9,216 map
+from a fingerprint-matched
+batch composite or registered-layer fallback, draws permanent routes, domains,
+site envelopes/labels and global player position, and routes its actual camera,
+ink and day cycle through the existing developer menu. Shift-click supplies
+exact global X/Z and can synchronously reuse or compile an edge-clamped four-sector
+mosaic anywhere inside the atlas. Replacement uses the same reference-site and
+global wilderness passes, deterministic dry/traversable fallback, collision
+priming and existing player/camera/material/day nodes; the map and developer
+surface keep their open state and values. Headless checks pass for exact land,
+water and blocked-site fallback, opposite atlas edges and the rebuilt Bloom site.
+Walking triggers while the old eight-chunk stream circle is still safe, chooses
+the cardinal or diagonal one-sector neighbour, primes its collision, and swaps
+without changing exact global X/Z, velocity, camera, day, map or developer state.
+It accepts only the identical exact safe cell and surface height—never a fallback
+teleport—and a cooldown plus deeper rearm band prevents boundary thrash. The
+headless planner passes east/west/north/south, all four corners, partial and
+refused atlas-edge cases, repeated suppression and a rearmed return. Live
+input/overlay and post-reload collision review remain open.
+
+### Slice H — reference-parity lighting, materials and ink
+
+With terrain, both sites and traversal tools working, tune the shared render path
+against fixed day/night captures. The high-key pastel surfaces, faded stone,
+soft long shadows, atmosphere and water must remain legible at play and far
+distance. Ink strength and classification must respond to lighting/time rather
+than crushing every edge with one dark value throughout the day. This is one
+shared production pipeline, not per-site presentation lighting.
+
+The first shared pass now separates quieter camera-facing internal turns from
+preserved silhouettes, gives both ink families a stepped night response, softens
+the shared grade/shadow defaults, and hands the post-twilight key the moon colour
+as well as direction. Locked Bloom day/night captures have been inspected for
+those narrow claims. Slice H remains active: material/weathering parity,
+source-soft shadows, other distances/biomes, Reference 1, live transitions, and
+author acceptance are still open.
+
+### Slice I — local compilation and remaining production
+
+Persist authored terrain, road, structure, navigation and chunk artifacts so
+rebuilding one site or sector leaves unrelated core hashes unchanged. Resume the
+remaining topology and supplied-reference reconstructions one connected site at
+a time. Templates remain reserved for minor non-reference marks outside measured
+footprints.
 
 ### Retained evidence from the retired order
 

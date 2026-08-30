@@ -19,6 +19,12 @@ namespace Petalfell.Player;
 /// </summary>
 public partial class Controller : CharacterBody3D
 {
+	/// <summary>
+	/// One world-space water column. SurfaceY is the rendered water plane; BedY
+	/// is the highest solid surface at that X/Z, including authored site solids.
+	/// </summary>
+	public readonly record struct WaterColumn(float BedY, float SurfaceY);
+
 	public const float Gravity = 58f;
 	public const float MaxSpeed = 13.5f;
 	public const float Accel = 118f;
@@ -57,14 +63,18 @@ public partial class Controller : CharacterBody3D
 	/// <summary>An automatic hop cannot physically last longer than this.</summary>
 	private const float AutoJumpMax = 0.9f;
 	private Terrain _terrain;
+	private Func<int, int, WaterColumn?> _waterColumnAt;
+	private float _activeWaterSurface = Palette.WaterLevel;
 
 	/// <summary>World-space destination from click-to-move, or null.</summary>
 	public System.Collections.Generic.List<Vector3> Route;
 	private int _routeIndex;
 
-	public void Setup(Terrain terrain)
+	public void Setup(Terrain terrain,
+		Func<int, int, WaterColumn?> waterColumnAt = null)
 	{
 		_terrain = terrain;
+		_waterColumnAt = waterColumnAt;
 		// The traveller is a slim capsule: wide enough not to slip through a
 		// diagonal gap between trunks, narrow enough to walk a stair cut three
 		// columns wide.
@@ -257,9 +267,25 @@ public partial class Controller : CharacterBody3D
 		// past the threshold, you stop swimming, gravity drops you back under.
 		int x = Mathf.FloorToInt(GlobalPosition.X);
 		int z = Mathf.FloorToInt(GlobalPosition.Z);
+		if (_waterColumnAt != null)
+		{
+			WaterColumn? sampled = _waterColumnAt(x, z);
+			if (!sampled.HasValue)
+			{
+				Swimming = false;
+				return;
+			}
+			WaterColumn column = sampled.Value;
+			_activeWaterSurface = column.SurfaceY;
+			float atlasDepth = column.SurfaceY - column.BedY;
+			Swimming = atlasDepth > SwimDepth &&
+				GlobalPosition.Y < column.SurfaceY + 0.35f;
+			return;
+		}
 		float bed = _terrain != null && x >= 0 && z >= 0 && x < _terrain.Size && z < _terrain.Size
 			? _terrain.Level[z * _terrain.Size + x] : 0f;
 		float depth = Palette.WaterLevel - bed;
+		_activeWaterSurface = Palette.WaterLevel;
 		Swimming = depth > SwimDepth && GlobalPosition.Y < Palette.WaterLevel + 0.35f;
 	}
 
@@ -367,7 +393,7 @@ public partial class Controller : CharacterBody3D
 		_autoJumpAge = 0f;
 		// The traveller floats rather than sinks: water deeper than a stride is
 		// common, and the surface is where the scene is.
-		float target = Palette.WaterLevel - 0.85f;
+		float target = _activeWaterSurface - 0.85f;
 		float error = target - GlobalPosition.Y;
 		vel.Y += Mathf.Clamp(error, -1f, 1f) * Buoyancy * dt;
 		vel.Y -= vel.Y * WaterDrag * dt;

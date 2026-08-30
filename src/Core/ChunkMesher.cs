@@ -113,7 +113,9 @@ public static class ChunkMesher
 
 	public static ChunkMeshData Build(VoxelGrid grid, int ci, int ck)
 	{
-		_edges ??= new EdgeRec[Span * Span * grid.Height * 3];
+		int edgeCapacity = Span * Span * grid.Height * 3;
+		if (_edges == null || _edges.Length < edgeCapacity)
+			_edges = new EdgeRec[edgeCapacity];
 
 		int x0 = ci * ChunkSize, z0 = ck * ChunkSize;
 		int x1 = Math.Min(grid.Size, x0 + ChunkSize), z1 = Math.Min(grid.Size, z0 + ChunkSize);
@@ -133,7 +135,9 @@ public static class ChunkMesher
 		}
 		yTop = Math.Min(grid.Height, yTop + 1);
 
-		_win ??= new byte[WinW * WinW * ChunkMesherHeight(grid)];
+		int windowCapacity = WinW * WinW * ChunkMesherHeight(grid);
+		if (_win == null || _win.Length < windowCapacity)
+			_win = new byte[windowCapacity];
 		_winX0 = x0 - WinPad;
 		_winZ0 = z0 - WinPad;
 		_winTop = yTop;

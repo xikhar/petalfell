@@ -163,9 +163,10 @@ content/chapter_01/
 The atlas is 12,288 × 9,216 blocks while the current runtime fixture is 3,456
 square. `topology.json` is the permanent rectangular source and `atlas.json`
 registers it through `topologyPath`. `world.json` now belongs only to opt-in
-legacy diagnostics. Normal startup composes the fixed production sectors around
-the active site, but route/site/navigation results are not yet persisted into
-sector artifacts. The two coordinate systems are never scaled into one another
+legacy diagnostics. Normal startup exposes the complete atlas through a moving,
+sector-aligned 1,536-block map-guided terrain window and overlays Bloom whenever
+its full permanent footprint is present. The earlier compiled-sector runtime
+remains explicit. The two coordinate systems are never scaled into one another
 at load time, because that would make supposedly absolute coordinates depend on
 a runtime setting.
 
@@ -173,7 +174,10 @@ A site record carries a stable id and display name; absolute block position and
 orientation; extent; domain, tier and archetype; culture and age; named
 entrances bound to route nodes; optional sightline targets; build status; and an
 optional authored plan path. Dressing seeds belong to the plan or derived build,
-not to the site's identity.
+not to the site's identity. Build status is also the deliberate normal-play
+promotion gate: `Production` and `Accepted` plans are realised and reserve their
+footprints in generated terrain windows; `Planned` and `Blockout` plans remain
+available to the authoring/review tools without changing the playable world.
 
 The first L3 format is domain-local because the connective walls, causeway and
 shared level hierarchy are the composition. Its origin and axis are authored in
@@ -205,7 +209,21 @@ of times. **Partial regeneration — rebuild one site's region without the whole
 continent — pays for itself within a week of authoring and should be built early
 rather than late.**
 
-The loop that matters:
+During the terrain-first milestone, the loop that matters is:
+
+1. Change a registered macro layer, biome/relief profile or one bounded
+   global-coordinate terrain pass.
+2. Audit source registration, profile references, declared neighbourhood support
+   and artifact versioning.
+3. Compile the representative mountain, cliff, river, lake, coast, fen, bloom
+   and drowned sectors plus independent neighbours.
+4. Verify repeat hashes and every available overlap; inspect fixed walking, wide
+   and far captures through the ordinary runtime renderer.
+5. Only after those gates pass, compile and verify the full 16 × 12 atlas and
+   inspect height, hydrology, biome/profile and cliff/drop coverage composites.
+6. Correct the authored source or derived rule; never paint a derived artifact.
+
+After that baseline passes, site/map iteration is:
 
 1. For reference-site work, read the relevant evidence-scoped methods and site
    ledger in [`building-knowledge/`](../building-knowledge/README.md), then
@@ -266,8 +284,10 @@ menu, teleport and chunk streaming are all already there.
   an *authored record* (§3).
 - **L3/L4 explicit site blueprints** — supplied-reference sites own their
   terrain silhouette plus direct voxel runs for every visible architectural and
-  decay mass. The first acceptance target is `reference-10`; the old generic
-  domain compiler remains diagnostic only.
+  decay mass. `reference-10` remains the preserved first transcription; after
+  terrain completion, `reference-1` plus its supplied top view is the next active
+  bridge/cliff/gate reconstruction. The old generic domain compiler remains
+  diagnostic only.
 - **L4 Blender**, eventually, for content not already being transcribed as voxel
   reference sites. It does not replace or simplify the current explicit pass.
 
@@ -303,33 +323,70 @@ global coordinates over sector-local storage. See [ATLAS.md](ATLAS.md) §3.
 
 ## 9. Status
 
+The author corrected the terrain iteration loop on 2026-08-30. Visual terrain
+work now runs in moving 1,536-block map-guided production windows: accepted atlas
+land, elevation, hydrology and region fields own macro intent, while the original
+terrain, water, shore, underwater, vegetation, material and ink paths remain the
+local implementation. The generic site pass overlays every `Production` or
+`Accepted` site on that same world; Bloom Grove Court is the first promoted site
+at its permanent coordinate. Walking generates the adjacent window and Shift-click on
+the full atlas map recentres at any in-bounds address. A whole-atlas batch is no
+longer a runtime or screenshot prerequisite. Full production terrain still
+precedes the unfinished continent topology and any further site geometry. Bloom
+Grove Court remains at its permanent atlas address as a playable, unaccepted
+baseline. The historical compiler-16 batch remains earlier mechanical evidence;
+compiler 27 now establishes deterministic coverage for all 192 sectors and all
+356 seams through a complete manifest-backed build, hydrology audit and
+independent verification. Production terrain remains active because that does
+not establish visual quality or author acceptance. The next site is the supplied
+`reference-1` bridge/cliff/gate at a
+compatible authored cliff-and-water location. Continuous bounded atlas handoff,
+the production map, Shift-click teleport and tilde developer controls are also
+mechanically implemented; their live post-swap input, collision and swimming
+review remains open. Ink, material, shadow and day/night parity follows.
+This supersedes the former rule that every site envelope must be allocated and
+Reference 10 accepted before any second structural reconstruction begins.
+
 The versioned L2 schema supports both the legacy square fixture and rectangular
 production coordinates. The strict atlas audit now validates the permanent
 `topology.json` against the 12,288 × 9,216 extent and registered province ids;
 the topology preview draws domains, site envelopes, routes and affected sector
 addresses directly over the accepted elevation, water and region sources. The
 first southern gateway domain is permanently placed at the central delta
-threshold. Its L3/L4 domain plan fixes seven platform polygons at Y106/108/
-114/122, four named platform cutouts, three stairs, sixteen connective wall runs,
-eight exact route sockets, forty-five scale-checked silhouette placements and
-fourteen coherent surface-treatment envelopes.
-The terrain-backed domain preview shows those records over the accepted delta
-shelf and water. A review compiler now composes the nine affected sector
-artifacts, realises the exact L2/L3 records as terrain-backed voxel geometry and
-applies globally deterministic paving-edge, surface-damage, reclamation,
-ground-detail and biome-vegetation assistants within the authored densities.
-Fixed late-morning and early-full-night captures
-use the ordinary game lighting and atmosphere at all four review distances. The
-authored sources remain untouched. The old source overlay and authored-route
-playable runtime still consume `world.json` only.
+threshold. Its old seven-platform, four-site L3/L4 composition remains a
+rejected `ToolingFixture`: it proved nine-sector composition and terrain-backed
+review but is not canonical site content. On 30 August 2026 the atlas topology
+replaced those four invented identities and side routes with the single measured
+`shallows-gate-and-causeway` district at `(6400,6980)`. Its strict Reference 1
+source plan records twelve terrain shapes, forty-four unique site structures,
+the causeway and both stairs, explicit water/cliff context, keep-open regions,
+tree exclusions and measured tree anchors at one voxel per source-plan cell.
+The runtime transform, vertical courses and site builder remain unresolved, so
+the topology status is `Blockout`: it can be inspected in dedicated site tools
+but is not promoted into normal play. The rejected domain fixture remains
+non-production evidence.
 An authoring-time compiler emits disposable `PTFLSEC2` terrain artifacts with
 bed/terrain height, absolute water surface, hydrology class and primary/secondary
-profile blend. It derives transition widths and hydrology shaping entirely in
-global coordinates and has passed repeat-hash and independent-neighbour overlap
-checks at atlas corners, a province boundary, high terrain and the drowned south.
-The current artifact reader rejects stale or malformed derived data. A read-only
-runtime review window materialises one sector plus apron, or a temporary square
-mosaic of ordinary sector artifacts, into local voxel storage at true atlas
+profile blend. Compiler 27 registers every profile's `cellSize` lattice in global
+coordinates, feeds bounded noise bands into continuous non-wind shoulders or
+crossing anisotropic wind ridges, admits sparse macro fronts to the natural field,
+applies mode filtering and despeckling, then articulates realised rises with three
+synchronous global-noise toe-ledge passes. Each sector receives 40 cells of
+transient support; registered hydrology is reapplied after natural relief and
+cleanup in that supported field before cropping, so natural relief cannot
+displace accepted water ownership. Its source fingerprint is
+`a9c535796c83271a06d091691184d1369401b0876ff1fc3b42b3b69542d458a3`; the complete
+192-sector manifest is
+`44a9b2033bd10fa879de0aa18b100ec84d866c8e17dc9d00cc49671e33c350b0`.
+The atlas audit measured 95,291,392 wet edges, 329,331 one-voxel stepped edges,
+zero severe steps (maximum one at `635,329`), zero submerged-dry boundaries and
+zero cross-sector violations. Its 180 horizontal and 176 vertical seams compared
+13,943,808 overlap cells without mismatch. A separate `verify-atlas` pass
+compared 7,050,240 horizontal, 6,893,568 vertical and 127,844,352 repeat-build
+cells without error. The current artifact reader rejects stale or malformed
+derived data. A read-only runtime review window materialises one sector plus
+apron, or a temporary square mosaic of ordinary sector artifacts, into local voxel
+storage at true atlas
 coordinates. Fixed sector and domain captures render through the ordinary
 terrain, ink, atmosphere, grade and water paths without allocating the
 continent.
@@ -339,10 +396,21 @@ The current southern plan is a superseded multi-reference tooling fixture; it is
 not production content under the reconstruction contract above. The active
 Reference 10 site has a strict source-facing v2 plan, explicit one-cell-per-voxel
 runtime parity, source/runtime SVG previews, a locked isometric/top capture rig,
-and collision-enabled player traversal inside its fixed four-sector normal-start
-mosaic. Culture, abandonment, the authored wilderness density source, dynamic
-mosaic handoff, the remaining 26–56 site envelopes and continent-scale road
-graph, persistent per-sector structure/navigation output, author-accepted
+and collision-enabled player traversal inside its bounded four-sector normal-start
+mosaic. A compiler-27 normal-start run loaded sectors `12,5`, `13,5`, `12,6` and
+`13,6`, primed 613 chunks, and realised Bloom as 10,236 explicit surface cells
+and 6,876 voxel writes. The production map can rebuild that 2×2 window at any
+in-bounds Shift-click address; its current headless preview selected the derived
+`atlas-profile.png`. Handoff verification passes at Bloom's `9800,4591` and the
+Reference 1 address `6400,6980`. Pre-edge walking can replace the window with the
+exact neighbouring cardinal or diagonal window while retaining global player
+state; its verifier passes four cardinal transitions, four corners, one partial
+outer-edge transition, one outer refusal, 90 suppressed repeats and one rearmed
+return. These are mechanical checks: visual quality, author acceptance, and live
+startup/post-swap input, collision and swimming review remain open. Culture,
+abandonment, the authored wilderness density source, the remaining 26–56 site
+envelopes and continent-scale road graph, persistent per-sector
+structure/navigation output, author-accepted
 realisation of the first L3/L4 plan, and all later site plans remain unbuilt. See
 [ROADMAP.md](ROADMAP.md) §3
 and [CURRENT_STATE.md](../CURRENT_STATE.md) §8.

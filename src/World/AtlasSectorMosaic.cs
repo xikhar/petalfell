@@ -79,6 +79,11 @@ public static class AtlasSectorMosaic
 				result.Profile[di] = source.Profile[si];
 				result.SecondaryProfile[di] = source.SecondaryProfile[si];
 				result.ProfileBlend[di] = source.ProfileBlend[si];
+				result.Surface[di] = source.Surface[si];
+				result.Slope[di] = source.Slope[si];
+				result.Aspect[di] = source.Aspect[si];
+				result.Curvature[di] = source.Curvature[si];
+				result.Wetness[di] = source.Wetness[si];
 			}
 		}
 		result.Validate(atlas.BiomeCatalog.Profiles.Count);

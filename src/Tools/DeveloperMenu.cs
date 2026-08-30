@@ -35,6 +35,9 @@ public partial class DeveloperMenu : CanvasLayer
 	private SliderRow _maxZoom;
 	private Button _cloudButton;
 
+	public bool IsOpen => _root?.Visible == true;
+	public event Action<bool> OpenChanged;
+
 	public void Setup(ShaderMaterial inkLight, ShaderMaterial inkDark, CameraRig camera,
 		DayCycle day = null)
 	{
@@ -172,6 +175,7 @@ public partial class DeveloperMenu : CanvasLayer
 			key.Keycode != Key.Quoteleft && key.Keycode != Key.Asciitilde) return;
 
 		_root.Visible = !_root.Visible;
+		OpenChanged?.Invoke(_root.Visible);
 		GetViewport().SetInputAsHandled();
 	}
 

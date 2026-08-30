@@ -2,14 +2,15 @@
 
 - **Lifecycle:** `active`
 - **Evidence summary:** current plan/builder are `mechanically verified`; the
-  complete v13 matrix remains historical `visually reviewed` evidence for the
-  unchanged central occupied footprint and east-slab channels; the current v16
-  locked, top, and four play-distance rotations are `visually reviewed` for the
-  annotated stair, passage, foundation, and threshold correction; the whole-site
-  match is not `author-accepted`
+  complete v13 matrix and v16 correction set remain historical `visually
+  reviewed` evidence for their unchanged geometry claims; the complete current
+  v17 matrix is `visually reviewed` only for the four annotated stair, passage,
+  shaft-support, and threshold claims; the v2 lighting set remains `visually
+  reviewed` only for locked day/night line hierarchy and readability; the
+  whole-site match is not `author-accepted`
 - **Scope:** `site-specific` to `bloom-grove-court` / `reference-10.png`
-- **Last verified:** 2026-08-30 mechanically and in the six current v16 raw
-  locked/top/play-rotation captures
+- **Last verified:** 2026-08-30 mechanically and across the complete current v17
+  locked/top, day/night, four-distance, and four-rotation capture matrix
 - **Supersedes:** none; rejected readings are retained below
 - **Superseded by:** none
 - **Owning sources:**
@@ -45,7 +46,9 @@ before changing any of these values.
 | The intended central-right occupied spread reads without overextended terrain; the broken low L return and two interior remnants remain discrete; both channels stay open without a bridge or floating back; and the rightward extent stays modest at far range | `visually reviewed` | All 19 raw captures and four derived comparisons in `/home/shikhar/godot/shots/reference-10-plan-v13-full/`, inspected 2026-08-30 | Historical evidence for unchanged terrain/occupancy claims; v13 predates the current pillar, passage, and threshold correction |
 | Reference 10's current upright pillar family is consistently 2x2 on connected foundations; one-cell-wide remnants in the precinct are walls, shoulders, or stelae rather than mixed-width pillars | `observed/source-measured` | `reference-10.png`, `reference-10-top.png`, and the author's explicit 2026-08-30 correction | Some rear/occluded mass identities remain ambiguous |
 | The four-point annotated correction removes the graded east stair-side shoulder/cap/rubble family; splits the south-west wall around an empty passage at x=-11..-10, z=-9..-6; starts all four central 2x2 shafts at y116 continuously over the y114 base and y115 stylobate course; and adds a y107 southern approach whose y107/y108/y109 tread surfaces make two rises into the y109 lower court | `mechanically verified` | Current plan/builder; passing source/runtime plan audits, world audit, and `dotnet build --no-restore`, 2026-08-30 | The audits prove topology, support declarations, and buildability, not the screen-space result |
-| At the locked source angle and true top, the east stair bumps are absent, the south-west wall pass is open, the four 2x2 shafts meet their connected foundation without the former air slice, and the southern threshold reads as two low rises; all four play-distance rotations preserve those corrections | `visually reviewed` | `/home/shikhar/godot/shots/reference-10-plan-v16-annotated/reference_match_day.png`, `reference_top_day.png`, and `site_play_r0.png` through `site_play_r3.png`, inspected 2026-08-30 | Close/wide/far distances, whole-site fidelity, collision/playability, and author acceptance remain open |
+| At the locked source angle and true top, the east stair bumps are absent, the south-west wall pass is open, the four 2x2 shafts meet their connected foundation without the former air slice, and the southern threshold reads as two low rises; all four play-distance rotations preserve those corrections | `visually reviewed` | Historical pre-lighting-change evidence: `/home/shikhar/godot/shots/reference-10-plan-v16-annotated/reference_match_day.png`, `reference_top_day.png`, and `site_play_r0.png` through `site_play_r3.png`, inspected 2026-08-30 | The later shared ink/lighting change requires a fresh top/play rotation set before making this a current-render claim |
+| Under the current v17 render, the main stair remains free of the rejected side bumps, the south-west passage remains a real opening, the four square 2x2 shafts visibly grow from their connected foundation courses, and the southern threshold remains a two-rise stair at every reviewed distance and quarter-turn | `visually reviewed` | All 19 raw files and four derived comparisons in `/home/shikhar/godot/shots/reference-10-callouts-current-v17/`, inspected 2026-08-30: locked day/night, calibrated top, close/play/wide/far at r0-r3, and source/top overlays plus edge differences | This review establishes only the four annotated geometry claims; it does not establish whole-site fidelity, collision/playability, or author acceptance |
+| The current shared renderer keeps the locked-day internal edge rhythm quieter than silhouettes and retains the court, stair, tree, and traveller hierarchy under the cooler readable night key | `visually reviewed` | `/home/shikhar/godot/shots/reference-10-ink-parity-v2/reference_match_day.png` and `reference_match_night.png`, inspected 2026-08-30 | This earlier pair establishes only its named lighting claim; the later complete v17 matrix was reviewed only for the four annotated geometry claims, not whole-site parity or author acceptance |
 | Current site matches Reference 10 one-to-one | `candidate` | Required evidence is missing | Needs material/light and remaining geometry refinement, playable collision review, and explicit author acceptance |
 
 Do not copy routine transient cell coordinates into this ledger. The exact
@@ -128,8 +131,12 @@ two-rise southern threshold have passed plan/world/build checks. The complete
 v13 matrix remains evidence only for the unchanged central occupied footprint,
 channels, reverse support, and far extent. The six inspected v16 raw views prove
 the four annotated corrections only at the locked, top, and play-distance
-quarter-turn views. That claim-scoped review does not prove close/wide/far
-behavior, collision/playability, whole-site fidelity, or author acceptance. The
+quarter-turn views under the prior shared lighting. The complete current v17
+matrix re-establishes those same four claims at the locked day/night and top
+views and at close/play/wide/far distance for all four rotations; it does not
+promote any other site claim. The v2 locked day/night captures establish only
+line hierarchy and night readability. These claim-scoped reviews do not prove
+collision/playability, whole-site fidelity, or author acceptance. The
 overall site still needs stronger evidence for exact terrain silhouette,
 architecture count/placement, arch proportions, material texture, lighting,
 tree silhouettes, rubble, all hidden faces, and collision/playability. No
@@ -139,13 +146,19 @@ explicit whole-site author acceptance exists.
 
 1. Regenerate the source-facing, runtime-facing, and source-pixel overlay plan
    artifacts after any further plan edit.
-2. Preserve `/home/shikhar/godot/shots/reference-10-plan-v16-annotated/` as the
-   current claim-scoped locked/top/play-rotation evidence. Recapture it after any
-   geometry, camera, material, shader, or lighting change.
+2. Preserve `/home/shikhar/godot/shots/reference-10-plan-v16-annotated/` as
+   historical claim-scoped locked/top/play-rotation evidence. Preserve
+   `/home/shikhar/godot/shots/reference-10-ink-parity-v2/` as the narrower
+   locked-day/night lighting review. The complete current-render evidence for
+   the four annotated geometry claims is
+   `/home/shikhar/godot/shots/reference-10-callouts-current-v17/`; recapture the
+   affected matrix after any later geometry, camera, material, shader, or
+   lighting change.
 3. Preserve `/home/shikhar/godot/shots/reference-10-plan-v13-full/` as historical
-   full-matrix evidence for the unchanged central footprint and channels. Build
-   and inspect a new complete current matrix before making any current-version
-   close/wide/far claim, using
+   full-matrix evidence for the unchanged central footprint and channels. Do not
+   use the newer v17 matrix to promote close/wide/far claims beyond the four
+   explicitly reviewed annotated corrections; broader claims require their own
+   named inspection criteria using
    [the capture workflow](../rendering/capture-overlay-and-acceptance.md).
 4. Test normal playable startup separately; capture review mode is nonplayable.
 5. Update the evidence table above with the exact new shot directory and visible

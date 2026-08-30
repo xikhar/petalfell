@@ -4,8 +4,9 @@
 > `plan.md` §2.1. Settlements now generate as holdouts, remnants, ruins and
 > monuments rather than as intact populated places; that conversion is done.
 >
-> **The current effort is the layer above this file.** Ruins at reference scale
-> and a canonical authored map — see [AGENTS.md](AGENTS.md) and
+> **The current effort is the layer above this file.** Finish visual review of
+> the map-guided full-atlas terrain runtime, then build the second measured
+> reference site and review the resulting two-site world — see [AGENTS.md](AGENTS.md) and
 > [docs/ROADMAP.md](docs/ROADMAP.md). Everything below is the substrate that work
 > builds on.
 
@@ -30,14 +31,35 @@ aspirational belongs here, and anything listed must have been seen working.
 - Godot 4.7.1 Mono project using C# and the Forward+ renderer.
 - Jolt is selected as the 3D physics engine.
 - The game is assembled in code from `src/Main.cs`; `main.tscn` is the entry scene.
-- The **3456×3456×76** generated world is now an opt-in review fixture reached
+- The **3456×3456×76** circular generated world is an opt-in review fixture reached
   with `--legacy-world`; it is no longer normal startup.
+- Normal startup is the complete 12,288×9,216 atlas through a moving
+  1,536×1,536 bounded production window. `ProductionTerrainGuide` reads the
+  accepted land, elevation, hydrology
+  and region images at global atlas coordinates. The original `Terrain` path owns
+  its six-block local lattice, terraces, cleanup, ledges, gradual banks,
+  underwater shelves, columns, vegetation, translucent moving water and ink.
+  The current Bloom window generated its terrain/site/flora in about 3.3 seconds
+  and reached a 197-chunk playable frame without a sector batch. A separate
+  central-river start generated in about 3.1 seconds. `--terrain-focus=X,Z`
+  chooses another starting address.
+- Bloom Grove Court is the first topology site with `Production` status and is
+  overlaid by the generic production-site pass on that same normal-start terrain at its permanent
+  `(9800,4600)` coordinate. The runtime translates its absolute source datum by
+  -76 blocks in the current Bloom window to meet the old terrain range without changing its measured plan or
+  voxel blueprint; the current run wrote 10,236 surface cells and 6,876 voxels.
+  The unfinished Shallows Gate remains `Blockout`, so it is inspectable in site
+  review but does not reserve vegetation, alter a production window or appear in
+  normal play. Future `Production`/`Accepted` sites use this same pass without a
+  site-id special case.
 - The authored production atlas contract is **12,288×9,216×192 blocks**, divided
-  into sixteen by twelve 768-block sectors, with sea level at 40. Normal startup
-  now opens a playable, collision-enabled four-sector atlas window at the active
-  Bloom Reach reconstruction. Full cross-continent sector-window handoff is not
-  built yet; the active window proves the production runtime boundary without
-  allocating continent-scale global arrays.
+  into sixteen by twelve 768-block sectors, with sea level at 40. The prior
+  full atlas map, Shift-click travel and automatic cardinal/diagonal walking
+  handoff now regenerate the same old-terrain path at permanent coordinates.
+  An observed east handoff rebuilt the neighbouring window and retained the
+  exact landing surface. The earlier compiler-backed runtime remains available
+  through `--compiled-atlas`; author play review of prolonged traversal,
+  collision and swimming remains open.
 - The project builds cleanly with `dotnet build`, with no warnings.
 
 ## 2. Map and world generation
@@ -67,23 +89,58 @@ aspirational belongs here, and anything listed must have been seen working.
   image-generated drafts accepted by the author on 27 August 2026; culture,
   abandonment and wilderness remain `Planned`. The audit checks dimensions, PNG encoding, the
   exact region palette and land-mask agreement for water and region.
-- `AtlasSectorCompiler` version 4 compiles an arbitrary 768-block sector plus a
-  24-block apron into a disposable `PTFLSEC2` artifact and PNG preview. Each cell
+- The current complete mechanically verified atlas batch uses
+  `AtlasSectorCompiler` version 27. It compiles an arbitrary 768-block sector
+  plus a 24-block apron into a disposable `PTFLSEC2` artifact and PNG preview.
+  Each cell
   carries terrain/bed height, optional absolute water surface, compiled land,
-  authored water value, hydrology class, primary/secondary profiles and blend.
-  It derives region transitions, floodplains, banks, oceans, enclosed lakes and
-  high-altitude permanent-water cores in global coordinates. Sectors 0,0, 4,2,
-  6,4, 8,8 and 15,11 rebuilt deterministically; every tested available east and
-  south neighbor matched all 39,168 overlap cells. Channel surfaces are held
-  below locally realised banks, including after profile relief.
+  authored water value, hydrology class, primary/secondary profiles and blend,
+  surface class, slope, aspect, curvature and wetness. It renormalises elevation
+  over land texels and registers each profile's `cellSize` lattice in global
+  coordinates. Bounded noise bands feed continuous non-wind shoulders or crossing
+  anisotropic wind ridges. Sparse macro fronts enter the natural field, mode
+  filtering and despeckling clean it, and three synchronous global-noise toe-ledge
+  passes articulate realised rises as bounded block layers.
+  Each independent sector is built with 40 cells of transient support; registered
+  hydrology is reapplied after natural relief and cleanup within that supported
+  field before the persisted sector is cropped, so oceans, enclosed lakes,
+  permanent-water cores, floodplains and banks retain their accepted ownership.
+  Every dry cardinal boundary is validated at least one
+  voxel above adjacent water. The compiler-27 atlas audit measured 95,291,392 wet
+  edges, 329,331 one-voxel stepped edges, zero severe steps (maximum one at
+  `635,329`), zero submerged-dry boundaries and zero cross-sector violations.
+  All 180 horizontal and 176 vertical seams compared 13,943,808 overlap cells
+  with zero mismatches; the independent verifier compared 7,050,240 horizontal,
+  6,893,568 vertical and 127,844,352 repeat-build cells without error. This is
+  mechanical evidence only; terrain beauty and author acceptance remain open.
 - The artifact reader rejects stale compiler versions, source fingerprints,
   malformed metadata and invalid cell payloads. `review-sector` materialises one
   sector plus apron into a local `VoxelGrid` at its global atlas origin and uses
-  the normal chunk mesher, ink, atmosphere, grade and water shader.
-  `capture-sector` writes deterministic near, wide, reverse and far views.
-  Mountain, confluence and drowned-south sectors were inspected in the renderer;
-  the legacy runtime hero capture was also checked after sharing its material
-  construction with the review path.
+  the normal chunk mesher, ink, atmosphere, grade and water shader. Wet-to-wet
+  height changes receive two-sided vertical water curtains while shore edges stay
+  open. `capture-sector` writes deterministic play, near, wide, reverse and far
+  views. The existing mountain and river capture sets are development
+  evidence, not an accepted visual result. The legacy runtime hero capture was
+  also checked after sharing its material construction with the review path.
+- `AtlasBatchAuthoring` plus `compile-atlas` and `verify-atlas` can resume a
+  192-sector build, write height/profile/surface/hydrology composites and compare
+  all 356 neighbour seams. The current compiler-27 source fingerprint is
+  `a9c535796c83271a06d091691184d1369401b0876ff1fc3b42b3b69542d458a3` and its
+  completed batch manifest is
+  `44a9b2033bd10fa879de0aa18b100ec84d866c8e17dc9d00cc49671e33c350b0`.
+  The historical compiler-16 manifest
+  `3f4efd7096e32c5d994087a0d7daa952b51cb1cac68171a5f957129ea3bbaa09`
+  remains earlier mechanical evidence, not the current terrain result. Current
+  hydrology, seam and independent deterministic verification are recorded in
+  [docs/ATLAS.md](docs/ATLAS.md) and the linked terrain knowledge.
+- Ordinary production wilderness now comes from data-backed vegetation and
+  boulder sets on globally anchored lattices with independent position,
+  acceptance and shape salts. It resolves the rendered profile and filters cap,
+  water, shore, slope, wetness, height and occupied voxels. Domain-plan and
+  reference-site review paths exclude the full conservative canopy/boulder
+  footprint, and authored reclamation remains a separate pass. Current sector
+  logs demonstrate placement, but a targeted exclusion test and fresh current
+  wilderness seam matrix remain open.
 - `review-domain` composes the first domain's nine ordinary sector artifacts
   into a temporary 2,352-square window (2,304-block core plus outer apron).
   `DomainPlanBlockout` then realises its exact route polylines, seven platforms
@@ -228,8 +285,10 @@ aspirational belongs here, and anything listed must have been seen working.
   concave folds stay dark, and pale eligibility comes from both owning faces.
 - The shader makes the final pale/dark decision from the live camera-facing state.
 - Outline width is expanded in screen space and remains fixed in framebuffer pixels
-  through camera zoom. The current default is 1.30 px.
-- Dark ink is a dark plum-grey rather than black. Light ink is a restrained grey-white.
+  through camera zoom. The current reviewed default is 1.05 px.
+- Dark ink is a soft plum-grey rather than black. Camera-facing internal turns are
+  lifted toward the restrained pale family while exterior silhouettes retain the
+  darker value; both families step with the ordinary day/night amount.
 - Analytic one-pixel antialiasing keeps the line body opaque while avoiding jagged
   edges and overlap darkening.
 - Junction metadata handles shared endpoints: dark runs normally win, while a vertex
@@ -329,13 +388,37 @@ aspirational belongs here, and anything listed must have been seen working.
 
 ## 7. Tools and interface currently present
 
-- A standalone developer overlay toggled with the tilde/backtick key.
+- The legacy interface remains available only in the opt-in **legacy world**.
+  Normal atlas startup begins in Bloom's four-sector mosaic and owns its own
+  production map plus the existing developer controls; map teleport and ordinary
+  walking can replace that bounded mosaic at another atlas address.
+- A standalone legacy developer overlay toggled with the tilde/backtick key.
 - Developer sliders control outline width, the minimum and maximum camera zoom
   distances, and the time of day (which pauses the cycle and scrubs it manually).
-- **A world map view on `M`.** Renders the whole continent from a byte buffer with
+- **A legacy world map view on `M`.** Renders the 3,456-square fixture from a byte buffer with
   downsampling, drawing terrain, water, roads and site markers coloured by remnant
   state. `Shift`-click teleports the player to a safe spot at that location,
   priming chunks before the move.
+- **A separate rectangular production-atlas map is wired into normal atlas
+  runtime.** `M` opens the 12,288 × 9,216 surface without constructing legacy
+  `Terrain`. It validates and reads the current batch profile/height composite
+  when present, otherwise reconstructs the background from registered land,
+  region, water and elevation sources. Permanent domain and rotated site
+  envelopes, labels, routes and the traveller's global atlas position draw over
+  that background. `Shift`-click emits exact global X/Z. An in-bounds address
+  now reuses or recompiles an edge-clamped four-sector mosaic, applies the same
+  reference-site and globally anchored wilderness passes, resolves a deterministic
+  dry/traversable landing, primes collision, and swaps only after the replacement
+  is ready. Open map pan/zoom and developer-menu camera, ink and day state survive
+  the reload. Water or blocked clicks use a fixed local search, then a registered
+  dry-source hint and finally the authored Bloom spawn; every decision is logged.
+  This map action remains a synchronous address teleport. Ordinary walking uses
+  the stricter continuous handoff below and never invokes these fallback moves.
+  The compiler-27 `atlas-map-preview` selected the current derived
+  `atlas-profile.png`; `atlas-map-preview` also exercises the registered-layer
+  fallback background headlessly, and
+  `verify-atlas-handoff` exercises address, edge and landing resolution without
+  opening a window.
 - A deterministic command-line capture rig writes named review screenshots and a
   top-down heightfield map.
 - Boot diagnostics report generation time, height distribution, terrace types,
@@ -382,27 +465,47 @@ in §2. What remains is the layer above them, and it is the current effort. See
   `src/World/CanonicalWorld.cs` performs a strict pre-generation audit;
   the atlas audit also checks production extent and province references. SVG
   previews show the topology over accepted macro layers and sector boundaries
-  without generating terrain. The in-game map overlay and legacy route stamps
-  still use only the smaller fixture. The production source deliberately remains
-  below the 30–60-site target. Normal startup realises the explicit Bloom Grove
+  without generating terrain. Legacy route stamps still use only the smaller
+  fixture; the production atlas has its separate full rectangular map described
+  in §7. The production source deliberately remains below the 30–60-site target.
+  Normal startup realises the explicit Bloom Grove
   Court over production terrain; the superseded southern-domain geometry remains
   a tooling fixture and does not enter normal play.
   ([docs/MAP_PIPELINE.md](docs/MAP_PIPELINE.md))
-- **The production atlas manifest, first macro blockouts and first sector compiler
+- **The production atlas manifest, accepted macro sources and current sector compiler
   exist.** The selected colour, line and elevation maps are tracked under
   `world-new/map/`; atlas dimensions, sector grid, registered macro layers,
   province polygons and biome build contracts are machine-audited and
   previewable. Land, elevation, generated water and categorical region sources
   are accepted; culture, abandonment and wilderness remain planned. A
   deterministic compiler emits one disposable terrain/hydrology/profile sector
-  plus apron and verifies neighbor overlap. A read-only production-sector window
+  plus apron and can verify neighbor overlap. A read-only production-sector window
   now materialises its voxel columns and multi-height water for visual review.
   The old game owns global 3,456-square fields only in `--legacy-world`. The
   active production site now has player traversal, collision and chunk streaming
-  over four compiled sectors. Seamless handoff to arbitrary neighbouring mosaics
-  and persistent route/site artifacts remain open.
+  over a moving four-sector-sized old-terrain allocation. The atlas-map
+  Shift-click path can generate and recenter that runtime at any in-bounds address, with deterministic
+  safe-landing fallback. Walking now requests the deterministic one-sector
+  neighbour before the eight-chunk stream circle reaches an unsafe edge; corners
+  shift both axes. Persistent route/site artifacts remain open.
+  The fully batch-verified compiler-27 baseline includes land-aware elevation
+  sampling, globally registered profile cell lattices, bounded noise bands,
+  continuous non-wind shoulders, crossing anisotropic wind ridges, sparse macro
+  fronts, mode filtering, despeckling, three synchronous global-noise toe-ledge
+  passes, 40-cell transient support and hydrology reapplied after natural
+  relief. It retains registered bidirectional bank shaping, absolute water
+  surfaces, dry/water clearance validation, cap/cliff/shore classification,
+  slope/aspect/curvature/wetness metrics and altitude/slope/moisture profile
+  resolution. Its review path adds coherent cap-material regions and ordinary
+  globally anchored tree/boulder dressing. Its 192-sector hydrology audit has no
+  severe water step, submerged dry boundary or cross-sector invariant failure;
+  all 356 seams match, and the independent full rebuild is deterministic.
+  Targeted wilderness exclusion proof, an atlas-wide wilderness matrix,
+  persistent reach direction/width and talus/scree fields, broad multi-biome
+  visual review and author acceptance do not yet exist, so production terrain
+  remains active rather than finished.
   ([docs/ATLAS.md](docs/ATLAS.md))
-- **The first authored L3 composition source has a review compiler.**
+- **The rejected southern L3 tooling fixture remains available for diagnostics.**
   `content/chapter_01/domains/shallows-gateway-domain.json` supplies seven
   platform polygons, four named terrain/collapse cutouts, four absolute levels,
   three stairs, sixteen walls, eight route sockets and forty-five measured landmark
@@ -424,6 +527,21 @@ in §2. What remains is the layer above them, and it is the current effort. See
   site-specific `reference-10` voxel transcription in Bloom Reach; no generic
   architectural builder or procedural dressing is allowed inside its footprint.
   ([docs/RUINS.md](docs/RUINS.md) §4)
+- **Reference 1 now has a strict source-facing plan and one canonical atlas
+  identity; its 3D reconstruction is not built yet.** The former monumental
+  gate, water causeway, lower precinct and stela-field topology records were
+  retired on 30 August 2026. `topology.json` now owns the single
+  `shallows-gate-and-causeway` district at `(6400,6980)`, with a measured south
+  landing, north exit and one continuous Strand-to-Spine processional route.
+  `shallows-gate-and-causeway-reference-1-plan.json` records twelve terrain
+  shapes, five surface-patch groups, forty-four unique structure records,
+  1,129 structure-projection cells, 3,033 visible site-owned terrain cells, two
+  stairs, nine exact rubble clusters, keep-open regions, tree exclusions and
+  twenty measured tree anchors at one cell per voxel. Its audited 1254×1254
+  source overlay has been inspected against the supplied top view. Runtime
+  rotation/reflection, the locked camera, vertical courses, site definition,
+  voxel builder, collision and rendered fidelity remain open, so the canonical
+  site status is honestly `Planned`.
 - **The first explicit reference transcription is an active Blockout under
   reconstruction; author acceptance remains open.** `bloom-grove-court` owns a
   strict source-facing v2 ground plan and unique voxel builder at atlas
@@ -460,6 +578,34 @@ in §2. What remains is the layer above them, and it is the current effort. See
   uncertainty live in the
   [site knowledge ledger](building-knowledge/sites/bloom-grove-court.md);
   no whole-site `author-accepted` claim exists.
+- **Production map/developer integration and bounded continuous walking handoff
+  are mechanically wired.** The Bloom startup owns the
+  rectangular atlas map above and attaches the existing tilde developer menu to
+  its actual ink materials, camera and day cycle. In-bounds global Shift-click
+  can atomically replace the four-sector window and move the existing player to
+  a deterministic safe surface; authored-footprint containment prevents a reload
+  inside Bloom from clipping its voxel blueprint across the wrong sector pair.
+  Ordinary walking triggers 192 blocks before a core edge and atomically shifts
+  the window by one sector, or diagonally at a corner. It preserves the exact
+  global transform, velocity, input, camera, day, map and developer nodes; primes
+  collision first; and requires the same exact cell to be safe with the same
+  surface height in both windows. A refused transition retains the old window,
+  applies no fallback teleport, and latches that safety boundary until the player
+  returns through a 288-block rearm band; a 45-frame cooldown prevents thrash.
+  Build plus headless map-teleport checks pass at Bloom's `9800,4591` and the
+  Reference 1 address `6400,6980`. The walking verifier passes four cardinal and
+  four corner transitions, one partial outer-edge transition, one outer refusal,
+  90 cooldown-suppressed repeats and one rearmed return. The live overlay/gesture
+  and post-reload collision/movement path have not yet received GUI review.
+- **A first shared time-responsive ink/high-key-lighting pass is built and
+  visually reviewed, but not reference-parity or author-accepted.** Internal
+  camera-facing turns are quieter than silhouettes, the default line is 1.05 px,
+  both ink families re-ink through dusk/night, shadow opacity and grade contrast
+  are lower, and the post-twilight key now takes the moon's colour as well as its
+  direction. The fixed Bloom v2 late-morning/night captures were inspected for
+  line hierarchy and night readability. Current site geometry, stone weathering,
+  shadow softness at the source view, other biomes/distances, and Reference 1
+  remain outside that evidence.
 - **The story layer.** Regions with roles, domains, and site allocation by
   meaning rather than by fit. ([docs/WORLD.md](docs/WORLD.md))
 - Biome identities affect terrain, flora, ground detail, and airborne detail, but the

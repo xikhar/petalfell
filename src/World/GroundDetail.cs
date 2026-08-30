@@ -38,7 +38,7 @@ public static class GroundDetail
 	/// <summary>World seed, so the scatter fields agree with the terrain's.</summary>
 	public static int Seed;
 
-	private static Noise2D _meadow, _flowers;
+	private static Noise2D _meadow, _flowers, _waterDrift;
 
 	/// <summary>Face brightness ramp for sub-voxel boxes, matching the voxel shader's.</summary>
 	private const float ShadeTop = 1.0f, ShadeSide = 0.88f, ShadeSideZ = 0.82f, ShadeBottom = 0.7f;
@@ -340,6 +340,7 @@ public static class GroundDetail
 	/// </summary>
 	public static ArrayMesh BuildAtlasWater(AtlasSectorWindow window, int ci, int ck)
 	{
+		_waterDrift ??= new Noise2D(Seed + 73);
 		AtlasSectorData data = window.Data;
 		int cs = ChunkMesher.ChunkSize;
 		int x0 = ci * cs, z0 = ck * cs;
@@ -356,7 +357,21 @@ public static class GroundDetail
 			int gx = data.OriginX + x, gz = data.OriginZ + z;
 			var rng = new Draw(gx, gz, 0x0FA7);
 			float fx = x + 0.5f, fz = z + 0.5f, y = surface + 0.38f;
-			if (rng.Chance(0.005f))
+			string detailSet = window.GroundDetailSetAt(x, z);
+			bool permitsPads = detailSet.Contains("reed", StringComparison.Ordinal) ||
+				detailSet.Contains("moss", StringComparison.Ordinal);
+			bool permitsPetals = detailSet.Contains("petal", StringComparison.Ordinal) ||
+				detailSet.Contains("flower", StringComparison.Ordinal);
+			if (!permitsPads && !permitsPetals) continue;
+			// Independent per-cell chances became evenly spaced confetti over broad
+			// atlas water. First admit only coherent drift patches, then let the local
+			// draw vary instances inside them; absolute coordinates preserve chunk and
+			// seam determinism.
+			float drift = _waterDrift.Fbm01(gx / 42f, gz / 42f, 3);
+			if (drift < 0.64f) continue;
+			float clump = Rng.Smoothstep(0.64f, 0.88f, drift);
+			float padChance = permitsPads ? 0.003f + clump * 0.022f : 0f;
+			if (rng.Chance(padChance))
 			{
 				var pad = rng.Pick(PadColors);
 				int count = rng.Int(1, 3);
@@ -372,7 +387,8 @@ public static class GroundDetail
 				continue;
 			}
 
-			if (!rng.Chance(0.011f)) continue;
+			float petalChance = permitsPetals ? 0.005f + clump * 0.035f : 0f;
+			if (!rng.Chance(petalChance)) continue;
 			int petals = rng.Int(1, 2);
 			for (int k = 0; k < petals; k++)
 				f.Fleck(fx + rng.Range(-0.38f, 0.38f), y,
@@ -689,6 +705,27 @@ public static class GroundDetail
 		return f.Empty ? null : f.Build();
 	}
 
+	/// <summary>Reject a long snow mark before any part can bridge a terrace edge.</summary>
+	private static bool SupportsSnowTrace(VoxelGrid grid, int expectedHeight,
+		Vector2 center, Vector2 along, float length)
+	{
+		// A metre-scale fleck can cross two or three voxel columns. The earlier
+		// sub-block marks could assume their source cell supported every corner; a
+		// longer mark cannot, or it bridges a terrace break and floats over the
+		// cliff. Five centreline samples are enough for this narrow diamond.
+		for (int i = -2; i <= 2; i++)
+		{
+			float t = i * 0.245f * length;
+			int x = (int)MathF.Floor(center.X + along.X * t);
+			int z = (int)MathF.Floor(center.Y + along.Y * t);
+			if (x < 0 || z < 0 || x >= grid.Size || z >= grid.Size ||
+				grid.HeightAt(x, z) != expectedHeight ||
+				grid.At(x, expectedHeight - 1, z) != Palette.SNOW)
+				return false;
+		}
+		return true;
+	}
+
 	/// <summary>
 	/// Sub-voxel detail for a compiled atlas window. The authored biome profile
 	/// chooses the vocabulary; the visible cap and water depth decide what can
@@ -809,11 +846,94 @@ public static class GroundDetail
 				continue;
 			}
 
-			float stoneChance = detailSet is "scree-and-heather" or "fern-moss-flower" ? 0.018f : 0.010f;
-			if ((stony || scree) && rng.Chance(stoneChance))
-				f.Box(fx + rng.Range(-0.25f, 0.25f), y - 0.06f,
-					fz + rng.Range(-0.25f, 0.25f), rng.Range(0.22f, 0.40f),
-					rng.Range(0.10f, 0.20f), rng.Range(0.22f, 0.40f), Lichen);
+			if (snowy)
+			{
+				// A snow shelf cannot rely on turf, flowers or colour patches to show
+				// scale. The first atlas pass therefore left hundreds of metres of cap
+				// as one unmarked white card. Wind traces are sparse *inside* a broad
+				// coherent field: the field makes drifts gather, while the keyed column
+				// draw only decides a few metre-scale parallel strokes in that region.
+				// Using the hash alone here would turn the whole cold shelf into even
+				// confetti, the same failure class as the old water-detail scatter.
+				float driftField = _meadow.Fbm01(gx / 72f, gz / 72f, 3);
+				float driftBand = Rng.Smoothstep(0.60f, 0.82f, driftField);
+				// Fewer but longer groups survive the long-lens atlas framing. The former
+				// one-to-two-metre marks became isolated pixels at the wide/far review
+				// distances even though their count was already high enough.
+				float traceChance = driftBand * (0.0015f + driftBand * 0.0045f);
+				if (rng.Chance(traceChance))
+				{
+					Color snow = Palette.Get(Palette.SNOW).Top;
+					var trace = new Color(snow.R * 0.89f, snow.G * 0.92f,
+						snow.B * 1.02f, 1f);
+					int count = rng.Int(3, 5);
+					float directionField = _flowers.Fbm01(gx / 180f + 17.4f,
+						gz / 180f - 9.6f, 2);
+					float rotation = -0.38f + (directionField - 0.5f) * 0.34f +
+						rng.Range(-0.045f, 0.045f);
+					var along = new Vector2(Mathf.Cos(rotation), Mathf.Sin(rotation));
+					var across = new Vector2(-along.Y, along.X);
+					float spacing = rng.Range(0.18f, 0.30f);
+					for (int k = 0; k < count; k++)
+					{
+						float lane = (k - (count - 1) * 0.5f) * spacing;
+						Vector2 offset = across * lane + along * rng.Range(-0.22f, 0.22f);
+						var centre = new Vector2(fx + offset.X, fz + offset.Y);
+						float length = rng.Range(2.40f, 5.80f);
+						if (!SupportsSnowTrace(grid, h, centre, along, length)) continue;
+						f.Fleck(centre.X, y + 0.018f, centre.Y, length,
+							rng.Range(0.10f, 0.19f), rotation, trace);
+					}
+				}
+				// Exposed stone belongs to broad wind-scoured patches. A naked per-cell
+				// chance produced equally spaced pepper over every snow shelf even when
+				// the individual stones were rare.
+				float exposureField = _flowers.Fbm01(gx / 96f + 23.7f,
+					gz / 96f - 11.2f, 3);
+				float exposure = Rng.Smoothstep(0.66f, 0.84f, exposureField) *
+					(1f - Rng.Smoothstep(0.47f, 0.65f, driftField));
+				if (rng.Chance(exposure * 0.010f))
+				{
+					int stones = rng.Int(1, 2);
+					for (int k = 0; k < stones; k++)
+						f.Box(fx + rng.Range(-0.34f, 0.34f), y - 0.05f,
+							fz + rng.Range(-0.34f, 0.34f), rng.Range(0.24f, 0.46f),
+							rng.Range(0.12f, 0.24f), rng.Range(0.24f, 0.46f), rng.Pick(PebbleTops));
+				}
+				continue;
+			}
+
+			if (stony || scree)
+			{
+				if (detailSet == "snow-windtrace")
+				{
+					// Snow-scoured cap patches are frost-bare, not lichen lawns. The
+					// former uniform 1% lichen roll printed green dots across every
+					// exposed region at far zoom. Admit a few pale shards only inside
+					// coherent talus fields, and keep each occurrence as a small group.
+					float talusField = _flowers.Fbm01(gx / 78f + 41.3f,
+						gz / 78f - 26.8f, 3);
+					float talus = Rng.Smoothstep(0.68f, 0.84f, talusField);
+					if (rng.Chance(talus * 0.0035f))
+					{
+						int count = rng.Int(2, 4);
+						for (int k = 0; k < count; k++)
+							f.Box(fx + rng.Range(-0.38f, 0.38f), y - 0.06f,
+								fz + rng.Range(-0.38f, 0.38f), rng.Range(0.20f, 0.38f),
+								rng.Range(0.10f, 0.20f), rng.Range(0.20f, 0.38f),
+								rng.Pick(PebbleTops));
+					}
+				}
+				else
+				{
+					float stoneChance = detailSet is "scree-and-heather" or "fern-moss-flower"
+						? 0.018f : 0.010f;
+					if (rng.Chance(stoneChance))
+						f.Box(fx + rng.Range(-0.25f, 0.25f), y - 0.06f,
+							fz + rng.Range(-0.25f, 0.25f), rng.Range(0.22f, 0.40f),
+							rng.Range(0.10f, 0.20f), rng.Range(0.22f, 0.40f), Lichen);
+				}
+			}
 		}
 
 		return f.Empty ? null : f.Build();

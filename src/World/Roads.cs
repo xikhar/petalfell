@@ -79,6 +79,8 @@ public sealed class RoadNetwork
 		Clear = new byte[size * size];
 	}
 
+	public static RoadNetwork Empty(int size) => new(size);
+
 	private const float Blocked = float.MaxValue;
 
 	/// <summary>

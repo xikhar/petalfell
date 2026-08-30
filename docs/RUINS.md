@@ -464,7 +464,7 @@ The author superseded this blended composition on 29 August 2026. A subsequent
 generic `reference-1` portal attempt was also rejected because it still stamped
 kit-like architecture onto broad slabs. Both remain evidence only.
 
-**Active Blockout under reconstruction:** the first production transcription is
+**Preserved first transcription:** the first production transcription is
 the unique `reference-10.png` Bloom Reach grove court. It owns its blocks,
 terrain cuts, paving damage, moss faces, blossom silhouettes and nearby stone
 falls directly; none are shared ruin-kit placements. Its strict plan and capture
@@ -481,8 +481,24 @@ low visible rises into the court. Its locked, top and four play-distance
 quarter-turn views have been inspected for those four claims. These
 claim-scoped findings are not complete multi-distance evidence, whole-site
 fidelity, or author acceptance.
-Normal startup places the traveller in its collision-enabled fixed four-sector
-production-atlas mosaic. Only explicit author confirmation can close this
-Blockout and allow the next structural reference to start.
+Normal startup places the traveller in Bloom on the fast map-guided production
+terrain and overlays the same preserved blueprint at its permanent atlas
+coordinate. Bloom's `Production` topology status enables that generic site pass;
+future sites remain `Blockout` during isolated reconstruction and enter this same
+world only when deliberately promoted. The earlier four-sector mosaic remains
+`--compiled-atlas`.
+Whole-site author acceptance remains open, but the
+author's 30 August 2026 terrain-first decision pauses further Bloom iteration and
+removes the former gate on starting a second structural reference.
+
+**Next transcription after production terrain:** `reference-1.png`, together
+with the supplied top view of the same place, owns the very large bridge,
+water/chasm, cliff shelves and monumental gate composition. Its permanent atlas
+location must already supply a compatible water crossing and relief hierarchy;
+the site may then author the exact cliff/terrace interventions inside its measured
+footprint. Its long causeway, submerged supports, southern stair, north gate,
+side stairs/ranges, rubble and vegetation openings are one measured district,
+not reusable bridge or portal stamps. Player scale and both supplied views govern
+its dimensions; a generic `reference-1` portal attempt remains rejected evidence.
 
 See [ROADMAP.md](ROADMAP.md) for order and slice status.

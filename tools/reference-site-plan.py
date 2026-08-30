@@ -2,9 +2,9 @@
 """Audit and render one authoritative reference-site ground plan as SVG.
 
 This is deliberately a plan viewer, not a ruin generator. It never chooses,
-moves, mirrors or stamps geometry. Version 2 also proves the two facts that the
-first blockout failed to prove: one authored cell reaches one runtime voxel, and
-every stair physically joins the two named terrain levels.
+moves, mirrors or stamps geometry. Version 2 also proves that the declared
+integer source-cell/runtime-voxel scale is coherent and that every stair
+physically joins the two named terrain levels.
 """
 
 from __future__ import annotations
@@ -124,12 +124,23 @@ def audit(data: dict) -> list[str]:
     if not data.get("siteId"):
         errors.append("siteId is required")
     contract = data.get("coordinateContract", {})
-    if contract.get("oneCellIsOneVoxel") is not True:
-        errors.append("coordinateContract.oneCellIsOneVoxel must be true")
-    if contract.get("runtimePlanScale") != 1:
-        errors.append("coordinateContract.runtimePlanScale must be exactly 1")
-    if contract.get("runtimeMirrorX") is not True:
-        errors.append("coordinateContract.runtimeMirrorX must explicitly preserve the solved source-facing orientation")
+    runtime_scale = contract.get("runtimePlanScale")
+    if not valid_int(runtime_scale) or not 1 <= runtime_scale <= 7 or runtime_scale % 2 == 0:
+        errors.append("coordinateContract.runtimePlanScale must be an odd integer from 1 through 7")
+        runtime_scale = 1
+    if contract.get("oneCellIsOneVoxel") is not (runtime_scale == 1):
+        errors.append(
+            "coordinateContract.oneCellIsOneVoxel must be true exactly when runtimePlanScale is 1"
+        )
+    transform_status = contract.get("runtimeTransformStatus", "resolved")
+    if transform_status == "resolved":
+        if not isinstance(contract.get("runtimeMirrorX"), bool):
+            errors.append("coordinateContract.runtimeMirrorX must be an explicit boolean for a solved transform")
+    elif transform_status == "unresolved":
+        if contract.get("runtimeMirrorX") is not None:
+            errors.append("coordinateContract.runtimeMirrorX must remain null while runtimeTransformStatus is unresolved")
+    else:
+        errors.append("coordinateContract.runtimeTransformStatus must be 'resolved' or 'unresolved'")
     if contract.get("plotView") != "source-facing":
         errors.append("coordinateContract.plotView must be 'source-facing'")
 
@@ -146,6 +157,22 @@ def audit(data: dict) -> list[str]:
             continue
         if not valid_int(terrain.get("surfaceY")):
             errors.append(f"terrain '{terrain_id}' needs an integer surfaceY")
+        write_mode = terrain.get("writeMode")
+        if write_mode not in {"preserve-atlas", "author-surface", "author-water"}:
+            errors.append(
+                f"terrain '{terrain_id}' writeMode must be preserve-atlas, "
+                "author-surface or author-water"
+            )
+        bed_y = terrain.get("bedY")
+        if write_mode == "author-water":
+            if terrain.get("material") != "atlas-water":
+                errors.append(f"authored water terrain '{terrain_id}' material must be atlas-water")
+            if not valid_int(bed_y):
+                errors.append(f"authored water terrain '{terrain_id}' needs an integer bedY")
+            elif valid_int(terrain.get("surfaceY")) and bed_y >= terrain["surfaceY"]:
+                errors.append(f"authored water terrain '{terrain_id}' bedY must be below surfaceY")
+        elif bed_y is not None:
+            errors.append(f"dry/preserved terrain '{terrain_id}' may not declare bedY")
         try:
             cells = shape_cells(terrain)
         except ValueError as exc:
@@ -433,6 +460,7 @@ def render(data: dict, runtime_facing: bool = False) -> str:
     cx, cy = width / 2, 430
     scale = 6.0
     contract = data.get("coordinateContract", {})
+    runtime_scale = contract.get("runtimePlanScale", 1)
     x_sign = -1 if runtime_facing and contract.get("runtimeMirrorX") is True else 1
     player = data.get("coordinateContract", {}).get("playerSpawn", {"x": 0, "z": 0})
     player_x = plot_x(player.get("x", 0), x_sign) * scale
@@ -468,7 +496,7 @@ def render(data: dict, runtime_facing: bool = False) -> str:
         "</style>",
         '<rect width="1200" height="930" fill="#faf9f5"/>',
         f'<text class="title" x="36" y="42">{html.escape(data["siteId"])} — canonical top view</text>',
-        f'<text class="subtitle" x="36" y="67">{"Runtime-facing mirrored footprint" if runtime_facing else "Overhead source-facing footprint"} · one square = one runtime voxel · north is up</text>',
+        f'<text class="subtitle" x="36" y="67">{"Runtime-facing transformed footprint" if runtime_facing else "Overhead source-facing footprint"} · one source square = {runtime_scale}×{runtime_scale} runtime voxels · north is up</text>',
         f'<g transform="translate({cx:.1f} {cy:.1f})">',
     ]
     for value in range(-80, 81, 10):
@@ -536,7 +564,7 @@ def render(data: dict, runtime_facing: bool = False) -> str:
         '<rect class="terrain-raised-platform" x="620" y="0" width="22" height="22"/><text class="legend" x="651" y="16">raised platforms y114</text>',
         '<rect class="connected-wall-run" x="835" y="0" width="22" height="22"/><text class="legend" x="866" y="16">thin ruin runs</text>',
         '<rect class="stair" x="1010" y="0" width="22" height="22"/><text class="legend" x="1041" y="16">stairs</text>',
-        '<text class="rule" x="0" y="58">Audit: exact 1:1 grid; both stair endpoints and heights join named terrain; ordinary wall runs stay at most two voxels thick.</text>',
+        f'<text class="rule" x="0" y="58">Audit: exact integer {runtime_scale}:1 runtime scale; both stair endpoints and heights join named terrain; source-plan wall widths remain explicit.</text>',
         '<text class="subtitle" x="0" y="85">The preview draws authored data only. Runtime geometry may weather these masses, but may not move or add them.</text>',
         '</g>',
         '</svg>',
@@ -558,6 +586,12 @@ def main() -> int:
     plan_path = resolve_plan(args.target)
     data = json.loads(plan_path.read_text(encoding="utf-8"))
     errors = audit(data)
+    if args.runtime_facing and data.get("coordinateContract", {}).get(
+        "runtimeTransformStatus", "resolved"
+    ) != "resolved":
+        errors.append(
+            "runtime-facing preview is unavailable until coordinateContract.runtimeTransformStatus is resolved"
+        )
     if errors:
         for error in errors:
             print(f"ERROR: {error}")

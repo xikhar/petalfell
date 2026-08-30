@@ -17,15 +17,25 @@ public static class AtlasDomainDressing
 
 	public static AtlasDomainDressingStatistics Apply(AtlasSectorWindow window,
 		WorldAtlasDefinition atlas, DomainPlanDefinition plan, int worldSeed)
-		=> ApplyCore(window, atlas, plan, null, worldSeed);
+		=> ApplyCore(window, atlas, plan, null, worldSeed, reclamationOnly: false);
+
+	/// <summary>
+	/// Apply only growth explicitly invited by authored L3 reclamation values.
+	/// Ordinary biome wilderness is owned by AtlasWildernessDressing and stays
+	/// outside the plan; keeping these passes distinct prevents an unmaintained
+	/// court from becoming a second generic forest scatter.
+	/// </summary>
+	public static AtlasDomainDressingStatistics ApplyReclamation(AtlasSectorWindow window,
+		WorldAtlasDefinition atlas, DomainPlanDefinition plan, int worldSeed)
+		=> ApplyCore(window, atlas, plan, null, worldSeed, reclamationOnly: true);
 
 	public static AtlasDomainDressingStatistics Apply(AtlasSectorWindow window,
 		WorldAtlasDefinition atlas, ReferenceSiteDefinition site, int worldSeed)
-		=> ApplyCore(window, atlas, null, site, worldSeed);
+		=> ApplyCore(window, atlas, null, site, worldSeed, reclamationOnly: false);
 
 	private static AtlasDomainDressingStatistics ApplyCore(AtlasSectorWindow window,
 		WorldAtlasDefinition atlas, DomainPlanDefinition plan,
-		ReferenceSiteDefinition site, int worldSeed)
+		ReferenceSiteDefinition site, int worldSeed, bool reclamationOnly)
 	{
 		if (window == null) throw new ArgumentNullException(nameof(window));
 		if (atlas?.BiomeCatalog == null) throw new ArgumentNullException(nameof(atlas));
@@ -54,6 +64,7 @@ public static class AtlasDomainDressing
 			int index = z * data.Width + x;
 			if (data.Land[index] == 0 || data.WaterSurface[index] > 0) continue;
 			float reclamation = plan == null ? 0f : ReclamationAt(plan, globalX, globalZ);
+			if (reclamationOnly && reclamation <= 0f) continue;
 			// Any raised or cut column belongs to the authored L3 composition. A
 			// named cutout may explicitly invite growth back; the wilderness pass is
 			// not allowed to make that story decision on its own.
@@ -76,7 +87,7 @@ public static class AtlasDomainDressing
 			BiomeBuildProfile profile = atlas.BiomeCatalog.Profiles[profileIndex];
 			FloraSpec flora = For(profile.VegetationSetId);
 			float density = grove.Fbm01(globalX / 168f, globalZ / 168f, 3);
-			float chance = Math.Max(0f, density - .35f) * flora.Density;
+			float chance = reclamationOnly ? 0f : Math.Max(0f, density - .35f) * flora.Density;
 			if (reclamation > 0f)
 				chance = Math.Max(chance, reclamation * (.24f + density * .46f));
 			if (!rng.Chance(chance)) continue;

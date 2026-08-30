@@ -9,6 +9,7 @@ using Petalfell.Render;
 using Petalfell.Skills;
 using Petalfell.UI;
 using Petalfell.World;
+using Petalfell.World.Sites;
 
 namespace Petalfell;
 
@@ -58,6 +59,11 @@ public partial class Main : Node3D
 
 	public override void _Ready()
 	{
+		var commandLine = OS.GetCmdlineUserArgs();
+		bool legacyWorld = Array.Exists(commandLine, arg => arg == "--legacy-world");
+		// Normal play is the production terrain window: the accepted continent owns
+		// macro intent and the proven block grammar realises it immediately.
+		bool productionTerrain = !legacyWorld;
 		// Topology authoring must not pay the several-second world-generation cost.
 		// Audit/preview commands load only authored sources, write their result and
 		// exit before any renderer or terrain state exists.
@@ -71,10 +77,10 @@ public partial class Main : Node3D
 		// not been registered fails to compile.
 		DayCycle.RegisterGlobals();
 		SetupInput();
-		// The production atlas is now the game, not an authoring side path. During
-		// the first reconstruction milestone it starts at the one site under visual
-		// acceptance; --legacy-world keeps the retired 3,456 fixture available only
-		// for low-level regression checks.
+		// Explicit sector/site review and --compiled-atlas still use the cached
+		// sector runtime. Normal play continues below through the fast production
+		// path: accepted maps own macro intent and the proven terrain grammar owns
+		// local construction.
 		if (Tools.AtlasSectorReview.TryRun(this, MapDefinitionPath, "bloom-grove-court"))
 		{
 			_authoringMode = true;
@@ -82,15 +88,28 @@ public partial class Main : Node3D
 		}
 		Map = MapDefinition.Load(MapDefinitionPath);
 		if (Seed == 0) Seed = Map.DefaultSeed;
+		ProductionTerrainGuide atlasGuide = null;
+		if (productionTerrain)
+		{
+			WorldSize = ParseIntArgument(commandLine, "--terrain-size",
+				ParseIntArgument(commandLine, "--legacy-demo-size", 768, 384, 1024), 384, 1024);
+			(int focusX, int focusZ) = ParsePairArgument(commandLine,
+				"--terrain-focus", int.MinValue, int.MinValue);
+			if (focusX == int.MinValue)
+				(focusX, focusZ) = ParsePairArgument(commandLine, "--legacy-demo-focus", 9800, 4600);
+			atlasGuide = ProductionTerrainGuide.Create(Map.CanonicalAtlas, WorldSize, focusX, focusZ);
+			GD.Print($"[production-terrain] {atlasGuide.Describe()} — map-owned macro fields, original block grammar");
+		}
 		if (WorldSize <= 0) WorldSize = Map.DefaultWorldSize;
-		if (Map.CanonicalWorld != null && WorldSize != Map.CanonicalWorld.WorldSize)
+		if (!productionTerrain && Map.CanonicalWorld != null && WorldSize != Map.CanonicalWorld.WorldSize)
 			throw new InvalidOperationException(
 				$"Canonical world uses absolute coordinates at size {Map.CanonicalWorld.WorldSize}; runtime requested {WorldSize}.");
 
 		var t0 = Time.GetTicksMsec();
-		Plan = new Planner(Seed, WorldSize, Map);
+		Plan = new Planner(Seed, WorldSize, Map, atlasGuide);
 		var t1 = Time.GetTicksMsec();
-		Terrain = new Terrain(Seed, WorldSize, Plan);
+		Terrain = new Terrain(Seed, WorldSize, Plan, terrainOnly: productionTerrain);
+		Vector2I? authoredSpawn = productionTerrain ? BuildProductionSites(atlasGuide) : null;
 		var t2 = Time.GetTicksMsec();
 		Props = BuiltProps.Build(Terrain, Seed);
 		var tProps = Time.GetTicksMsec();
@@ -150,8 +169,10 @@ public partial class Main : Node3D
 
 		AddChild(BuildWater());
 
-		MapPoint start = Map.Spawns.Count > 0 ? Map.Spawns[0].Centre : null;
-		var (sx, sz) = Terrain.FindSpawn(start);
+		MapPoint start = !productionTerrain && Map.Spawns.Count > 0 ? Map.Spawns[0].Centre : null;
+		(int sx, int sz) = authoredSpawn is Vector2I siteSpawn
+			? (siteSpawn.X, siteSpawn.Y)
+			: Terrain.FindSpawn(start);
 		// Level is the surface plane (first empty voxel), so 0.2 places the
 		// capsule just above its authored starting ground.
 		Vector3 spawn = new(sx + 0.5f, Terrain.Level[sz * WorldSize + sx] + 0.2f, sz + 0.5f);
@@ -268,6 +289,72 @@ public partial class Main : Node3D
 
 		var (shotDir, only) = Tools.Capture.ParseArgs();
 		if (shotDir != null) _ = RunCapture(shotDir, only, spawn);
+	}
+
+	/// <summary>
+	/// Overlay every runtime-promoted reference site whose permanent atlas
+	/// footprint is fully inside this quick production window. Site status is the
+	/// promotion gate; Blockout plans remain inspectable without entering play.
+	/// Blueprints are unchanged; only their absolute review-height datum is
+	/// translated onto the old terrain grammar's much smaller vertical range.
+	/// </summary>
+	private Vector2I? BuildProductionSites(ProductionTerrainGuide guide)
+	{
+		if (guide == null || Map.CanonicalAtlas?.Topology == null) return null;
+		Vector2I? authoredSpawn = null;
+		foreach (CanonicalSite canonical in Map.CanonicalAtlas.Topology.Sites)
+		{
+			ReferenceSiteDefinition site = canonical.ReferencePlan;
+			if (!canonical.RunsInProduction || site == null) continue;
+
+			PlanPoint min = site.RuntimeFootprintMin, max = site.RuntimeFootprintMax;
+			BlockPoint[] corners =
+			{
+				site.ToGlobalRuntime(new PlanPoint { X = min.X, Z = min.Z }),
+				site.ToGlobalRuntime(new PlanPoint { X = max.X, Z = min.Z }),
+				site.ToGlobalRuntime(new PlanPoint { X = min.X, Z = max.Z }),
+				site.ToGlobalRuntime(new PlanPoint { X = max.X, Z = max.Z }),
+			};
+			bool fits = true;
+			foreach (BlockPoint corner in corners)
+				fits &= corner.X >= guide.OriginX && corner.Z >= guide.OriginZ &&
+				        corner.X < guide.OriginX + WorldSize &&
+				        corner.Z < guide.OriginZ + WorldSize;
+			if (!fits)
+			{
+				GD.Print($"[production-site] {site.SiteId} intersects this window but is not fully loaded");
+				continue;
+			}
+
+			int localX = site.Origin.X - guide.OriginX;
+			int localZ = site.Origin.Z - guide.OriginZ;
+			int naturalTop = Terrain.Grid.Top[localZ * WorldSize + localX];
+			ReferenceSiteGroundPlan groundPlan = ReferenceSiteGroundPlan.Load(site);
+			int sourceDatum = 0;
+			foreach (ReferenceGroundPlanTerrain shape in groundPlan.Terrain)
+				if (shape.WriteMode == "preserve-atlas" && shape.SurfaceY.HasValue)
+				{
+					sourceDatum = shape.SurfaceY.Value;
+					break;
+				}
+			if (sourceDatum == 0)
+				throw new InvalidOperationException($"site '{site.SiteId}' has no natural terrain datum");
+
+			var data = new AtlasSectorData(0, 0, guide.OriginX, guide.OriginZ,
+				WorldSize, 0, WorldSize, WorldSize, Terrain.Grid.Height, Terrain.Sea,
+				"production-map-guided-runtime");
+			var window = new AtlasSectorWindow(data, Map.CanonicalAtlas, Seed, Terrain.Grid);
+			int verticalOffset = naturalTop - sourceDatum;
+			ReferenceSiteStatistics stats = ReferenceSiteBuilder.Build(window, site,
+				verticalOffset);
+			Terrain.SyncAuthoredTerrain();
+			BlockPoint globalSpawn = site.ToGlobal(site.PlayerSpawn);
+			GD.Print($"[production-site] {site.SiteId} offsetY {verticalOffset} " +
+			         $"surfaces {stats.SurfaceCells} voxels {stats.Voxels}");
+			authoredSpawn ??= new Vector2I(globalSpawn.X - guide.OriginX,
+				globalSpawn.Z - guide.OriginZ);
+		}
+		return authoredSpawn;
 	}
 
 	/// <summary>
@@ -439,7 +526,9 @@ public partial class Main : Node3D
 				11 => FindLandmark(LandmarkForm.StandingStones),
 				12 => FindLandmark(LandmarkForm.Farmstead),
 				13 => FindKitAnchor(shot.Name, spawn),
-				6 => Plan.Lakes.Count > 0
+				6 => Plan.AtlasGuide != null
+					? FindFeature(new Vector3(WorldSize * 0.5f, Terrain.Sea, WorldSize * 0.5f), wantCliff: false)
+					: Plan.Lakes.Count > 0
 					? new Vector3(Plan.Lakes[0].Cx, Terrain.Sea, Plan.Lakes[0].Cz)
 					: FindRiverFeature(),
 				_ => spawn,
@@ -639,7 +728,12 @@ public partial class Main : Node3D
 				if (Terrain.Level[i] > Terrain.Sea) continue;
 				score = 40f - r * 0.2f;
 			}
-			if (score > best) { best = score; found = new Vector3(x + 0.5f, Terrain.Level[i], z + 0.5f); }
+			if (score > best)
+			{
+				best = score;
+				float y = wantCliff ? Terrain.Level[i] : Palette.WaterLevel;
+				found = new Vector3(x + 0.5f, y, z + 0.5f);
+			}
 		}
 		return found;
 	}
@@ -647,7 +741,12 @@ public partial class Main : Node3D
 	private Vector3 FindRiverFeature()
 	{
 		if (Terrain.RiverPath.Count == 0)
+		{
+			if (Plan.AtlasGuide != null)
+				return FindFeature(new Vector3(WorldSize * 0.5f, Terrain.Sea,
+					WorldSize * 0.5f), wantCliff: false);
 			return new Vector3(Plan.LakeRegion.Cx, Palette.WaterLevel, Plan.LakeRegion.Cz);
+		}
 		RiverNode best = Terrain.RiverPath[0];
 		float scoreBest = float.MaxValue;
 		bool foundVisibleWater = false;
@@ -935,5 +1034,34 @@ public partial class Main : Node3D
 		Bind("world_map", Key.M);
 		Bind("inventory", Key.Tab);
 		Bind("skill_selector", Key.T);
+	}
+
+	private static int ParseIntArgument(string[] args, string name, int fallback, int min, int max)
+	{
+		for (int i = 0; i < args.Length; i++)
+		{
+			string value = null;
+			if (args[i] == name && i + 1 < args.Length) value = args[i + 1];
+			else if (args[i].StartsWith(name + "=")) value = args[i][(name.Length + 1)..];
+			if (value != null && int.TryParse(value, out int parsed))
+				return Math.Clamp(parsed, min, max);
+		}
+		return fallback;
+	}
+
+	private static (int x, int z) ParsePairArgument(string[] args, string name,
+		int fallbackX, int fallbackZ)
+	{
+		for (int i = 0; i < args.Length; i++)
+		{
+			string value = null;
+			if (args[i] == name && i + 1 < args.Length) value = args[i + 1];
+			else if (args[i].StartsWith(name + "=")) value = args[i][(name.Length + 1)..];
+			if (value == null) continue;
+			string[] pair = value.Split(',', StringSplitOptions.TrimEntries);
+			if (pair.Length == 2 && int.TryParse(pair[0], out int x) &&
+			    int.TryParse(pair[1], out int z)) return (x, z);
+		}
+		return (fallbackX, fallbackZ);
 	}
 }

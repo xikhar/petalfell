@@ -19,6 +19,20 @@ public sealed class ReferenceSiteDefinition
 	public string GroundPlanPath { get; set; } = "";
 	public BlockPoint Origin { get; set; } = new();
 	public float AxisDegrees { get; set; }
+	/// <summary>
+	/// Exact integer runtime voxels per measured source-plan cell. Scale one is
+	/// the direct transcription used by Reference 10; Reference 1 deliberately
+	/// uses three so its player-relative monument hierarchy matches the source
+	/// while retaining the measured plan as the coordinate authority.
+	/// </summary>
+	public int RuntimePlanScale { get; set; } = 1;
+	/// <summary>
+	/// Optional absolute Top-Y datum for a source plan whose measured vertical
+	/// courses are stored relative to one architectural threshold. Keeping it in
+	/// the authored registration prevents a reconstruction from moving when the
+	/// ordinary atlas compiler changes the terrain below its footprint.
+	/// </summary>
+	public int? VerticalDatumY { get; set; }
 	public PlanPoint FootprintMin { get; set; } = new();
 	public PlanPoint FootprintMax { get; set; } = new();
 	public PlanPoint PlayerSpawn { get; set; } = new();
@@ -54,11 +68,17 @@ public sealed class ReferenceSiteDefinition
 			report.Error($"origin {Origin.X},{Origin.Z} does not match site centre {site.Centre.X},{site.Centre.Z}");
 		if (MathF.Abs(NormalizeAngle(AxisDegrees - site.OrientationDegrees)) > .01f)
 			report.Error("axisDegrees does not match the canonical site orientation");
+		if (RuntimePlanScale < 1 || RuntimePlanScale > 7 || RuntimePlanScale % 2 == 0)
+			report.Error($"runtimePlanScale {RuntimePlanScale} must be an odd integer from 1 through 7");
+		if (VerticalDatumY is int datum && (datum < 1 || datum >= atlas.Height))
+			report.Error($"verticalDatumY {datum} lies outside the atlas height");
 		if (FootprintMin == null || FootprintMax == null ||
 		    FootprintMin.X >= FootprintMax.X || FootprintMin.Z >= FootprintMax.Z)
 			report.Error("footprint bounds are invalid");
-		else if (FootprintMin.X < -site.ExtentX / 2 || FootprintMax.X > site.ExtentX / 2 ||
-		         FootprintMin.Z < -site.ExtentZ / 2 || FootprintMax.Z > site.ExtentZ / 2)
+		else if (RuntimeFootprintMin.X < -site.ExtentX / 2 ||
+		         RuntimeFootprintMax.X > site.ExtentX / 2 ||
+		         RuntimeFootprintMin.Z < -site.ExtentZ / 2 ||
+		         RuntimeFootprintMax.Z > site.ExtentZ / 2)
 			report.Error("footprint leaves the canonical site envelope");
 		if (ReferenceView == null || ReferenceView.Distance <= 0f ||
 		    ReferenceView.PitchDegrees <= 0f || ReferenceView.PitchDegrees >= 89f ||
@@ -71,6 +91,18 @@ public sealed class ReferenceSiteDefinition
 
 	public BlockPoint ToGlobal(PlanPoint local)
 	{
+		if (local == null) throw new ArgumentNullException(nameof(local));
+		return ToGlobalRuntime(new PlanPoint
+		{
+			X = local.X * RuntimePlanScale,
+			Z = local.Z * RuntimePlanScale,
+		});
+	}
+
+	/// <summary>Rotate an already-scaled runtime-local voxel coordinate.</summary>
+	public BlockPoint ToGlobalRuntime(PlanPoint local)
+	{
+		if (local == null) throw new ArgumentNullException(nameof(local));
 		float radians = AxisDegrees * MathF.PI / 180f;
 		float cos = MathF.Cos(radians), sin = MathF.Sin(radians);
 		return new BlockPoint
@@ -87,8 +119,36 @@ public sealed class ReferenceSiteDefinition
 		float dx = x - Origin.X, dz = z - Origin.Z;
 		float localX = dx * cos - dz * sin;
 		float localZ = dx * sin + dz * cos;
-		return localX >= FootprintMin.X && localX <= FootprintMax.X &&
-		       localZ >= FootprintMin.Z && localZ <= FootprintMax.Z;
+		return localX >= RuntimeFootprintMin.X && localX <= RuntimeFootprintMax.X &&
+		       localZ >= RuntimeFootprintMin.Z && localZ <= RuntimeFootprintMax.Z;
+	}
+
+	[JsonIgnore]
+	public PlanPoint RuntimeFootprintMin
+	{
+		get
+		{
+			int half = (RuntimePlanScale - 1) / 2;
+			return new PlanPoint
+			{
+				X = FootprintMin.X * RuntimePlanScale - half,
+				Z = FootprintMin.Z * RuntimePlanScale - half,
+			};
+		}
+	}
+
+	[JsonIgnore]
+	public PlanPoint RuntimeFootprintMax
+	{
+		get
+		{
+			int half = (RuntimePlanScale - 1) / 2;
+			return new PlanPoint
+			{
+				X = FootprintMax.X * RuntimePlanScale + half,
+				Z = FootprintMax.Z * RuntimePlanScale + half,
+			};
+		}
 	}
 
 	private bool ContainsLocal(PlanPoint point) => point != null &&

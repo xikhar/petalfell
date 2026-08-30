@@ -23,27 +23,65 @@ Wandering is the game. The reward for walking somewhere is the place itself.
 
 ## What phase the project is in
 
-**The low-level layer is done.** Rendering, shaders, ink, water, lighting, the
-day cycle, voxel storage, chunk streaming, collision, terrain, biomes,
-vegetation, fauna, the player, the camera, the dog, inventory. These work to a
-standard the author is satisfied with. Do not rebuild them.
+**The legacy low-level layer is done.** Rendering, shaders, ink, water, lighting,
+the day cycle, voxel storage, chunk streaming, collision, terrain, biomes,
+vegetation, fauna, the player, the camera, the dog and inventory already work in
+the old 3,456-square fixture. Preserve and reuse those systems. That statement
+does **not** mean the production continent already has finished terrain. The
+compiler-27 sector build is the last complete whole-atlas integration baseline: its
+192-sector batch, hydrology gate, all independent seams and repeat-build check
+are mechanically verified; the exact manifest and counts live in
+[ROADMAP.md](docs/ROADMAP.md) Slice D. Its relief now uses global profile-sized
+cell lattices and noise, non-wind contour shoulders, crossing wind-ridge fields,
+sparse macro fronts with three synchronous noise-broken toe ledges, and a
+40-cell transient support border. It does not generate circular or radial
+geography. The active visual runtime instead feeds all four accepted macro maps
+into the proven low-level system directly. Agent-inspected snow, highland, scarp,
+river and normal-start captures
+establish a complete review boundary, not visual acceptance: broad terraces,
+sparse surfaces, flat banks and reference-level materials remain open, and the
+author has not accepted the terrain.
 
-**The large layer is beginning.** Three things, in this order, are the whole
-current effort:
+**The production-world layer is active.** Four things, in this order, are the
+whole current effort:
 
-1. **The production atlas and its sector tools.** Chapter 1 is a 12,288 × 9,216
-   logical continent, not a larger value fed to the current global-array
-   generator. Painted macro layers and deterministic 768-block sector builds
-   make that scale possible. Wilderness is derived inside authored limits.
-2. **The canonical authored topology and its production tools.** Every significant
-   domain, site, entrance, sightline and road connection has a permanent authored
-   identity before detailed geometry is built. Seeds may dress that intent; they
-   may not invent or move it.
-3. **Measured reconstructions of the supplied ruins and monuments**, with each
-   `world-new/reference-*.png` district reproduced faithfully at a compatible
-   permanent atlas location. Do not invent replacement hero-site compositions
-   for now. Between those reconstruction footprints, the atlas remains ordinary
-   deterministic biome, elevation and hydrology terrain.
+1. **Review production terrain through the fast map-guided full-atlas runtime first.**
+   Normal play generates bounded 1,536-block windows as the player moves or
+   Shift-clicks anywhere on the 12,288 × 9,216 map. Accepted atlas land,
+   elevation, hydrology and region maps own the macro
+   world; the proven terrain, water, shore, vegetation and material grammar owns
+   the local blocks. Use this for visual iteration; do not rebuild
+   192 sectors to judge a local terrain rule. Chapter 1 is a
+   12,288 × 9,216 logical continent remains addressed through sector-aligned
+   bounded allocations, never one continent-sized value fed to the old global
+   arrays. Bring the
+   old world's successful block surfaces, broken edges, terrace layers, water
+   transitions and material grammar into sector-local passes, while the accepted
+   elevation, hydrology and biome sources continue to own all macro geography.
+   Mountains, ridges, cliffs, sudden level changes, rivers, lakes, coasts and all
+   biome surfaces must survive independent builds and exact seams across the
+   whole 16 × 12 atlas. Compiler 27 reached that whole-atlas mechanical gate and
+   remains available through `--compiled-atlas`; retain its evidence for the later
+   integration gate, but do not use it as the inner visual iteration loop.
+2. **Preserve Bloom Grove Court and reconstruct `reference-1.png` next.** The
+   existing `reference-10` transcription remains at its permanent Bloom Reach
+   location while the supplied bridge, cliff and monumental gate are measured
+   from `reference-1.png` plus the supplied top view and built at a compatible
+   permanent atlas location. Do not invent a substitute composition.
+3. **Finish traversal review across the accepted atlas.** The map-guided old
+   terrain path is now connected to the bounded full-map runtime, neighbouring
+   walking handoff and Shift-click travel.
+   The production map must show the terrain and both authored sites and retain
+   Shift-click teleport; the tilde developer surface must again control time,
+   zoom, outline and the other existing review variables in atlas runtime.
+4. **Close visual parity.** After terrain, both sites and their navigation tools
+   work, tune ink, shading, materials, atmosphere, day/night lighting and shadows
+   against the supplied references. Ink may not remain one crushing dark value
+   across the entire day.
+
+The canonical authored topology remains mandatory for every significant site and
+connection. The terrain-first order pauses the unfinished 30–60-site allocation;
+it does not authorize procedural placement or unstable coordinates.
 
 ---
 
@@ -138,16 +176,28 @@ compatible permanent location and connection; L3/L4 transcribe one named
 wall, arch, terrace, break, rubble mass and tree exclusion is authored in the
 site's own voxel blueprint. A low-level voxel write or rectangular fill is only
 storage shorthand; no architectural generator may stamp a reusable column,
-portal, stair or tower into a reconstruction. The first acceptance target is
-`reference-10.png` in Bloom Reach because its visible player fixes scale and its
-footprint is almost entirely observable.
+portal, stair or tower into a reconstruction. `reference-10.png` in Bloom Reach
+is the preserved first transcription and remains unaccepted as a whole. The next
+active structural source is the much larger `reference-1.png` bridge/cliff/gate
+site, after production terrain is complete; starting it no longer waits for a
+whole-site acceptance decision on Bloom.
 
-**Normal startup is the atlas runtime.** The old 3,456-square generated map is a
-legacy diagnostic selected explicitly, never the world shown by a normal run.
-The ordinary executable opens a fixed four-sector production-atlas mosaic with
-collision, the player and ordinary chunk streaming inside that mosaic at the
-current reconstruction site. Dynamic handoff to arbitrary neighbouring mosaics
-remains unbuilt.
+**Normal startup is the fast map-guided full-atlas terrain runtime.**
+The old 3,456-square circular map remains `--legacy-world`; the historical compiled
+atlas runtime remains `--compiled-atlas`. Today the ordinary executable begins in
+a 2×2-sector/1,536-block generated window around Bloom Grove Court. The four accepted
+macro layers guide the original low-level generator, and the preserved Site 0
+blueprint is overlaid at its permanent atlas coordinate. This is the shared
+production foundation for later sites: topology status `Production` or
+`Accepted` enables the generic runtime overlay, while `Planned` and `Blockout`
+remain authoring/review-only and may not silently reserve or alter normal-play
+terrain. The production map can
+synchronously generate and recenter that bounded window at
+any in-bounds Shift-click address while preserving its map and developer state.
+Ordinary walking now requests an adjacent cardinal or diagonal mosaic before the
+loaded edge becomes unsafe, primes collision, and atomically preserves the exact
+player transform and motion plus camera/day/UI state. Its headless planner is
+verified; live post-swap input and collision review remains open.
 
 **Authored data is never written by the generator; derived data is never edited
 by hand.** If those mix, reproducibility is silently lost.
@@ -270,6 +320,11 @@ Run the game:
 godot-mono --path .
 ```
 
+This opens the fast map-guided full-atlas terrain runtime. Use
+`--terrain-focus=X,Z` to start at another atlas address, `--compiled-atlas` only
+when reviewing sector integration, and `--legacy-world` for the retired circular
+fixture.
+
 **Godot GUI workspace rule:** on the author's Hyprland workstation, agents must
 launch every Godot GUI silently on workspace 5. Do not invoke a GUI command
 directly on the active workspace; use the workspace-5 `hl.dsp.exec_cmd` launcher
@@ -288,12 +343,15 @@ other listed commands are headless.
 ./tools/world-authoring.sh audit
 ./tools/world-authoring.sh atlas-preview
 ./tools/world-authoring.sh atlas-topology-preview
+./tools/world-authoring.sh atlas-map-preview
 ./tools/world-authoring.sh preview-atlas-domain shallows-gateway-domain
 ./tools/world-authoring.sh sample-atlas 6400,6500
 ./tools/world-authoring.sh preview
 ./tools/world-authoring.sh preview-domain shallows-gateway-domain
 ./tools/world-authoring.sh compile-sector 8,8
 ./tools/world-authoring.sh verify-sector 8,8
+./tools/world-authoring.sh verify-atlas-handoff 3355,1915
+./tools/world-authoring.sh verify-atlas-walking-handoff
 ./tools/world-authoring.sh review-sector 8,8
 ./tools/world-authoring.sh capture-sector 8,8
 ./tools/world-authoring.sh review-domain shallows-gateway-domain
@@ -310,6 +368,17 @@ The atlas and production-topology previews default under `../shots/`; the domain
 preview crops the accepted terrain layers to one permanent L2 domain and labels
 its intersecting sectors and, when present, its audited L3 plan. `sample-atlas`
 reports the deterministic terrain/water/profile values at one global coordinate.
+`atlas-map-preview` exercises the production in-game map background headlessly:
+it uses a current batch profile/height composite when the manifest matches the
+compiler fingerprint, and otherwise falls back to the registered land, region,
+water and elevation layers.
+`verify-atlas-handoff` composes the same edge-clamped four-sector playable data
+as a global map teleport, realises intersecting reference sites and wilderness,
+and reports the deterministic safe landing. Ocean/blocked addresses exercise
+the registered dry-source and authored Bloom recovery chain without opening a GUI.
+`verify-atlas-walking-handoff` exercises cardinal, diagonal and atlas-edge
+window planning plus cooldown/rearm suppression. Walking continuity accepts only
+the same exact safe cell in both windows and never uses the map teleport fallback.
 `preview` and `preview-domain` remain the smaller runtime fixture. A sector
 compile writes its disposable `.pfs` artifact under
 `content/chapter_01/derived/` and a PNG to `../shots/`. The verifier rebuilds the

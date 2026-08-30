@@ -77,7 +77,7 @@ public static class Vegetation
 		LastTreeCount = 0;
 		var grid = terrain.Grid;
 		int S = terrain.Size;
-		var rng = new Rng(seed ^ 0x7EE5);
+		var sequential = new Rng(seed ^ 0x7EE5);
 		var nGrove = new Noise2D(seed + 21);
 		var nHue = new Noise2D(seed + 22);
 
@@ -87,15 +87,25 @@ public static class Vegetation
 		for (int cz = 0; cz < S / Cell; cz++)
 		for (int cx = 0; cx < S / Cell; cx++)
 		{
+			int gcx = (terrain.Grid.OriginX / Cell) + cx;
+			int gcz = (terrain.Grid.OriginZ / Cell) + cz;
+			var rng = terrain.Plan.AtlasGuide == null
+				? sequential
+				: new Rng(unchecked(seed ^ StableCellSeed(gcx, gcz, 0x7EE5)));
 			int x = cx * Cell + (int)(rng.Next() * Cell);
 			int z = cz * Cell + (int)(rng.Next() * Cell);
 			if (x < 4 || z < 4 || x >= S - 4 || z >= S - 4) continue;
 
 			int i = z * S + x;
 			if (terrain.Land[i] == 0) continue;
-			if (terrain.Plan.Definition.ReservesNaturalDetail(x / (float)S, z / (float)S, 5f / S)) continue;
+			if (terrain.Plan.AtlasGuide != null &&
+			    terrain.Plan.Definition.CanonicalAtlas?.Topology?.Sites.Exists(site =>
+				    site.RunsInProduction && site.ReferencePlan?.ContainsGlobal(grid.OriginX + x,
+					    grid.OriginZ + z) == true) == true) continue;
+			if (terrain.Plan.AtlasGuide == null &&
+			    terrain.Plan.Definition.ReservesNaturalDetail(x / (float)S, z / (float)S, 5f / S)) continue;
 			// The kit yard (a review fixture) keeps its sightlines clear.
-			if (RuinKit.Contains(x, z)) continue;
+			if (terrain.Plan.AtlasGuide == null && RuinKit.Contains(x, z)) continue;
 			// How long ago this ground was given up. Everything below reads from
 			// it: on a road somebody still walks, growth is kept back; on one
 			// nobody has walked in generations, the wood closes over it.
@@ -159,19 +169,30 @@ public static class Vegetation
 			// the biomes arrived with a 1.3x spread instead of the 3x they
 			// specify. Clamping first is what makes the plan visible on the
 			// ground.
-			float dens = nGrove.Fbm01(x * 0.035f, z * 0.035f, 3);
+			float gx = terrain.Grid.OriginX + x, gz = terrain.Grid.OriginZ + z;
+			float dens = nGrove.Fbm01(gx * 0.035f, gz * 0.035f, 3);
 			dens = MathF.Min(dens, 0.55f) * flora.Density;
 			if (!rng.Chance(dens * 0.36f)) continue;
 
 			float scale = rng.Range(flora.ScaleLo, flora.ScaleHi);
 			// Hue varies only *within* the biome's palette, so neighbouring
 			// stands differ without ever crossing into another province.
-			float hue = nHue.Fbm01(x * 0.09f, z * 0.09f, 2);
+			float hue = nHue.Fbm01(gx * 0.09f, gz * 0.09f, 2);
 			byte leaf = flora.Canopy[Math.Min(flora.Canopy.Length - 1,
 				(int)(hue * flora.Canopy.Length))];
 
 			Tree(grid, rng, x, h, z, scale, leaf);
 			LastTreeCount++;
+		}
+	}
+
+	private static int StableCellSeed(int x, int z, int salt)
+	{
+		unchecked
+		{
+			uint h = (uint)(x * 374761393 + z * 668265263 + salt * 1442695040);
+			h = (h ^ (h >> 13)) * 1274126177u;
+			return (int)(h ^ (h >> 16));
 		}
 	}
 

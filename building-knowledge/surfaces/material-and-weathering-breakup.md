@@ -1,16 +1,19 @@
 # Material and weathering breakup
 
 - **Lifecycle:** `active`
-- **Evidence summary:** the material path is `mechanically verified`; Reference
-  10's current placement is `visually reviewed` but not `author-accepted`
+- **Evidence summary:** the material path and production-snow pattern/detail
+  ownership are `mechanically verified`; Reference 10's current placement is
+  `visually reviewed` but not `author-accepted`; the changed snow result has not
+  yet been visually reviewed
 - **Scope:** existing voxel material path is `general`; exact palette placement
   is `site-specific`
-- **Last verified:** 2026-08-30 in Reference 10 v11 day/night and distance
-  captures
+- **Last verified:** 2026-08-30 mechanically for the production-snow path;
+  2026-08-30 visually in Reference 10 v11 day/night and distance captures
 - **Supersedes:** flat single-tone stone and per-block random/checkerboard decay
 - **Superseded by:** none
 - **Owning sources:** [`Palette.cs`](../../src/Core/Palette.cs),
   [`voxel.gdshader`](../../shaders/voxel.gdshader),
+  [`GroundDetail.cs`](../../src/World/GroundDetail.cs),
   [`Reference10GroveCourt.cs`](../../src/World/Sites/Reference10GroveCourt.cs),
   [`bloom-grove-court-reference-10-plan.json`](../../content/chapter_01/sites/bloom-grove-court-reference-10-plan.json)
 
@@ -19,8 +22,10 @@
 Reference-like stone breakup is two-scale. Explicit authored cells and courses
 carry the broad pale/cool/warm/moss pattern that must survive far zoom; the
 existing world-space `PatternRock` shader adds restrained fine weathering at
-near range. The shader never chooses the layout, damage, moss islands, or
-architectural courses.
+near range. Production snow is the bounded exception: its fine crust still
+fades, while one subtle low-frequency drift remains at distance so an alpine
+shelf does not collapse to a white card. The shader never chooses the layout,
+damage, moss islands, or architectural courses.
 
 ## Evidence
 
@@ -28,6 +33,7 @@ architectural courses.
 |---|---|---|---|---|
 | `STONE`, `STONE_PALE`, `STONE_WARM`, `PAVING`, rubble, and `MOSS_STONE` use the existing rock-pattern material path | `mechanically verified` | general/tool-specific | Palette definitions and `voxel.gdshader`; Reference 10 material mapping in `WriteAuthoredSurfaceWear` | Does not establish that current colours exactly match the source grade |
 | Fine pattern is world-space and fades from 40 to 130 world units, so far-read breakup must be authored at block scale | `mechanically verified` | general/tool-specific | `voxel.gdshader` pattern projection and fade uniforms | Runtime grade/fog/light can alter perceived contrast |
+| Production snow separates fading close crust from a persistent low-frequency world-XZ drift, and physical traces/stones are admitted by broad deterministic fields rather than an atlas-wide per-cell scatter | `mechanically verified` | tool-specific | `Palette.PatternSnow`, the bounded 30–90 m snow branch in `voxel.gdshader`, and the 72/96-block fields plus support test in `GroundDetail.BuildAtlas`; `dotnet build --no-restore`, `git diff --check`, and headless Godot editor import passed 2026-08-30 | No current capture has been inspected for contrast, trace density, edge popping, or shimmer; these values remain visually provisional |
 | Explicit paving islands and vertical stone accents remain visible across Reference 10 review distances | `visually reviewed` | site-specific | v11 close/play/wide/far day matrix and `reference_match_night.png` inspected 2026-08-30 | Current result is cleaner and less nuanced than the source; not accepted |
 
 ## Procedure
@@ -49,7 +55,12 @@ architectural courses.
 6. Preserve natural cap/sub/deep materials on reclaimed terrain. The green lip,
    warm soil seam, and regional cliff tone are part of terrain integration;
    only paved surfaces need pale masonry below them.
-7. Judge material under the ordinary day cycle at locked day, night, and close
+7. Give snow its own frequency split. Fade fine crust with other near patterns,
+   but retain only a subtle, low-frequency world-space drift for mid/far read.
+   Gather metre-scale wind traces in wavelength-scale fields and reject traces
+   whose full length lacks a same-height snow cap. Gate exposed stones through a
+   second broad scoured field; never restore an independent per-cell snow chance.
+8. Judge material under the ordinary day cycle at locked day, night, and close
    play distance. Fix geometry and camera before tuning colour against an
    overlay.
 
@@ -69,7 +80,10 @@ without becoming a printed grid. At wide/far distance, ignore the faded shader
 and check whether authored macro patches still describe age and material. At
 night, verify that pale, cool, warm, and mossed masses remain separable without
 turning the scene into uniformly dark violet. Compare geometry in an edge view
-before blaming material for a silhouette mismatch.
+before blaming material for a silhouette mismatch. For snow, orbit and compare
+successive fixed frames: the broad drift should remain legible at wide/far range
+without crawling, while physical traces should form sparse parallel groups,
+stay supported by one shelf, and disappear as groups rather than even pepper.
 
 ## Scope and limits
 
@@ -89,6 +103,12 @@ copied to another site.
   is now tied to each unique structure.
 - Increasing shader detail at far range caused shimmer and still could not fix
   composition. The shader fades; macro authored blocks own distant readability.
+- Sharing the turf pattern left production snow as one white card after the
+  generic 40–130 m fade. Snow now retains only a smooth 30–90 m world-space
+  drift; its higher-frequency crust still fades.
+- Independent per-column snow stones and sub-metre scratches read as far-field
+  confetti or vanished entirely. Broad scoured/drift fields now gate supported
+  metre-scale groups; their actual rendered density remains to be reviewed.
 
 ## Update triggers
 

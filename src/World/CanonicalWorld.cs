@@ -305,6 +305,13 @@ public sealed class CanonicalSite
 	public SiteTier Tier { get; set; }
 	public SiteArchetype Archetype { get; set; }
 	public SiteBuildStatus Status { get; set; }
+	/// <summary>
+	/// Production and Accepted are the explicit promotion boundary for normal
+	/// play. Planned and Blockout sites remain available to authoring/review tools
+	/// without reserving or modifying terrain in the playable continent.
+	/// </summary>
+	[JsonIgnore] public bool RunsInProduction =>
+		Status is SiteBuildStatus.Production or SiteBuildStatus.Accepted;
 	public BlockPoint Centre { get; set; } = new();
 	public int ExtentX { get; set; }
 	public int ExtentZ { get; set; }

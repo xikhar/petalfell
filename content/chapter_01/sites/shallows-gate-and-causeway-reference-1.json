@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "siteId": "shallows-gate-and-causeway",
+  "builderId": "reference-1-gate-and-causeway-v1",
+  "referencePath": "res://world-new/reference-1.png",
+  "groundPlanPath": "res://content/chapter_01/sites/shallows-gate-and-causeway-reference-1-plan.json",
+  "origin": { "x": 6400, "z": 6980 },
+  "axisDegrees": 0,
+  "runtimePlanScale": 3,
+  "verticalDatumY": 168,
+  "footprintMin": { "x": -48, "z": -28 },
+  "footprintMax": { "x": 47, "z": 62 },
+  "playerSpawn": { "x": 0, "z": 20 },
+  "referenceView": {
+    "focus": { "x": 4, "z": 10 },
+    "distance": 435,
+    "yawDegrees": 45,
+    "pitchDegrees": 35.26439,
+    "heightOffset": 5,
+    "sourceWidth": 1672,
+    "sourceHeight": 941
+  }
+}

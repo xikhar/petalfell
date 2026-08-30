@@ -45,9 +45,9 @@ public partial class DayCycle : Node
 	/// un-dimmed, one is the original exposure curve, and values above one deepen
 	/// it without changing the authored colours.
 	/// </summary>
-	public float NightDarkness { get; private set; } = 1.45f;
+	public float NightDarkness { get; private set; } = 0.90f;
 	/// <summary>Clear-sky shadow filtering, before weather adds its small softening.</summary>
-	public float ShadowSoftness { get; private set; } = 3.4f;
+	public float ShadowSoftness { get; private set; } = 5.20f;
 	/// <summary>Smoothed, deterministic weather coverage. Clouds are lighting-only.</summary>
 	public float CloudCover { get; private set; }
 	/// <summary>World-space directions from the world toward each celestial body.</summary>
@@ -245,6 +245,13 @@ public partial class DayCycle : Node
 		CloudCover = ComputeCloudCover();
 		var sunColour = Blend(from.Sun, to.Sun);
 		var moonColour = Palette.MoonColor;
+		// The old single-key implementation moved to the moon's direction after
+		// sunset but kept illuminating the terrain with the dusk sun colour. That
+		// is why the nominal blue night turned the ground brown-magenta. Blend the
+		// key itself toward the authored moon only after twilight is established;
+		// the transition happens while the horizon key is already weak.
+		float moonKey = Mathf.SmoothStep(0.48f, 0.82f, night);
+		var keyColour = sunColour.Lerp(moonColour, moonKey);
 		float energy = Lerp(from.SunEnergy, to.SunEnergy);
 		// The palette already changes hue and authored energy through dusk. This
 		// second, continuous exposure curve is what makes night actually deepen
@@ -266,7 +273,7 @@ public partial class DayCycle : Node
 
 		if (_key != null)
 		{
-			_key.LightColor = sunColour;
+			_key.LightColor = keyColour;
 			_key.LightEnergy = energy * keyExposure * directCloud;
 			_key.ShadowOpacity = Lerp(from.ShadowOpacity, to.ShadowOpacity)
 				* Mathf.Lerp(1f, 0.76f, cloudSoftness);
@@ -288,7 +295,7 @@ public partial class DayCycle : Node
 		}
 
 		if (_fill != null)
-			_fill.LightEnergy = Mathf.Lerp(0.10f, 0.05f, night)
+			_fill.LightEnergy = Mathf.Lerp(0.11f, 0.075f, night)
 				* (daylight ? Mathf.Lerp(1f, 1.22f, CloudCover) : Mathf.Lerp(1f, 0.55f, CloudCover));
 
 		if (_env != null)
@@ -339,7 +346,7 @@ public partial class DayCycle : Node
 		RenderingServer.GlobalShaderParameterSet(SunDirParam, keyDir);
 		RenderingServer.GlobalShaderParameterSet(NightParam, night);
 		RenderingServer.GlobalShaderParameterSet(SunColourParam,
-			new Vector3(sunColour.R, sunColour.G, sunColour.B));
+			new Vector3(keyColour.R, keyColour.G, keyColour.B));
 	}
 
 	/// <summary>Applies immediately even while the developer clock is frozen.</summary>

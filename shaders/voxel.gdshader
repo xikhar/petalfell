@@ -108,6 +108,7 @@ void fragment() {
 
 	float mark = 0.0;      // 0..1, how much this fragment is "in shadow" of its pattern
 	float lift = 0.0;      // occasional brighter clods, so a face is not uniform
+	float snow_drift = 0.0; // broad snow tone survives after close detail fades
 
 	if (pattern > 0.5 && pattern < 1.5) {
 		// EARTH — soil and mud. Irregular clods and a broad tonal drift, with no
@@ -153,6 +154,25 @@ void fragment() {
 		float wear = fbm(wp * 1.0) * 0.6 + fbm(wp * 3.3) * 0.4;
 		mark = (wear - 0.5) * 0.72;
 		lift = smoothstep(0.76, 0.98, wear) * 0.10;
+	} else if (pattern > 7.5 && pattern < 8.5) {
+		// SNOW — close crust plus one very broad drift field. The fine part follows
+		// the ordinary distance fade; the broad part is intentionally sampled in
+		// global XZ and retained. Its 30-90 metre wavelengths remain smooth when a
+		// shelf is only a few pixels wide, unlike persistent high-frequency speckle,
+		// which shimmers and turns the far field into a printed mesh.
+		vec2 wp = warp(uv * 0.72, 0.38);
+		float crust = fbm(wp * 2.4);
+		float wind_tooth = fbm(vec2(wp.x * 1.1 + wp.y * 0.28, wp.y * 5.1));
+		mark = (crust - 0.5) * 0.30 + (wind_tooth - 0.5) * 0.22;
+		lift = smoothstep(0.79, 0.98, crust) * 0.055;
+
+		float broad = vnoise(v_world.xz * 0.031 + vec2(19.7, -8.3));
+		float basin = vnoise(v_world.xz * 0.012 + vec2(-31.1, 42.6));
+		// Snow sits near the high-key shoulder, so symmetric +/-3.5% modulation
+		// mostly clipped its bright half and read as one white card. A slightly
+		// darker centre and wider range preserves the pastel cap while making the
+		// 30-90m drift legible beside categorical scree and stone regions.
+		snow_drift = (broad * 0.64 + basin * 0.36 - 0.56) * 0.11;
 	}
 
 	// LEAF — one tone per BLOCK.
@@ -167,7 +187,7 @@ void fragment() {
 	// The ink draws only the crown's outer contour — never the seams between
 	// neighbouring leaf blocks — so without this the whole mass collapses into
 	// one flat silhouette.
-	if (pattern > 6.5) {
+	if (pattern > 6.5 && pattern < 7.5) {
 		vec3 cell = floor(v_world - wn * 0.5 + 0.001);
 		float tone = hash21(cell.xz * 1.0 + cell.y * 17.0);
 		base *= mix(0.88, 1.09, tone);
@@ -177,6 +197,7 @@ void fragment() {
 	float fade = 1.0 - smoothstep(pattern_fade_start, pattern_fade_end, dist);
 	mark *= pattern_strength * fade;
 	lift *= fade;
+	base *= 1.0 + snow_drift;
 
 	// Darken toward a desaturated, slightly cooler version of the surface, never
 	// toward black or a fixed grey. The mark has to read as the same material in

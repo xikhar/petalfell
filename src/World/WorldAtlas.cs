@@ -270,6 +270,8 @@ public sealed class AtlasProvince
 public sealed class BiomeCatalogDefinition
 {
 	public int Version { get; set; } = 1;
+	public List<AtlasVegetationSet> VegetationSets { get; set; } = new();
+	public List<AtlasBoulderSet> BoulderSets { get; set; } = new();
 	public List<BiomeBuildProfile> Profiles { get; set; } = new();
 
 	public static BiomeCatalogDefinition Load(string resourcePath) =>
@@ -279,6 +281,60 @@ public sealed class BiomeCatalogDefinition
 	{
 		var report = new AtlasAuditReport();
 		if (Version != 1) report.Error($"version must be 1, got {Version}");
+		var vegetationIds = new HashSet<string>(StringComparer.Ordinal);
+		foreach (AtlasVegetationSet set in VegetationSets)
+		{
+			if (string.IsNullOrWhiteSpace(set.Id)) report.Error("vegetation set id is required");
+			else if (!vegetationIds.Add(set.Id)) report.Error($"duplicate vegetation set id '{set.Id}'");
+			if (set.CandidateSpacing < 8 || set.CandidateSpacing > 64)
+				report.Error($"vegetation set '{set.Id}' candidateSpacing must be in 8-64 blocks");
+			if (!float.IsFinite(set.Density) || set.Density < 0f || set.Density > 1f)
+				report.Error($"vegetation set '{set.Id}' density must be finite and in 0-1");
+			if (!float.IsFinite(set.GroveWavelength) ||
+			    set.GroveWavelength < set.CandidateSpacing * 4f)
+				report.Error($"vegetation set '{set.Id}' groveWavelength must be at least four candidate cells");
+			if (!float.IsFinite(set.ScaleMin) || !float.IsFinite(set.ScaleMax) ||
+			    set.ScaleMin < .1f || set.ScaleMin > set.ScaleMax || set.ScaleMax > 1f)
+				report.Error($"vegetation set '{set.Id}' scale range must satisfy 0.1 <= min <= max <= 1");
+			if (set.MaxSlope < 0 || set.MaxSlope > 16)
+				report.Error($"vegetation set '{set.Id}' maxSlope must be in 0-16 blocks");
+			if (set.MinWetness < 0 || set.MinWetness > set.MaxWetness || set.MaxWetness > 255)
+				report.Error($"vegetation set '{set.Id}' wetness range must satisfy 0 <= min <= max <= 255");
+			if (set.CanopyPalette.Count == 0)
+				report.Error($"vegetation set '{set.Id}' needs at least one canopy palette entry");
+			foreach (string palette in set.CanopyPalette)
+				if (!AtlasWildernessPalette.IsCanopy(palette))
+					report.Error($"vegetation set '{set.Id}' names unknown canopy palette '{palette}'");
+		}
+
+		var boulderIds = new HashSet<string>(StringComparer.Ordinal);
+		foreach (AtlasBoulderSet set in BoulderSets)
+		{
+			if (string.IsNullOrWhiteSpace(set.Id)) report.Error("boulder set id is required");
+			else if (!boulderIds.Add(set.Id)) report.Error($"duplicate boulder set id '{set.Id}'");
+			if (set.CandidateSpacing < 8 || set.CandidateSpacing > 96)
+				report.Error($"boulder set '{set.Id}' candidateSpacing must be in 8-96 blocks");
+			if (!float.IsFinite(set.Density) || set.Density < 0f || set.Density > 1f)
+				report.Error($"boulder set '{set.Id}' density must be finite and in 0-1");
+			if (!float.IsFinite(set.ClusterWavelength) ||
+			    set.ClusterWavelength < set.CandidateSpacing * 4f)
+				report.Error($"boulder set '{set.Id}' clusterWavelength must be at least four candidate cells");
+			if (set.RadiusMin < 1 || set.RadiusMin > set.RadiusMax || set.RadiusMax > 4)
+				report.Error($"boulder set '{set.Id}' radius range must satisfy 1 <= min <= max <= 4");
+			if (set.HeightMin < 1 || set.HeightMin > set.HeightMax || set.HeightMax > 6)
+				report.Error($"boulder set '{set.Id}' height range must satisfy 1 <= min <= max <= 6");
+			if (set.MaxSlope < 0 || set.MaxSlope > 24)
+				report.Error($"boulder set '{set.Id}' maxSlope must be in 0-24 blocks");
+			if (set.MinWetness < 0 || set.MinWetness > set.MaxWetness || set.MaxWetness > 255)
+				report.Error($"boulder set '{set.Id}' wetness range must satisfy 0 <= min <= max <= 255");
+			if (set.StonePalette.Count == 0)
+				report.Error($"boulder set '{set.Id}' needs at least one stone palette entry");
+			foreach (string palette in set.StonePalette)
+				if (!AtlasWildernessPalette.IsStone(palette))
+					report.Error($"boulder set '{set.Id}' names unknown stone palette '{palette}'");
+		}
+		if (VegetationSets.Count == 0) report.Error("at least one vegetation set is required");
+		if (BoulderSets.Count == 0) report.Error("at least one boulder set is required");
 		if (Profiles.Count == 0) report.Error("at least one biome build profile is required");
 		var ids = new HashSet<string>(StringComparer.Ordinal);
 		foreach (var profile in Profiles)
@@ -291,6 +347,46 @@ public sealed class BiomeCatalogDefinition
 				if (!Enum.TryParse<Biome>(biome, out _)) report.Error($"profile '{profile.Id}' names unknown runtime biome '{biome}'");
 			if (profile.TerraceStep <= 0) report.Error($"profile '{profile.Id}' terraceStep must be positive");
 			if (string.IsNullOrWhiteSpace(profile.ErosionResponse)) report.Error($"profile '{profile.Id}' erosionResponse is required");
+			if (profile.Relief == null) report.Error($"profile '{profile.Id}' relief is required");
+			else
+			{
+				if (profile.Relief.CellSize < 2 || profile.Relief.CellSize > 12)
+					report.Error($"profile '{profile.Id}' relief cellSize must be between 2 and 12");
+				if (profile.Relief.CliffStep < profile.TerraceStep || profile.Relief.CliffStep > 16)
+					report.Error($"profile '{profile.Id}' relief cliffStep must be at least terraceStep and no more than 16");
+				if (!float.IsFinite(profile.Relief.SlopeStart) || !float.IsFinite(profile.Relief.SlopeFull) ||
+				    profile.Relief.SlopeStart < 0f || profile.Relief.SlopeStart >= profile.Relief.SlopeFull ||
+				    profile.Relief.SlopeFull > 2f)
+					report.Error($"profile '{profile.Id}' relief slopeStart/slopeFull must satisfy 0 <= start < full <= 2");
+				if (!float.IsFinite(profile.Relief.RidgeStart) || profile.Relief.RidgeStart < 0f || profile.Relief.RidgeStart > 1f)
+					report.Error($"profile '{profile.Id}' relief ridgeStart must be between 0 and 1");
+				if (!float.IsFinite(profile.Relief.RidgeStrength) || profile.Relief.RidgeStrength < 0f || profile.Relief.RidgeStrength > 32f)
+					report.Error($"profile '{profile.Id}' relief ridgeStrength must be between 0 and 32 blocks");
+				if (!float.IsFinite(profile.Relief.RidgeAngleDegrees) ||
+				    profile.Relief.RidgeAngleDegrees < -180f ||
+				    profile.Relief.RidgeAngleDegrees > 180f)
+					report.Error($"profile '{profile.Id}' relief ridgeAngleDegrees must be between -180 and 180");
+				float minimumWavelength = profile.Relief.CellSize * 4f;
+				if (!float.IsFinite(profile.Relief.RidgeWavelength) || profile.Relief.RidgeWavelength < minimumWavelength)
+					report.Error($"profile '{profile.Id}' relief ridgeWavelength must be at least four cell widths");
+				if (!float.IsFinite(profile.Relief.LedgeWavelength) || profile.Relief.LedgeWavelength < minimumWavelength)
+					report.Error($"profile '{profile.Id}' relief ledgeWavelength must be at least four cell widths");
+				if (!float.IsFinite(profile.Relief.LedgeThreshold) || profile.Relief.LedgeThreshold < -1f || profile.Relief.LedgeThreshold > 1f)
+					report.Error($"profile '{profile.Id}' relief ledgeThreshold must be between -1 and 1");
+				if (profile.Relief.LedgeHeight < 0 || profile.Relief.LedgeHeight > 8)
+					report.Error($"profile '{profile.Id}' relief ledgeHeight must be between 0 and 8 blocks");
+				if (profile.Relief.ShoreWidth < 0 || profile.Relief.ShoreWidth > 32)
+					report.Error($"profile '{profile.Id}' relief shoreWidth must be between 0 and 32 blocks");
+			}
+			if (profile.Selection == null) report.Error($"profile '{profile.Id}' selection is required");
+			else
+			{
+				foreach (var (name, value) in profile.Selection.ScoreTerms())
+					if (!float.IsFinite(value) || value < -4f || value > 4f)
+						report.Error($"profile '{profile.Id}' selection {name} must be finite and between -4 and 4");
+				if (!float.IsFinite(profile.Selection.PatchWavelength) || profile.Selection.PatchWavelength < 32f)
+					report.Error($"profile '{profile.Id}' selection patchWavelength must be at least 32 blocks");
+			}
 			if (profile.Hydrology == null) report.Error($"profile '{profile.Id}' hydrology is required");
 			else
 			{
@@ -302,6 +398,8 @@ public sealed class BiomeCatalogDefinition
 					report.Error($"profile '{profile.Id}' floodplainRise must be at least bankRise and both must be non-negative");
 				if (profile.Hydrology.SurfaceDrop < 0 || profile.Hydrology.WaterDepth <= 0)
 					report.Error($"profile '{profile.Id}' surfaceDrop must be non-negative and waterDepth positive");
+				if (profile.Hydrology.PreserveCutRise < 1 || profile.Hydrology.PreserveCutRise > 64)
+					report.Error($"profile '{profile.Id}' preserveCutRise must be between 1 and 64 blocks");
 			}
 			float previous = float.MaxValue;
 			foreach (var band in profile.NoiseBands)
@@ -314,6 +412,12 @@ public sealed class BiomeCatalogDefinition
 			if (!profile.Surfaces.Complete) report.Error($"profile '{profile.Id}' must name cap, substrate, cliff, shore and underwater surfaces");
 			foreach (var (name, value) in profile.RequiredReferences())
 				if (string.IsNullOrWhiteSpace(value)) report.Error($"profile '{profile.Id}' {name} is required");
+			if (!string.IsNullOrWhiteSpace(profile.VegetationSetId) &&
+			    !vegetationIds.Contains(profile.VegetationSetId))
+				report.Error($"profile '{profile.Id}' references missing vegetation set '{profile.VegetationSetId}'");
+			if (!string.IsNullOrWhiteSpace(profile.BoulderSetId) &&
+			    !boulderIds.Contains(profile.BoulderSetId))
+				report.Error($"profile '{profile.Id}' references missing boulder set '{profile.BoulderSetId}'");
 		}
 		return report;
 	}
@@ -326,10 +430,13 @@ public sealed class BiomeBuildProfile
 	public List<string> RuntimeBiomes { get; set; } = new();
 	public int TerraceStep { get; set; } = 2;
 	public string ErosionResponse { get; set; } = "";
+	public AtlasReliefProfile Relief { get; set; } = new();
+	public AtlasBiomeSelectionProfile Selection { get; set; } = new();
 	public AtlasHydrologyProfile Hydrology { get; set; } = new();
 	public List<AtlasNoiseBand> NoiseBands { get; set; } = new();
 	public AtlasSurfaceSet Surfaces { get; set; } = new();
 	public string VegetationSetId { get; set; } = "";
+	public string BoulderSetId { get; set; } = "";
 	public string GroundDetailSetId { get; set; } = "";
 	public string AtmosphereProfileId { get; set; } = "";
 	public string ShaderProfileId { get; set; } = "";
@@ -339,11 +446,101 @@ public sealed class BiomeBuildProfile
 	public IEnumerable<(string name, string value)> RequiredReferences()
 	{
 		yield return ("vegetationSetId", VegetationSetId);
+		yield return ("boulderSetId", BoulderSetId);
 		yield return ("groundDetailSetId", GroundDetailSetId);
 		yield return ("atmosphereProfileId", AtmosphereProfileId);
 		yield return ("shaderProfileId", ShaderProfileId);
 		yield return ("roadProfileId", RoadProfileId);
 		yield return ("architecturePaletteId", ArchitecturePaletteId);
+	}
+}
+
+/// <summary>
+/// Data-backed ordinary wilderness grammar. The globally anchored scatter pass
+/// owns candidate identity; a biome set owns only suitability, density and look.
+/// </summary>
+public sealed class AtlasVegetationSet
+{
+	public string Id { get; set; } = "";
+	public int CandidateSpacing { get; set; } = 16;
+	public float Density { get; set; }
+	public float GroveWavelength { get; set; } = 192f;
+	public float ScaleMin { get; set; } = .2f;
+	public float ScaleMax { get; set; } = .8f;
+	public int MaxSlope { get; set; } = 2;
+	public int MinWetness { get; set; }
+	public int MaxWetness { get; set; } = 255;
+	public List<string> CanopyPalette { get; set; } = new();
+}
+
+/// <summary>
+/// Data-backed punctuation for natural surfaces. Geometry remains a derived
+/// block assembly and never alters the compiled height or macro geography.
+/// </summary>
+public sealed class AtlasBoulderSet
+{
+	public string Id { get; set; } = "";
+	public int CandidateSpacing { get; set; } = 22;
+	public float Density { get; set; }
+	public float ClusterWavelength { get; set; } = 224f;
+	public int RadiusMin { get; set; } = 1;
+	public int RadiusMax { get; set; } = 2;
+	public int HeightMin { get; set; } = 1;
+	public int HeightMax { get; set; } = 3;
+	public int MaxSlope { get; set; } = 4;
+	public int MinWetness { get; set; }
+	public int MaxWetness { get; set; } = 255;
+	public List<string> StonePalette { get; set; } = new();
+}
+
+/// <summary>
+/// Sector-local geometric response to accepted elevation and hydrology. These
+/// values may articulate an authored mountain, cliff or shore, but may not move
+/// the macro feature or create a new one.
+/// </summary>
+public sealed class AtlasReliefProfile
+{
+	public int CellSize { get; set; } = 6;
+	public int CliffStep { get; set; } = 4;
+	public float SlopeStart { get; set; } = 0.25f;
+	public float SlopeFull { get; set; } = 0.75f;
+	public float RidgeStart { get; set; } = 0.65f;
+	public float RidgeStrength { get; set; } = 0f;
+	/// <summary>
+	/// Atlas-space direction of the long ridge axis. This is fixed profile data:
+	/// rotating noise independently at each cell changes its phase and creates
+	/// disconnected cliff fragments instead of one continuous landform.
+	/// </summary>
+	public float RidgeAngleDegrees { get; set; }
+	public float RidgeWavelength { get; set; } = 256f;
+	public float LedgeWavelength { get; set; } = 96f;
+	public float LedgeThreshold { get; set; } = 0.35f;
+	public int LedgeHeight { get; set; } = 2;
+	public int ShoreWidth { get; set; } = 8;
+}
+
+/// <summary>
+/// Suitability coefficients used to choose among a province's allowed profile
+/// IDs. The eventual score combines normalized authored altitude, water-derived
+/// moisture, macro slope and coherent patch noise; it refines a province's
+/// accepted geography and never changes province ownership.
+/// </summary>
+public sealed class AtlasBiomeSelectionProfile
+{
+	public float Bias { get; set; }
+	public float AltitudeWeight { get; set; }
+	public float MoistureWeight { get; set; }
+	public float SlopeWeight { get; set; }
+	public float PatchWeight { get; set; }
+	public float PatchWavelength { get; set; } = 256f;
+
+	public IEnumerable<(string name, float value)> ScoreTerms()
+	{
+		yield return ("bias", Bias);
+		yield return ("altitudeWeight", AltitudeWeight);
+		yield return ("moistureWeight", MoistureWeight);
+		yield return ("slopeWeight", SlopeWeight);
+		yield return ("patchWeight", PatchWeight);
 	}
 }
 
@@ -361,6 +558,7 @@ public sealed class AtlasHydrologyProfile
 	public int BankRise { get; set; } = 2;
 	public int SurfaceDrop { get; set; } = 1;
 	public int WaterDepth { get; set; } = 3;
+	public int PreserveCutRise { get; set; } = 12;
 }
 
 public sealed class AtlasNoiseBand

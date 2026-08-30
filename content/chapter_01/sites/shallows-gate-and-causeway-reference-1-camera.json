@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "kind": "locked-reference-camera-calibration",
+  "siteId": "shallows-gate-and-causeway",
+  "referencePath": "res://world-new/reference-1.png",
+  "referenceSha256": "be660ca1329022cfb15c40b21390f0813e829fe4f718215230a0458103c581c9",
+  "siteDefinitionPath": "res://content/chapter_01/sites/shallows-gate-and-causeway-reference-1.json",
+  "groundPlanPath": "res://content/chapter_01/sites/shallows-gate-and-causeway-reference-1-plan.json",
+  "runtimeRegistration": {
+    "origin": { "x": 6400, "z": 6980 },
+    "extent": { "x": 336, "z": 408 },
+    "runtimePlanScale": 3,
+    "axisDegrees": 0,
+    "runtimeMirrorX": false,
+    "sourceToRuntime": "runtime local X = 3 * source X; runtime local Z = 3 * source Z; each source course expands to three runtime Y voxels",
+    "southEntrance": { "local": { "x": 0, "z": 42 }, "global": { "x": 6400, "z": 7106 } },
+    "northEntrance": { "local": { "x": 0, "z": -23 }, "global": { "x": 6400, "z": 6911 } },
+    "certainty": "author-directed-integer-scale-with-mechanically-verified-topology-and-source-solved-transform"
+  },
+  "referenceView": {
+    "projection": "Perspective",
+    "verticalFovDegrees": 21,
+    "sourceWidth": 1672,
+    "sourceHeight": 941,
+    "focus": { "x": 4, "z": 10 },
+    "heightOffset": 5,
+    "distance": 435,
+    "yawDegrees": 45,
+    "pitchDegrees": 35.26439,
+    "certainty": "locked-v1-mechanically-audited-and-visually-reviewed"
+  },
+  "calibrationLandmarks": [
+    {
+      "id": "threshold-origin",
+      "localPoint": { "x": 0, "y": 0, "z": 0 },
+      "sourcePixel": [918,456],
+      "maxResidualPixels": 20,
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "traveller-feet",
+      "localPoint": { "x": 0, "y": 0, "z": 20 },
+      "sourcePixel": [665,589],
+      "maxResidualPixels": 20,
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "south-stair-upper-west",
+      "localPoint": { "x": -3.5, "y": 0, "z": 36.5 },
+      "sourcePixel": [397,701],
+      "maxResidualPixels": 28,
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "south-stair-upper-east",
+      "localPoint": { "x": 2.5, "y": 0, "z": 36.5 },
+      "sourcePixel": [475,746],
+      "maxResidualPixels": 28,
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "south-stair-lower-west",
+      "localPoint": { "x": -3.5, "y": -6, "z": 42.5 },
+      "sourcePixel": [318,809],
+      "maxResidualPixels": 30,
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "south-stair-lower-east",
+      "localPoint": { "x": 2.5, "y": -6, "z": 42.5 },
+      "sourcePixel": [394,854],
+      "maxResidualPixels": 35,
+      "certainty": "observed/source-measured"
+    },
+    {
+      "id": "east-upper-plateau-north-boundary",
+      "localPoint": { "x": 32, "y": 8, "z": -9 },
+      "sourcePixel": [1444,493],
+      "maxResidualPixels": 35,
+      "certainty": "candidate/source-correspondence"
+    }
+  ],
+  "evidencePolylines": [
+    {
+      "id": "causeway-west-deck-edge",
+      "colour": "#fff4a4",
+      "points": [
+        { "x": -7.5, "y": 0, "z": 0 },
+        { "x": -7.5, "y": 0, "z": 36.5 }
+      ]
+    },
+    {
+      "id": "causeway-east-deck-edge",
+      "colour": "#fff4a4",
+      "points": [
+        { "x": 7.5, "y": 0, "z": 0 },
+        { "x": 7.5, "y": 0, "z": 36.5 }
+      ]
+    },
+    {
+      "id": "south-stair-course-line-west",
+      "colour": "#ffad2e",
+      "points": [
+        { "x": -3.5, "y": 0, "z": 36.5 },
+        { "x": -3.5, "y": -6, "z": 42.5 }
+      ]
+    },
+    {
+      "id": "south-stair-course-line-east",
+      "colour": "#ffad2e",
+      "points": [
+        { "x": 2.5, "y": 0, "z": 36.5 },
+        { "x": 2.5, "y": -6, "z": 42.5 }
+      ]
+    },
+    {
+      "id": "east-side-stair-course-line",
+      "colour": "#ec67ff",
+      "points": [
+        { "x": 32, "y": 0, "z": 0 },
+        { "x": 32, "y": 8, "z": -8 }
+      ]
+    }
+  ],
+  "overlayPlanes": [
+    { "id": "threshold-and-deck", "y": 0, "colour": "#21b9ff", "bounds": [-12,-2,12,45], "gridStep": 1, "majorStep": 5 },
+    { "id": "south-landing-and-approach", "y": -6, "colour": "#ffad2e", "bounds": [-21,43,9,61], "gridStep": 2, "majorStep": 10 },
+    { "id": "candidate-water", "y": -21, "colour": "#7658ff", "bounds": [-50,-10,50,65], "gridStep": 5, "majorStep": 10 },
+    { "id": "candidate-east-lower-court", "y": 0, "colour": "#7ae6ff", "bounds": [10,-7,35,19], "gridStep": 2, "majorStep": 10 },
+    { "id": "candidate-east-upper-plateau", "y": 8, "colour": "#ec67ff", "bounds": [11,-20,35,-8], "gridStep": 2, "majorStep": 10 }
+  ],
+  "unresolved": [
+    "the locked v1 rig is a reproducible review match, not a claim about the source renderer's unpublished camera",
+    "the overhead and isometric references differ locally; their remaining residual is recorded rather than hidden in non-integer geometry",
+    "hidden geometry cannot be calibrated from this camera artifact"
+  ]
+}

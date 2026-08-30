@@ -1,0 +1,759 @@
+{
+  "version": 2,
+  "siteId": "shallows-gate-and-causeway",
+  "referencePath": "res://world-new/reference-1.png",
+  "sourceMeasurementPath": "res://content/chapter_01/sites/shallows-gate-and-causeway-reference-1-measurement.json",
+  "basis": "Strict source-facing L3 horizontal ownership for the complete measured Reference 1 district. Every rectangle is a compact serialization of site-specific source cells, never a reusable architectural stamp. The tracked top image owns X/Z; reference-1.png owns the unresolved vertical silhouette, damage, material, lighting, and final acceptance.",
+  "coordinateContract": {
+    "origin": { "x": 0, "z": 0 },
+    "playerSpawn": { "x": 0, "z": 20 },
+    "plotView": "source-facing",
+    "oneCellIsOneVoxel": false,
+    "runtimePlanScale": 3,
+    "runtimeMirrorX": false,
+    "runtimeTransformStatus": "resolved",
+    "sourceViewYawDegrees": 45,
+    "sourceViewPitchDegrees": 35.26439,
+    "cameraCalibrationPath": "res://content/chapter_01/sites/shallows-gate-and-causeway-reference-1-camera.json",
+    "verticalSchedulePath": "res://content/chapter_01/sites/shallows-gate-and-causeway-reference-1-vertical.json"
+  },
+  "provisionalVerticalContract": {
+    "status": "candidate",
+    "datum": "One measured source course expands to three runtime voxels: bridge-and-gate threshold TopY is local 0 / absolute 168; authored water remains local -21 / absolute 105",
+    "reason": "The locked 1672x941 review rig and vertical schedule now own the first integer silhouette blockout. Candidate course values remain provisional until unique authored geometry is captured and compared; a passing audit or build cannot promote them.",
+    "unsolved": [
+      "gate course heights and roof thickness",
+      "portal clear height",
+      "bridge underside and side-support bases",
+      "submerged pier courses",
+      "east upper-plateau and lower-court course split",
+      "connected southern approach footprint below the exact stair landing"
+    ]
+  },
+  "terrain": [
+    {
+      "id": "ordinary-atlas-context",
+      "role": "surrounding-terrain",
+      "surfaceY": 0,
+      "material": "natural-atlas",
+      "writeMode": "author-surface",
+      "footprint": [-48,-28,47,62]
+    },
+    {
+      "id": "west-water-channel",
+      "role": "water-and-drop-context",
+      "surfaceY": -21,
+      "bedY": -23,
+      "material": "atlas-water",
+      "writeMode": "author-water",
+      "polygon": [[-48,-5],[-36,-5],[-36,14],[-31,14],[-31,18],[-15,18],[-15,15],[-9,15],[-9,37],[-14,37],[-14,46],[-8,46],[-8,55],[-18,55],[-18,62],[-30,62],[-30,56],[-36,56],[-36,45],[-48,45]]
+    },
+    {
+      "id": "east-water-channel",
+      "role": "water-and-drop-context",
+      "surfaceY": -21,
+      "bedY": -23,
+      "material": "atlas-water",
+      "writeMode": "author-water",
+      "polygon": [[10,15],[14,15],[14,19],[29,19],[29,16],[35,16],[35,-5],[47,-5],[47,45],[36,45],[36,56],[30,56],[30,62],[17,62],[17,55],[8,55],[8,46],[14,46],[14,37],[10,37]]
+    },
+    {
+      "id": "under-causeway-water",
+      "role": "water-and-drop-context",
+      "surfaceY": -21,
+      "bedY": -23,
+      "material": "atlas-water",
+      "writeMode": "author-water",
+      "footprint": [-9,0,9,36]
+    },
+    {
+      "id": "west-outer-shelf-continuation",
+      "role": "source-visible-irregular-dry-shelf-continuation",
+      "surfaceY": 0,
+      "material": "natural-atlas",
+      "writeMode": "author-surface",
+      "polygon": [[-48,-7],[-39,-7],[-39,-5],[-34,-5],[-34,-1],[-31,-1],[-31,8],[-34,8],[-34,12],[-40,12],[-40,14],[-48,14]]
+    },
+    {
+      "id": "east-middle-shelf-continuation",
+      "role": "source-visible-irregular-dry-shelf-continuation",
+      "surfaceY": 0,
+      "material": "natural-atlas",
+      "writeMode": "author-surface",
+      "polygon": [[35,6],[47,6],[47,24],[39,24],[39,22],[34,22],[34,19],[29,19],[29,15],[33,15],[33,10],[35,10]]
+    },
+    {
+      "id": "south-east-shoreline-continuation",
+      "role": "source-visible-irregular-dry-shoreline-continuation",
+      "surfaceY": 0,
+      "material": "natural-atlas",
+      "writeMode": "author-surface",
+      "polygon": [[7,49],[9,49],[9,46],[14,46],[14,43],[22,43],[22,45],[34,45],[34,47],[38,47],[38,50],[43,50],[43,54],[47,54],[47,62],[7,62]]
+    },
+    {
+      "id": "far-east-shelf-continuation",
+      "role": "source-visible-irregular-dry-shelf-continuation",
+      "surfaceY": 0,
+      "material": "natural-atlas",
+      "writeMode": "author-surface",
+      "polygon": [[40,32],[47,32],[47,56],[43,56],[43,53],[38,53],[38,49],[34,49],[34,45],[31,45],[31,39],[35,39],[35,35],[40,35]]
+    },
+    {
+      "id": "west-lower-cliff-apron",
+      "role": "intermittent-lower-apron",
+      "surfaceY": -4,
+      "material": "cliff-stone-and-turf",
+      "writeMode": "author-surface",
+      "polygon": [[-36,-7],[-12,-7],[-12,15],[-19,15],[-19,18],[-31,18],[-31,14],[-36,14]]
+    },
+    {
+      "id": "east-lower-court",
+      "role": "lower-court",
+      "surfaceY": 0,
+      "material": "cliff-stone-and-turf",
+      "writeMode": "author-surface",
+      "polygon": [[10,-7],[35,-7],[35,2],[33,2],[33,16],[29,16],[29,19],[13,19],[13,15],[10,15]]
+    },
+    {
+      "id": "west-main-shelf",
+      "role": "eroded-platform-shelf",
+      "surfaceY": 0,
+      "material": "reclaimed-cliff-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[-35,-17],[-11,-17],[-11,-2],[-13,-2],[-13,14],[-19,14],[-19,17],[-31,17],[-31,13],[-35,13]]
+    },
+    {
+      "id": "east-main-shelf",
+      "role": "upper-ruin-plateau",
+      "surfaceY": 8,
+      "material": "reclaimed-cliff-terrace",
+      "writeMode": "author-surface",
+      "polygon": [[11,-20],[36,-20],[36,-10],[35,-10],[35,-7],[11,-7]]
+    },
+    {
+      "id": "gate-threshold-shelf",
+      "role": "raised-platform",
+      "surfaceY": 0,
+      "material": "worn-gate-stone",
+      "writeMode": "author-surface",
+      "polygon": [[-13,-21],[14,-21],[14,0],[11,0],[11,5],[-11,5],[-11,0],[-13,0]]
+    },
+    {
+      "id": "east-stair-lower-landing",
+      "role": "intermittent-lower-apron",
+      "surfaceY": 0,
+      "material": "cliff-stone-and-turf",
+      "writeMode": "author-surface",
+      "footprint": [30,0,34,2]
+    },
+    {
+      "id": "causeway-deck",
+      "role": "lower-court",
+      "surfaceY": 0,
+      "material": "worn-paving",
+      "writeMode": "author-surface",
+      "footprint": [-7,0,7,36]
+    },
+    {
+      "id": "south-landing",
+      "role": "lower-processional-approach",
+      "surfaceY": -6,
+      "material": "reclaimed-landing",
+      "writeMode": "author-surface",
+      "polygon": [[-11,43],[10,43],[10,45],[8,45],[8,48],[6,48],[6,54],[4,54],[4,58],[7,58],[7,62],[-13,62],[-13,59],[-18,59],[-18,56],[-21,56],[-21,51],[-18,51],[-18,48],[-14,48],[-14,45],[-11,45]]
+    }
+  ],
+  "surfacePatches": [
+    {
+      "id": "gate-threshold-wear",
+      "terrainId": "causeway-deck",
+      "material": "cool-paving",
+      "footprints": [[-5,0,5,5]]
+    },
+    {
+      "id": "causeway-processional-wear",
+      "terrainId": "causeway-deck",
+      "material": "worn-paving",
+      "footprints": [[-5,6,5,8],[-6,10,6,18],[-6,20,6,28],[-5,30,5,35]]
+    },
+    {
+      "id": "west-precinct-paving",
+      "terrainId": "west-main-shelf",
+      "material": "moss-paving",
+      "footprints": [[-30,-5,-23,2],[-21,-4,-17,4],[-16,-1,-14,8]]
+    },
+    {
+      "id": "east-precinct-paving",
+      "terrainId": "east-lower-court",
+      "material": "worn-paving",
+      "footprints": [[14,-5,20,4],[22,-4,28,4],[15,6,25,12]]
+    },
+    {
+      "id": "south-landing-reclamation",
+      "terrainId": "south-landing",
+      "material": "reclaimed-turf",
+      "footprints": [[-8,47,5,50]]
+    }
+  ],
+  "structures": [
+    {
+      "id": "gate-connected-body-west",
+      "kind": "connected-facade",
+      "baseY": 0,
+      "height": 22,
+      "verticalStatus": "provisional",
+      "supportTerrain": "gate-threshold-shelf",
+      "measurementComponentIds": ["gate-ground-footprint","gate-rear-spanning-mass","gate-west-front-mass"],
+      "footprints": [[-11,-18,-4,-9],[-11,-8,-4,-1]]
+    },
+    {
+      "id": "gate-connected-body-east",
+      "kind": "connected-facade",
+      "baseY": 0,
+      "height": 22,
+      "verticalStatus": "provisional",
+      "supportTerrain": "gate-threshold-shelf",
+      "measurementComponentIds": ["gate-ground-footprint","gate-rear-spanning-mass","gate-east-front-mass"],
+      "footprints": [[4,-18,11,-9],[4,-8,11,-1]]
+    },
+    {
+      "id": "gate-elevated-roof",
+      "kind": "connected-facade",
+      "baseY": 0,
+      "height": 24,
+      "verticalStatus": "provisional",
+      "groundClearanceY": 14,
+      "supportTerrain": "gate-threshold-shelf",
+      "measurementComponentIds": ["gate-elevated-roof-projection"],
+      "footprint": [-12,-20,12,-8]
+    },
+    {
+      "id": "gate-west-attached-buttress",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 18,
+      "verticalStatus": "provisional",
+      "supportTerrain": "gate-threshold-shelf",
+      "measurementComponentIds": ["gate-west-buttress-group"],
+      "footprints": [[-13,-17,-12,-2],[-11,-3,-9,-2]]
+    },
+    {
+      "id": "gate-east-attached-buttress",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 18,
+      "verticalStatus": "provisional",
+      "supportTerrain": "gate-threshold-shelf",
+      "measurementComponentIds": ["gate-east-buttress-group"],
+      "footprints": [[12,-17,13,-2],[9,-3,11,-2]]
+    },
+    {
+      "id": "south-processional-stair",
+      "kind": "stair",
+      "verticalStatus": "provisional",
+      "measurementComponentIds": ["south-processional-stair"],
+      "fromTerrain": "south-landing",
+      "toTerrain": "causeway-deck",
+      "axis": [0,-1],
+      "fromLanding": [-3,43,2,44],
+      "toLanding": [-3,35,2,35],
+      "treads": [
+        { "footprint": [-3,42,2,42], "topY": -6 },
+        { "footprint": [-3,41,2,41], "topY": -5 },
+        { "footprint": [-3,40,2,40], "topY": -4 },
+        { "footprint": [-3,39,2,39], "topY": -3 },
+        { "footprint": [-3,38,2,38], "topY": -2 },
+        { "footprint": [-3,37,2,37], "topY": -1 },
+        { "footprint": [-3,36,2,36], "topY": 0 }
+      ]
+    },
+    {
+      "id": "east-side-stair",
+      "kind": "stair",
+      "verticalStatus": "provisional",
+      "measurementComponentIds": ["east-side-stair"],
+      "fromTerrain": "east-stair-lower-landing",
+      "toTerrain": "east-main-shelf",
+      "axis": [0,-1],
+      "fromLanding": [30,1,34,1],
+      "toLanding": [30,-9,34,-9],
+      "treads": [
+        { "footprint": [30,0,34,0], "topY": 0 },
+        { "footprint": [30,-1,34,-1], "topY": 1 },
+        { "footprint": [30,-2,34,-2], "topY": 2 },
+        { "footprint": [30,-3,34,-3], "topY": 3 },
+        { "footprint": [30,-4,34,-4], "topY": 4 },
+        { "footprint": [30,-5,34,-5], "topY": 5 },
+        { "footprint": [30,-6,34,-6], "topY": 6 },
+        { "footprint": [30,-7,34,-7], "topY": 7 },
+        { "footprint": [30,-8,34,-8], "topY": 8 }
+      ]
+    },
+    {
+      "id": "causeway-west-parapet-north",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 2,
+      "verticalStatus": "provisional",
+      "supportTerrain": "causeway-deck",
+      "measurementComponentIds": ["causeway-west-parapet"],
+      "footprint": [-7,1,-7,8]
+    },
+    {
+      "id": "causeway-west-parapet-middle",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 2,
+      "verticalStatus": "provisional",
+      "supportTerrain": "causeway-deck",
+      "measurementComponentIds": ["causeway-west-parapet"],
+      "footprint": [-7,10,-7,24]
+    },
+    {
+      "id": "causeway-west-parapet-south",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 2,
+      "verticalStatus": "provisional",
+      "supportTerrain": "causeway-deck",
+      "measurementComponentIds": ["causeway-west-parapet"],
+      "footprint": [-7,26,-7,35]
+    },
+    {
+      "id": "causeway-east-parapet-north",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 2,
+      "verticalStatus": "provisional",
+      "supportTerrain": "causeway-deck",
+      "measurementComponentIds": ["causeway-east-parapet"],
+      "footprint": [7,1,7,8]
+    },
+    {
+      "id": "causeway-east-parapet-middle",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 2,
+      "verticalStatus": "provisional",
+      "supportTerrain": "causeway-deck",
+      "measurementComponentIds": ["causeway-east-parapet"],
+      "footprint": [7,10,7,24]
+    },
+    {
+      "id": "causeway-east-parapet-south",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 2,
+      "verticalStatus": "provisional",
+      "supportTerrain": "causeway-deck",
+      "measurementComponentIds": ["causeway-east-parapet"],
+      "footprint": [7,26,7,35]
+    },
+    {
+      "id": "causeway-west-side-supports",
+      "kind": "side-support-group",
+      "baseY": -21,
+      "height": 21,
+      "verticalStatus": "provisional",
+      "supportTerrain": "under-causeway-water",
+      "measurementComponentIds": ["causeway-west-support-envelope"],
+      "footprints": [[-9,5,-8,8],[-9,15,-8,19],[-9,28,-8,32]]
+    },
+    {
+      "id": "causeway-east-side-supports",
+      "kind": "side-support-group",
+      "baseY": -21,
+      "height": 21,
+      "verticalStatus": "provisional",
+      "supportTerrain": "under-causeway-water",
+      "measurementComponentIds": ["causeway-east-support-envelope"],
+      "footprints": [[8,5,9,8],[8,16,9,20],[8,29,9,33]]
+    },
+    {
+      "id": "causeway-south-abutment-west-drop",
+      "kind": "connected-facade",
+      "baseY": -21,
+      "height": 21,
+      "verticalStatus": "provisional",
+      "supportTerrain": "under-causeway-water",
+      "measurementComponentIds": ["causeway-south-abutment"],
+      "footprint": [-9,34,-8,35]
+    },
+    {
+      "id": "causeway-south-abutment-east-drop",
+      "kind": "connected-facade",
+      "baseY": -21,
+      "height": 21,
+      "verticalStatus": "provisional",
+      "supportTerrain": "under-causeway-water",
+      "measurementComponentIds": ["causeway-south-abutment"],
+      "footprint": [8,34,9,35]
+    },
+    {
+      "id": "causeway-north-deck-plinth",
+      "kind": "isolated-survivor",
+      "baseY": 0,
+      "height": 3,
+      "verticalStatus": "provisional",
+      "supportTerrain": "causeway-deck",
+      "measurementComponentIds": ["causeway-clear-processional-axis"],
+      "footprint": [-2,8,-1,9]
+    },
+    {
+      "id": "causeway-south-east-post",
+      "kind": "isolated-survivor",
+      "baseY": 0,
+      "height": 2,
+      "verticalStatus": "provisional",
+      "supportTerrain": "causeway-deck",
+      "measurementComponentIds": ["causeway-clear-processional-axis"],
+      "footprint": [3,27,3,27]
+    },
+    {
+      "id": "causeway-mid-rubble",
+      "kind": "rubble-cluster",
+      "baseY": 0,
+      "verticalStatus": "provisional",
+      "supportTerrain": "causeway-deck",
+      "measurementComponentIds": ["causeway-clear-processional-axis"],
+      "envelope": [1,11,4,14],
+      "cells": [[2,12],[3,12],[3,13],[2,13],[1,13]]
+    },
+    {
+      "id": "west-inner-cliff-range",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 14,
+      "verticalStatus": "provisional",
+      "supportTerrain": "west-main-shelf",
+      "measurementComponentIds": ["west-precinct-envelope","west-inner-cliff-range"],
+      "footprints": [[-16,-4,-15,13],[-18,-4,-17,-3],[-18,12,-17,13]]
+    },
+    {
+      "id": "west-middle-parallel-range",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 11,
+      "verticalStatus": "provisional",
+      "supportTerrain": "west-main-shelf",
+      "measurementComponentIds": ["west-precinct-envelope","west-middle-parallel-range"],
+      "footprints": [[-22,-5,-21,11],[-20,-5,-19,-4],[-20,10,-19,11]]
+    },
+    {
+      "id": "west-outer-broken-range",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 8,
+      "verticalStatus": "provisional",
+      "supportTerrain": "west-main-shelf",
+      "measurementComponentIds": ["west-precinct-envelope","west-outer-broken-range"],
+      "footprints": [[-29,-3,-28,8],[-27,7,-24,8],[-25,-4,-24,6]]
+    },
+    {
+      "id": "west-north-rib-west",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 13,
+      "verticalStatus": "provisional",
+      "supportTerrain": "west-main-shelf",
+      "measurementComponentIds": ["west-precinct-envelope","west-north-rib-group"],
+      "footprint": [-20,-12,-19,-5]
+    },
+    {
+      "id": "west-north-rib-middle",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 10,
+      "verticalStatus": "provisional",
+      "supportTerrain": "west-main-shelf",
+      "measurementComponentIds": ["west-precinct-envelope","west-north-rib-group"],
+      "footprint": [-17,-11,-16,-5]
+    },
+    {
+      "id": "west-north-rib-east",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 8,
+      "verticalStatus": "provisional",
+      "supportTerrain": "west-main-shelf",
+      "measurementComponentIds": ["west-precinct-envelope","west-north-rib-group"],
+      "footprint": [-15,-10,-14,-5]
+    },
+    {
+      "id": "west-court-survivor",
+      "kind": "isolated-survivor",
+      "baseY": 0,
+      "height": 12,
+      "verticalStatus": "provisional",
+      "supportTerrain": "west-main-shelf",
+      "measurementComponentIds": ["west-precinct-envelope"],
+      "footprint": [-19,4,-18,5]
+    },
+    {
+      "id": "west-threshold-survivor",
+      "kind": "isolated-survivor",
+      "baseY": 0,
+      "height": 9,
+      "verticalStatus": "provisional",
+      "supportTerrain": "west-main-shelf",
+      "measurementComponentIds": ["west-precinct-envelope"],
+      "footprint": [-15,1,-14,2]
+    },
+    {
+      "id": "west-threshold-rubble",
+      "kind": "rubble-cluster",
+      "baseY": 0,
+      "verticalStatus": "provisional",
+      "supportTerrain": "west-main-shelf",
+      "measurementComponentIds": ["west-precinct-envelope"],
+      "envelope": [-16,4,-14,6],
+      "cells": [[-14,4],[-15,4],[-15,5],[-16,5],[-16,6],[-15,6]]
+    },
+    {
+      "id": "west-middle-rubble",
+      "kind": "rubble-cluster",
+      "baseY": 0,
+      "verticalStatus": "provisional",
+      "supportTerrain": "west-main-shelf",
+      "measurementComponentIds": ["west-precinct-envelope"],
+      "envelope": [-22,5,-20,7],
+      "cells": [[-20,5],[-21,5],[-21,6],[-22,6],[-22,7]]
+    },
+    {
+      "id": "west-outer-rubble",
+      "kind": "rubble-cluster",
+      "baseY": 0,
+      "verticalStatus": "provisional",
+      "supportTerrain": "west-main-shelf",
+      "measurementComponentIds": ["west-precinct-envelope"],
+      "envelope": [-29,9,-27,11],
+      "cells": [[-27,9],[-28,9],[-28,10],[-29,10],[-29,11]]
+    },
+    {
+      "id": "west-north-rubble",
+      "kind": "rubble-cluster",
+      "baseY": 0,
+      "verticalStatus": "provisional",
+      "supportTerrain": "west-main-shelf",
+      "measurementComponentIds": ["west-precinct-envelope","west-north-rib-group"],
+      "envelope": [-19,-8,-17,-7],
+      "cells": [[-18,-7],[-19,-7],[-19,-8],[-18,-8],[-17,-8]]
+    },
+    {
+      "id": "east-threshold-west-rib",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 14,
+      "verticalStatus": "provisional",
+      "supportTerrain": "gate-threshold-shelf",
+      "measurementComponentIds": ["east-precinct-envelope","east-inner-rib-field"],
+      "footprint": [12,-3,13,-1]
+    },
+    {
+      "id": "east-inner-west-rib",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 14,
+      "verticalStatus": "provisional",
+      "supportTerrain": "east-lower-court",
+      "measurementComponentIds": ["east-precinct-envelope","east-inner-rib-field"],
+      "footprint": [12,0,13,13]
+    },
+    {
+      "id": "east-inner-middle-rib",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 11,
+      "verticalStatus": "provisional",
+      "supportTerrain": "east-lower-court",
+      "measurementComponentIds": ["east-precinct-envelope","east-inner-rib-field"],
+      "footprint": [16,2,17,14]
+    },
+    {
+      "id": "east-inner-east-rib",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 9,
+      "verticalStatus": "provisional",
+      "supportTerrain": "east-lower-court",
+      "measurementComponentIds": ["east-precinct-envelope","east-inner-rib-field"],
+      "footprint": [20,3,21,13]
+    },
+    {
+      "id": "east-outer-broken-range",
+      "kind": "connected-wall-run",
+      "baseY": 0,
+      "height": 8,
+      "verticalStatus": "provisional",
+      "supportTerrain": "east-lower-court",
+      "measurementComponentIds": ["east-precinct-envelope","east-outer-broken-range"],
+      "footprints": [[22,-1,29,0],[28,1,29,11],[23,11,27,12]]
+    },
+    {
+      "id": "east-north-broken-room",
+      "kind": "connected-wall-run",
+      "baseY": 8,
+      "height": 10,
+      "verticalStatus": "provisional",
+      "supportTerrain": "east-main-shelf",
+      "measurementComponentIds": ["east-precinct-envelope","east-north-ruin-group"],
+      "footprints": [[15,-17,27,-16],[15,-15,16,-8],[26,-15,27,-10],[20,-9,27,-8]]
+    },
+    {
+      "id": "east-north-room-survivor",
+      "kind": "isolated-survivor",
+      "baseY": 8,
+      "height": 13,
+      "verticalStatus": "provisional",
+      "supportTerrain": "east-main-shelf",
+      "measurementComponentIds": ["east-precinct-envelope","east-north-ruin-group"],
+      "footprint": [18,-12,19,-11]
+    },
+    {
+      "id": "east-inner-survivor",
+      "kind": "isolated-survivor",
+      "baseY": 0,
+      "height": 10,
+      "verticalStatus": "provisional",
+      "supportTerrain": "east-lower-court",
+      "measurementComponentIds": ["east-precinct-envelope","east-inner-rib-field"],
+      "footprint": [14,5,15,6]
+    },
+    {
+      "id": "east-outer-survivor",
+      "kind": "isolated-survivor",
+      "baseY": 0,
+      "height": 8,
+      "verticalStatus": "provisional",
+      "supportTerrain": "east-lower-court",
+      "measurementComponentIds": ["east-precinct-envelope","east-outer-broken-range"],
+      "footprint": [24,5,25,6]
+    },
+    {
+      "id": "east-threshold-rubble",
+      "kind": "rubble-cluster",
+      "baseY": 0,
+      "verticalStatus": "provisional",
+      "supportTerrain": "east-lower-court",
+      "measurementComponentIds": ["east-precinct-envelope","east-inner-rib-field"],
+      "envelope": [12,1,15,3],
+      "cells": [[12,1],[13,1],[13,2],[14,2],[14,3],[15,3]]
+    },
+    {
+      "id": "east-inner-rubble",
+      "kind": "rubble-cluster",
+      "baseY": 0,
+      "verticalStatus": "provisional",
+      "supportTerrain": "east-lower-court",
+      "measurementComponentIds": ["east-precinct-envelope","east-inner-rib-field"],
+      "envelope": [17,8,20,10],
+      "cells": [[17,8],[18,8],[18,9],[19,9],[19,10],[20,10]]
+    },
+    {
+      "id": "east-outer-rubble",
+      "kind": "rubble-cluster",
+      "baseY": 0,
+      "verticalStatus": "provisional",
+      "supportTerrain": "east-lower-court",
+      "measurementComponentIds": ["east-precinct-envelope","east-outer-broken-range"],
+      "envelope": [25,7,28,9],
+      "cells": [[25,7],[26,7],[26,8],[27,8],[27,9],[28,9]]
+    },
+    {
+      "id": "east-north-rubble",
+      "kind": "rubble-cluster",
+      "baseY": 8,
+      "verticalStatus": "provisional",
+      "supportTerrain": "east-main-shelf",
+      "measurementComponentIds": ["east-precinct-envelope","east-north-ruin-group"],
+      "envelope": [22,-14,25,-12],
+      "cells": [[22,-12],[22,-13],[23,-13],[23,-14],[24,-14],[25,-14]]
+    }
+  ],
+  "keepOpenRegions": [
+    {
+      "id": "gate-central-passage",
+      "measurementComponentIds": ["gate-central-passage"],
+      "bounds": [-3,-8,3,0],
+      "reason": "The recessed seven-cell portal and processional axis must remain empty at ground level."
+    },
+    {
+      "id": "gate-hidden-passage-continuation",
+      "measurementComponentIds": ["gate-hidden-passage-continuation"],
+      "bounds": [-3,-18,3,-9],
+      "reason": "A conservative hidden continuation keeps the primary-source daylight path open behind the overhead-measured portal; its exact rear depth is candidate, not overhead-measured."
+    },
+    {
+      "id": "causeway-clear-processional-axis",
+      "measurementComponentIds": ["causeway-clear-processional-axis"],
+      "bounds": [-6,0,6,36],
+      "allowedStructureIds": ["causeway-north-deck-plinth","causeway-south-east-post","causeway-mid-rubble","south-processional-stair"],
+      "reason": "Only the three named deliberate source masses and the measured stair transition may touch the thirteen-cell clear deck; no pillar scatter."
+    }
+  ],
+  "treeExclusionRegions": [
+    { "id": "gate-tree-exclusion", "polygon": [[-13,-22],[14,-22],[14,1],[8,1],[8,5],[-8,5],[-8,1],[-13,1]] },
+    { "id": "west-inner-ranges-tree-exclusion", "polygon": [[-23,-6],[-13,-6],[-13,15],[-23,15]] },
+    { "id": "west-outer-range-tree-exclusion", "polygon": [[-30,-5],[-23,-5],[-23,9],[-30,9]] },
+    { "id": "west-north-west-rib-tree-exclusion", "polygon": [[-21,-13],[-18,-13],[-18,-4],[-21,-4]] },
+    { "id": "west-north-middle-rib-tree-exclusion", "polygon": [[-18,-12],[-15,-12],[-15,-4],[-18,-4]] },
+    { "id": "west-north-east-rib-tree-exclusion", "polygon": [[-16,-11],[-13,-11],[-13,-4],[-16,-4]] },
+    { "id": "east-precinct-tree-exclusion", "polygon": [[11,-17],[31,-17],[31,16],[11,16]] },
+    { "id": "causeway-tree-exclusion", "polygon": [[-11,-2],[11,-2],[11,44],[-11,44]] },
+    { "id": "south-approach-tree-exclusion", "polygon": [[-6,43],[6,43],[6,49],[-6,49]] }
+  ],
+  "surroundingTrees": [
+    [-15,-24],[-4,-25],[11,-25],[20,-23],[27,-18],[-14,-12],[-24,-9],[-35,-5],[-37,3],[-28,9],[38,-6],[34,8],[35,17],[-7,50],[1,55],[10,52],[18,49],[29,48],[35,56],[42,43]
+  ],
+  "measurementCoverage": {
+    "terrainRegionIds": {
+      "west-cliff-shelf": ["west-lower-cliff-apron","west-main-shelf"],
+      "gate-threshold-shelf": ["gate-threshold-shelf"],
+      "east-lower-court": ["east-lower-court"],
+      "east-upper-plateau": ["east-main-shelf"],
+      "south-landing": ["south-landing"],
+      "water-and-drop-intervention-envelope": ["west-water-channel","east-water-channel","under-causeway-water"],
+      "west-outer-shelf-continuation": ["west-outer-shelf-continuation"],
+      "east-middle-shelf-continuation": ["east-middle-shelf-continuation"],
+      "south-east-shoreline-continuation": ["south-east-shoreline-continuation"],
+      "far-east-shelf-continuation": ["far-east-shelf-continuation"]
+    },
+    "componentIds": {
+      "gate-ground-footprint": ["gate-connected-body-west","gate-connected-body-east"],
+      "gate-elevated-roof-projection": ["gate-elevated-roof"],
+      "gate-rear-spanning-mass": ["gate-connected-body-west","gate-connected-body-east"],
+      "gate-west-front-mass": ["gate-connected-body-west"],
+      "gate-east-front-mass": ["gate-connected-body-east"],
+      "gate-central-passage": ["gate-central-passage"],
+      "gate-hidden-passage-continuation": ["gate-hidden-passage-continuation"],
+      "gate-west-buttress-group": ["gate-west-attached-buttress"],
+      "gate-east-buttress-group": ["gate-east-attached-buttress"],
+      "causeway-deck": ["causeway-deck"],
+      "causeway-clear-processional-axis": ["causeway-clear-processional-axis","causeway-north-deck-plinth","causeway-south-east-post","causeway-mid-rubble"],
+      "causeway-west-parapet": ["causeway-west-parapet-north","causeway-west-parapet-middle","causeway-west-parapet-south"],
+      "causeway-east-parapet": ["causeway-east-parapet-north","causeway-east-parapet-middle","causeway-east-parapet-south"],
+      "causeway-west-support-envelope": ["causeway-west-side-supports"],
+      "causeway-east-support-envelope": ["causeway-east-side-supports"],
+      "causeway-south-abutment": ["causeway-south-abutment-west-drop","causeway-south-abutment-east-drop"],
+      "south-processional-stair": ["south-processional-stair"],
+      "west-precinct-envelope": ["west-inner-cliff-range","west-middle-parallel-range","west-outer-broken-range","west-north-rib-west","west-north-rib-middle","west-north-rib-east","west-court-survivor","west-threshold-survivor","west-threshold-rubble","west-middle-rubble","west-outer-rubble","west-north-rubble"],
+      "west-inner-cliff-range": ["west-inner-cliff-range"],
+      "west-middle-parallel-range": ["west-middle-parallel-range"],
+      "west-outer-broken-range": ["west-outer-broken-range"],
+      "west-north-rib-group": ["west-north-rib-west","west-north-rib-middle","west-north-rib-east","west-north-rubble"],
+      "east-precinct-envelope": ["east-threshold-west-rib","east-inner-west-rib","east-inner-middle-rib","east-inner-east-rib","east-outer-broken-range","east-north-broken-room","east-north-room-survivor","east-inner-survivor","east-outer-survivor","east-threshold-rubble","east-inner-rubble","east-outer-rubble","east-north-rubble","east-side-stair"],
+      "east-inner-rib-field": ["east-threshold-west-rib","east-inner-west-rib","east-inner-middle-rib","east-inner-east-rib","east-inner-survivor","east-threshold-rubble","east-inner-rubble"],
+      "east-outer-broken-range": ["east-outer-broken-range","east-outer-survivor","east-outer-rubble"],
+      "east-north-ruin-group": ["east-north-broken-room","east-north-room-survivor","east-north-rubble"],
+      "east-side-stair": ["east-side-stair"]
+    }
+  },
+  "acceptanceRules": {
+    "isolatedSurvivorMaximumFootprint": [2,2],
+    "thinWallMaximumWidth": 2,
+    "thickerMassesMustBeConnected": true,
+    "eachStairMustTouchBothNamedTerrains": true,
+    "significantGeometryMustAppearInThisPlan": true,
+    "generatorMayNotMoveOrAddStructures": true
+  }
+}

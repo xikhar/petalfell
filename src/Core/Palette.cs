@@ -50,6 +50,11 @@ public static class Palette
 	public static readonly Color WaterShoal = C(0xb9bcf2);
 	public static readonly Color WaterShallow = C(0x7076e2);
 	public static readonly Color WaterDeep = C(0x3a3ea6);
+	// Multi-height atlas water has no planar reflection pass to lift its body.
+	// The ordinary blue ramp plus the review sky rendered electric violet; this
+	// dustier, low-chroma periwinkle instead supplies the pale volume seen around
+	// Reference 1's bridge without changing the accepted single-plane legacy lake.
+	public static readonly Color WaterAtlasBody = C(0xa4a9df);
 	public static readonly Color WaterWarm = C(0xe3c4c9);
 	public static readonly Color WaterSheen = C(0xe8e2f5);
 	public static readonly Color WaterEdge = C(0x5c5378);
@@ -77,9 +82,6 @@ public static class Palette
 	// Supplying an already-linear value here would convert it twice and make this
 	// intended mid-grey ink render almost black.
 	public static readonly Color InkDark = new Color(0.30f, 0.28f, 0.33f);
-	// Dimmed. The pale ink was authored against a much flatter render; once the
-	// grade gained real contrast it stopped reading as "this surface turned" and
-	// started reading as a drawn white highlight sitting on top of the picture.
 	public static readonly Color InkLight = new Color(0.62f, 0.61f, 0.65f);
 	/// <summary>
 	/// Stroke width in framebuffer pixels. Kept here so the renderer and the
@@ -105,8 +107,8 @@ public static class Palette
 	public static readonly Vector3 GradeLift = new(0.002f, 0.000f, 0.010f);
 	public static readonly Vector3 GradeGamma = new(1.00f, 1.005f, 0.99f);
 	public static readonly Vector3 GradeGain = new(1.015f, 1.02f, 1.05f);
-	public const float GradeSaturation = 1.26f;
-	public const float GradeContrast = 1.16f;
+	public const float GradeSaturation = 1.17f;
+	public const float GradeContrast = 1.10f;
 	public const float GradeVignette = 0.06f;
 
 	/* ---------------- time of day ----------------
@@ -183,17 +185,17 @@ public static class Palette
 	public static readonly SkyState[] Day =
 	{
 		//              t     zenith    horizon   ground    sun       energy ambient   energy fog       shad night glow
-		new SkyState(0.00f, 0x232c5e, 0x3b4478, 0x272a4c, 0xc3d0ff, 0.34f, 0xaeb6e2, 0.40f, 0x3a3f6a, 0.46f, 1.00f, 0.40f, 0.62f),
-		new SkyState(0.21f, 0x33356a, 0x64507f, 0x36335a, 0xc7aae4, 0.38f, 0xb0a8dc, 0.42f, 0x54497a, 0.48f, 0.90f, 0.44f, 0.52f),
+		new SkyState(0.00f, 0x232c5e, 0x3b4478, 0x272a4c, 0xc3d0ff, 0.34f, 0xaeb6e2, 0.40f, 0x3a3f6a, 0.38f, 1.00f, 0.40f, 0.62f),
+		new SkyState(0.21f, 0x33356a, 0x64507f, 0x36335a, 0xc7aae4, 0.38f, 0xb0a8dc, 0.42f, 0x54497a, 0.40f, 0.90f, 0.44f, 0.52f),
 		// The sun on the horizon: the long, low, orange half hour.
-		new SkyState(0.27f, 0x6f74c0, 0xe8a290, 0x8b7196, 0xffd2b4, 0.60f, 0xbcb4e0, 0.38f, 0xd6b4b0, 0.66f, 0.42f, 0.70f, 0.26f),
-		new SkyState(0.33f, 0x9aa0e0, 0xf0cdc4, 0xc0aec4, 0xffe6d6, 0.92f, 0xd6d4f2, 0.40f, 0xe6cfda, 0.72f, 0.12f, 0.92f, 0.56f),
-		new SkyState(0.50f, 0xb9b4e8, 0xdcd6f4, 0xd2cbef, 0xfff0ee, 0.98f, 0xebeeff, 0.42f, 0xcdc6ef, 0.74f, 0.00f, 1.05f, 0.78f),
-		new SkyState(0.68f, 0xb0aae6, 0xe4d2e2, 0xcdc2ea, 0xffeee2, 0.94f, 0xe4e2f8, 0.42f, 0xd6c8ea, 0.74f, 0.02f, 1.00f, 0.68f),
+		new SkyState(0.27f, 0x6f74c0, 0xe8a290, 0x8b7196, 0xffd2b4, 0.60f, 0xbcb4e0, 0.38f, 0xd6b4b0, 0.52f, 0.42f, 0.70f, 0.26f),
+		new SkyState(0.33f, 0x9aa0e0, 0xf0cdc4, 0xc0aec4, 0xffe6d6, 0.92f, 0xd6d4f2, 0.40f, 0xe6cfda, 0.58f, 0.12f, 0.92f, 0.56f),
+		new SkyState(0.50f, 0xb9b4e8, 0xdcd6f4, 0xd2cbef, 0xfff0ee, 0.98f, 0xebeeff, 0.42f, 0xcdc6ef, 0.60f, 0.00f, 1.05f, 0.78f),
+		new SkyState(0.68f, 0xb0aae6, 0xe4d2e2, 0xcdc2ea, 0xffeee2, 0.94f, 0xe4e2f8, 0.42f, 0xd6c8ea, 0.60f, 0.02f, 1.00f, 0.68f),
 		// Dusk. Warmer and deeper than dawn, because the day has to end
 		// differently from how it began or the cycle reads as a loop.
-		new SkyState(0.76f, 0x6a63b4, 0xe8ab96, 0x8f6f92, 0xffc8a4, 0.56f, 0xb4aeda, 0.38f, 0xd8b2ae, 0.64f, 0.46f, 0.66f, 0.24f),
-		new SkyState(0.83f, 0x35326a, 0x6b4a7c, 0x38335c, 0xbb9edd, 0.38f, 0xaea6da, 0.42f, 0x584878, 0.48f, 0.92f, 0.44f, 0.52f),
+		new SkyState(0.76f, 0x6a63b4, 0xe8ab96, 0x8f6f92, 0xffc8a4, 0.56f, 0xb4aeda, 0.38f, 0xd8b2ae, 0.52f, 0.46f, 0.66f, 0.24f),
+		new SkyState(0.83f, 0x35326a, 0x6b4a7c, 0x38335c, 0xbb9edd, 0.38f, 0xaea6da, 0.42f, 0x584878, 0.40f, 0.92f, 0.44f, 0.52f),
 	};
 
 	/* ---------------- petals ---------------- */
@@ -328,6 +330,12 @@ public static class Palette
 	/// into one flat silhouette and stops reading as stacked cubes at all.
 	/// </summary>
 	public const float PatternLeaf = 7f;
+	/// <summary>
+	/// Snow keeps a broad, world-anchored tonal drift after the ordinary close
+	/// surface tooth has faded. Sharing PatternGrass made an alpine shelf become
+	/// one white card as soon as that generic detail disappeared at mid distance.
+	/// </summary>
+	public const float PatternSnow = 8f;
 
 	public struct BlockDef
 	{
@@ -401,7 +409,7 @@ public static class Palette
 		// Biome surfaces. Each province has to be recognisable from its ground
 		// alone — the plan's whole point in having provinces is that you can
 		// tell where you are by looking, before any tree or building appears.
-		Def(SNOW, 0xf4f2fa, 0xe9e6f3, 0xd6d2e6, lightEdge: true, pattern: PatternGrass);
+		Def(SNOW, 0xf4f2fa, 0xe9e6f3, 0xd6d2e6, lightEdge: true, pattern: PatternSnow);
 		Def(MOSS, 0xa6b87c, 0x9fb384, 0x8ba070, lightEdge: true, pattern: PatternGrass, fringe: 0x86a355);
 		Def(MUD, 0xa48a75, 0x99806c, 0x847060, pattern: PatternEarth);
 		Def(BLOSSOM_DRIFT, 0xf0dce2, 0xe9d2da, 0xd6bec7, lightEdge: true, pattern: PatternGrass);

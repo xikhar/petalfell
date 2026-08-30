@@ -19,14 +19,14 @@ public static class Reference10GroveCourt
 	public const string BuilderId = "reference-10-grove-court-v1";
 
 	public static ReferenceSiteStatistics Build(AtlasSectorWindow window,
-		ReferenceSiteDefinition site)
+		ReferenceSiteDefinition site, int verticalOffset = 0)
 	{
 		if (window == null) throw new ArgumentNullException(nameof(window));
 		if (site == null) throw new ArgumentNullException(nameof(site));
 		if (site.BuilderId != BuilderId)
 			throw new InvalidOperationException($"Reference 10 cannot build '{site.BuilderId}'.");
 		ReferenceSiteGroundPlan plan = ReferenceSiteGroundPlan.Load(site);
-		var build = new Blueprint(window, site, plan);
+		var build = new Blueprint(window, site, plan, verticalOffset);
 		build.Write();
 		return new ReferenceSiteStatistics(build.SurfaceCells, build.Voxels);
 	}
@@ -40,6 +40,7 @@ public static class Reference10GroveCourt
 		private readonly byte[] _naturalCap;
 		private readonly byte[] _naturalSub;
 		private readonly byte[] _naturalDeep;
+		private readonly int _verticalOffset;
 		private readonly HashSet<(int X, int Z)> _pavingCells = new();
 		private string _activeStructure = "";
 		private HashSet<(int X, int Z)> _activeProjection;
@@ -49,7 +50,7 @@ public static class Reference10GroveCourt
 		public int Voxels { get; private set; }
 
 		public Blueprint(AtlasSectorWindow window, ReferenceSiteDefinition site,
-			ReferenceSiteGroundPlan plan)
+			ReferenceSiteGroundPlan plan, int verticalOffset)
 		{
 			_site = site;
 			_plan = plan;
@@ -58,6 +59,7 @@ public static class Reference10GroveCourt
 			_naturalCap = (byte[])_grid.Cap.Clone();
 			_naturalSub = (byte[])_grid.Sub.Clone();
 			_naturalDeep = (byte[])_grid.Deep.Clone();
+			_verticalOffset = verticalOffset;
 		}
 
 		public void Write()
@@ -722,6 +724,7 @@ public static class Reference10GroveCourt
 		private void RepaintSurface(int localX, int localZ, int surfaceY, byte cap)
 		{
 			if (!_pavingCells.Contains((localX, localZ))) return;
+			surfaceY += _verticalOffset;
 			(int x, int z) = LocalCell(localX, localZ);
 			if (!_grid.InBounds(x, surfaceY - 1, z)) return;
 			int index = z * _data.Width + x;
@@ -741,6 +744,7 @@ public static class Reference10GroveCourt
 
 		private void TerrainSurface(int localX, int localZ, int surfaceY, byte cap)
 		{
+			surfaceY += _verticalOffset;
 			(int x, int z) = LocalCell(localX, localZ);
 			if (!_grid.InBounds(x, surfaceY - 1, z)) return;
 			int index = z * _data.Width + x;
@@ -774,7 +778,9 @@ public static class Reference10GroveCourt
 			if (index < 0 || index >= _plan.SurroundingTrees.Count)
 				throw new InvalidOperationException($"Ground plan has no tree anchor {index}.");
 			List<int> point = _plan.SurroundingTrees[index];
-			int x = point[0], z = point[1], y = Ground(x, z);
+			// Put translates source-plan Y into this runtime window. Convert the
+			// already-materialised ground back first so the tree is translated once.
+			int x = point[0], z = point[1], y = Ground(x, z) - _verticalOffset;
 			Fill(x, x, y, y + trunkHeight, z, z, Palette.TRUNK_ROSE);
 			foreach (TreeBox box in crown)
 				Fill(x + box.X0, x + box.X1, y + box.Y0, y + box.Y1,
@@ -793,6 +799,7 @@ public static class Reference10GroveCourt
 
 		private void Put(int localX, int y, int localZ, byte material)
 		{
+			y += _verticalOffset;
 			if (!string.IsNullOrEmpty(_activeStructure))
 			{
 				if (_activeProjection == null || !_activeProjection.Contains((localX, localZ)))

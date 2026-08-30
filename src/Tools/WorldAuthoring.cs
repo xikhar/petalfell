@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Godot;
+using Petalfell.UI;
 using Petalfell.World;
 
 namespace Petalfell.Tools;
@@ -23,10 +24,18 @@ public static class WorldAuthoring
 		string preview = null;
 		string atlasPreview = null;
 		string atlasTopologyPreview = null;
+		string atlasMapPreview = null;
 		string domainId = null;
 		string atlasDomainId = null;
 		string compileSector = null;
 		string verifySector = null;
+		string verifyWilderness = null;
+		string verifyAtlasHandoff = null;
+		bool verifyAtlasWalkingHandoff = false;
+		bool compileAtlas = false;
+		bool verifyAtlas = false;
+		bool auditAtlasHydrology = false;
+		string atlasOutput = "res://content/chapter_01/derived";
 		string sampleAtlas = null;
 		string sectorOutput = null;
 		string sectorPreview = null;
@@ -42,6 +51,8 @@ public static class WorldAuthoring
 			else if (args[i].StartsWith("--atlas-preview=")) atlasPreview = args[i][16..];
 			else if (args[i] == "--atlas-topology-preview" && i + 1 < args.Length) atlasTopologyPreview = args[++i];
 			else if (args[i].StartsWith("--atlas-topology-preview=")) atlasTopologyPreview = args[i][25..];
+			else if (args[i] == "--atlas-map-preview" && i + 1 < args.Length) atlasMapPreview = args[++i];
+			else if (args[i].StartsWith("--atlas-map-preview=")) atlasMapPreview = args[i][20..];
 			else if (args[i] == "--world-domain" && i + 1 < args.Length) domainId = args[++i];
 			else if (args[i].StartsWith("--world-domain=")) domainId = args[i][15..];
 			else if (args[i] == "--atlas-domain" && i + 1 < args.Length) atlasDomainId = args[++i];
@@ -50,6 +61,16 @@ public static class WorldAuthoring
 			else if (args[i].StartsWith("--compile-sector=")) compileSector = args[i][17..];
 			else if (args[i] == "--verify-sector" && i + 1 < args.Length) verifySector = args[++i];
 			else if (args[i].StartsWith("--verify-sector=")) verifySector = args[i][16..];
+			else if (args[i] == "--verify-wilderness" && i + 1 < args.Length) verifyWilderness = args[++i];
+			else if (args[i].StartsWith("--verify-wilderness=")) verifyWilderness = args[i][20..];
+			else if (args[i] == "--verify-atlas-handoff" && i + 1 < args.Length) verifyAtlasHandoff = args[++i];
+			else if (args[i].StartsWith("--verify-atlas-handoff=")) verifyAtlasHandoff = args[i][23..];
+			else if (args[i] == "--verify-atlas-walking-handoff") verifyAtlasWalkingHandoff = true;
+			else if (args[i] == "--compile-atlas") compileAtlas = true;
+			else if (args[i] == "--verify-atlas") verifyAtlas = true;
+			else if (args[i] == "--audit-atlas-hydrology") auditAtlasHydrology = true;
+			else if (args[i] == "--atlas-output" && i + 1 < args.Length) atlasOutput = args[++i];
+			else if (args[i].StartsWith("--atlas-output=")) atlasOutput = args[i][15..];
 			else if (args[i] == "--sample-atlas" && i + 1 < args.Length) sampleAtlas = args[++i];
 			else if (args[i].StartsWith("--sample-atlas=")) sampleAtlas = args[i][15..];
 			else if (args[i] == "--sector-output" && i + 1 < args.Length) sectorOutput = args[++i];
@@ -63,7 +84,11 @@ public static class WorldAuthoring
 		}
 
 		if (!audit && preview == null && atlasPreview == null && atlasTopologyPreview == null &&
-		    compileSector == null && verifySector == null && sampleAtlas == null) return false;
+		    atlasMapPreview == null &&
+		    compileSector == null && verifySector == null && verifyWilderness == null &&
+		    verifyAtlasHandoff == null && !verifyAtlasWalkingHandoff &&
+		    !compileAtlas && !verifyAtlas && !auditAtlasHydrology &&
+		    sampleAtlas == null) return false;
 		int exit = 0;
 		try
 		{
@@ -96,9 +121,47 @@ public static class WorldAuthoring
 					WriteAtlasTopologySvg(map.CanonicalAtlas, atlasTopologyPreview, atlasDomainId);
 					GD.Print($"[atlas-topology-preview] {ProjectSettings.GlobalizePath(atlasTopologyPreview)}");
 				}
-				if (atlasReport.Valid && (compileSector != null || verifySector != null || sampleAtlas != null))
+				if (atlasReport.Valid && atlasMapPreview != null)
+				{
+					var mapCompiler = new AtlasSectorCompiler(map.CanonicalAtlas,
+						map.DefaultSeed, map.CanonicalAtlasPath);
+					Image image = AtlasWorldMap.RenderBackground(map.CanonicalAtlas,
+						atlasOutput, mapCompiler.SourceFingerprint, out string source);
+					string absolute = ProjectSettings.GlobalizePath(atlasMapPreview);
+					string directory = Path.GetDirectoryName(absolute);
+					if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+					Error error = image.SavePng(absolute);
+					if (error != Error.Ok)
+						throw new IOException($"could not write atlas map preview '{atlasMapPreview}': {error}");
+					GD.Print($"[atlas-map-preview] {absolute} from {source}");
+				}
+				if (atlasReport.Valid && verifyAtlasWalkingHandoff)
+				{
+					AtlasWalkingHandoffVerification result =
+						AtlasWalkingHandoffAuthoring.Verify(map.CanonicalAtlas,
+							AtlasRuntimeHandoff.DefaultWalkingTriggerMargin,
+							AtlasRuntimeHandoff.DefaultWalkingRearmMargin,
+							AtlasRuntimeHandoff.DefaultWalkingCooldownFrames);
+					GD.Print($"[atlas-walk-handoff-verify] " +
+					         $"{result.CardinalTransitions} cardinal/" +
+					         $"{result.CornerTransitions} corner/" +
+					         $"{result.PartialOuterCorners} partial-outer transitions; " +
+					         $"{result.OuterRefusals} outer refusal; " +
+					         $"{result.SuppressedRepeats} suppressed repeats; " +
+					         $"{result.ReturnTransitions} rearmed return");
+				}
+				if (atlasReport.Valid && (compileSector != null || verifySector != null ||
+				    verifyWilderness != null || verifyAtlasHandoff != null ||
+				    compileAtlas || verifyAtlas || auditAtlasHydrology || sampleAtlas != null))
 				{
 					var compiler = new AtlasSectorCompiler(map.CanonicalAtlas, map.DefaultSeed, map.CanonicalAtlasPath);
+					if (compileAtlas)
+						AtlasBatchAuthoring.Compile(map.CanonicalAtlas, compiler, atlasOutput, sectorApron);
+					if (verifyAtlas)
+						AtlasBatchAuthoring.Verify(map.CanonicalAtlas, compiler, atlasOutput, sectorApron);
+					if (auditAtlasHydrology)
+						AtlasBatchAuthoring.AuditHydrology(
+							map.CanonicalAtlas, compiler, atlasOutput, sectorApron);
 					if (sampleAtlas != null)
 					{
 						(int x, int z) = ParsePoint(sampleAtlas);
@@ -113,7 +176,9 @@ public static class WorldAuthoring
 						GD.Print($"[atlas-sample] {x},{z} sector {sx},{sz} height {data.Height[index]} " +
 						         $"water-surface {data.WaterSurface[index]} land {data.Land[index] != 0} " +
 						         $"hydrology {data.Hydrology[index]} water-value {data.Water[index]} " +
-						         $"profile {primary} secondary {secondary} weight {data.ProfileBlend[index] / 255f:0.000}");
+						         $"surface {(AtlasTerrainSurface)data.Surface[index]} slope {data.Slope[index]} " +
+						         $"wetness {data.Wetness[index]} profile {primary} secondary {secondary} " +
+						         $"weight {data.ProfileBlend[index] / 255f:0.000}");
 					}
 					if (compileSector != null)
 					{
@@ -130,6 +195,12 @@ public static class WorldAuthoring
 						         $"water {stats.WaterCells * 100f / (data.CoreSize * data.CoreSize):0.0}% " +
 						         $"floodplain {stats.FloodplainCells * 100f / (data.CoreSize * data.CoreSize):0.0}% " +
 						         $"bank {stats.BankCells * 100f / (data.CoreSize * data.CoreSize):0.0}% " +
+						         $"cliff {stats.CliffCells * 100f / (data.CoreSize * data.CoreSize):0.0}% " +
+						         $"shore {stats.ShoreCells * 100f / (data.CoreSize * data.CoreSize):0.0}% " +
+						         $"water-steps {stats.WaterStepEdges} severe {stats.SevereWaterStepEdges} " +
+						         $"max-step {stats.MaxWaterStep}@{stats.MaxWaterStepX},{stats.MaxWaterStepZ} " +
+						         $"submerged-dry {stats.SubmergedDryBoundaryEdges} " +
+						         $"max-depth {stats.MaxSubmergedDryDepth}@{stats.MaxSubmergedDryX},{stats.MaxSubmergedDryZ} " +
 						         $"region-blend {stats.BlendedCells * 100f / (data.CoreSize * data.CoreSize):0.0}% " +
 						         $"land-height {stats.MinHeight}..{stats.MaxHeight} " +
 						         $"water-surface {stats.MinWaterSurface}..{stats.MaxWaterSurface} hash {artifactHash}");
@@ -143,9 +214,111 @@ public static class WorldAuthoring
 						GD.Print($"[sector-verify] {sx},{sz} repeat hash {result.ContentHash} " +
 						         $"east overlap {result.EastOverlapCells} cells south overlap {result.SouthOverlapCells} cells");
 					}
+					if (verifyWilderness != null)
+					{
+						(int sx, int sz) = ParseSector(verifyWilderness);
+						AtlasWildernessVerification result = AtlasWildernessAuthoring.Verify(
+							map.CanonicalAtlas, compiler, map.DefaultSeed, sx, sz, sectorApron);
+						AtlasWildernessDressingStatistics stats = result.Statistics;
+						GD.Print($"[wilderness-verify] {sx},{sz} manifest {stats.ManifestHash:x16} " +
+						         $"{stats.Trees} trees/{stats.Boulders} boulders from {stats.Candidates} candidates; " +
+						         $"repeat {result.RepeatColumns} columns/{result.RepeatVoxels} voxels; " +
+						         $"east {result.EastColumns} columns/{result.EastVoxels} voxels; " +
+						         $"south {result.SouthColumns} columns/{result.SouthVoxels} voxels");
+					}
+					if (verifyAtlasHandoff != null)
+					{
+						(int x, int z) = ParsePoint(verifyAtlasHandoff);
+						string output = atlasOutput.TrimEnd('/');
+						AtlasMosaicBounds requestedBounds = AtlasRuntimeHandoff.WindowAround(
+							map.CanonicalAtlas, x, z, sectorSpan: 2);
+						string resolution = "requested address";
+						if (!TryPrepare(x, z, out AtlasPreparedWindow prepared,
+						    out AtlasRuntimeLanding landing, out string rejection))
+						{
+							string originalRejection = rejection ??
+								"no traversable surface in requested mosaic";
+							if (AtlasRuntimeHandoff.TryNearestAuthoredDryHint(map.CanonicalAtlas,
+							    x, z, out BlockPoint dryHint, out int pixelRadius) &&
+							    TryPrepare(dryHint.X, dryHint.Z, out prepared, out landing,
+								    out string dryRejection))
+							{
+								resolution = $"registered dry hint {dryHint.X},{dryHint.Z} " +
+								             $"at pixel radius {pixelRadius}";
+								rejection = originalRejection;
+								if (dryRejection != null)
+									resolution += $", hint rejected {dryRejection}/radius " +
+									              $"{landing.SearchRadius}";
+							}
+							else if (TryBloomRecovery(out prepared, out landing,
+							         out string bloomRejection, out BlockPoint bloomSpawn))
+							{
+								resolution = $"authored Bloom recovery {bloomSpawn.X}," +
+								             $"{bloomSpawn.Z}";
+								rejection = originalRejection;
+								if (bloomRejection != null)
+									resolution += $", spawn rejected {bloomRejection}/radius " +
+									              $"{landing.SearchRadius}";
+							}
+							else throw new InvalidOperationException(
+								$"no deterministic traversable landing for {x},{z}; " +
+								$"requested mosaic {requestedBounds} rejected {originalRejection}");
+						}
+						GD.Print($"[atlas-handoff-verify] request {x},{z} requested-sectors " +
+						         $"{requestedBounds}; {resolution}; resolved-sectors " +
+						         $"{prepared.Bounds} => " +
+						         $"{landing.GlobalX},{landing.GlobalZ},{landing.SurfaceY} " +
+						         $"exact {landing.ExactCell} radius {landing.SearchRadius} " +
+						         $"rejection {rejection ?? "none"}; wilderness " +
+						         $"{prepared.Wilderness.Trees} trees/" +
+						         $"{prepared.Wilderness.Boulders} boulders " +
+						         $"manifest {prepared.Wilderness.ManifestHash:x16}; sites " +
+						         $"{string.Join(',', prepared.SiteBuilds.Select(site => site.SiteId))}");
+
+						bool TryPrepare(int centreX, int centreZ,
+							out AtlasPreparedWindow result, out AtlasRuntimeLanding resultLanding,
+							out string resultRejection)
+						{
+							result = AtlasRuntimeHandoff.PrepareWindow(map.CanonicalAtlas,
+								map.DefaultSeed, centreX, centreZ, sectorSpan: 2,
+								LoadHandoffSector,
+								message => GD.PrintErr($"[atlas-handoff-verify] {message}"));
+							return AtlasRuntimeHandoff.TryResolveLanding(result.Window,
+								centreX, centreZ, out resultLanding, out resultRejection);
+						}
+
+						bool TryBloomRecovery(out AtlasPreparedWindow result,
+							out AtlasRuntimeLanding resultLanding, out string resultRejection,
+							out BlockPoint spawn)
+						{
+							if (AtlasRuntimeHandoff.TryGetAuthoredRecoverySpawn(map.CanonicalAtlas,
+							    out spawn) && TryPrepare(spawn.X, spawn.Z, out result,
+							    out resultLanding, out resultRejection)) return true;
+							result = null;
+							resultLanding = default;
+							resultRejection = null;
+							return false;
+						}
+
+						AtlasSectorData LoadHandoffSector(int sx, int sz)
+						{
+							string artifact = $"{output}/sector-{sx}-{sz}.pfs";
+							try { return compiler.ReadArtifact(artifact); }
+							catch (Exception ex) when (ex is FileNotFoundException or
+							       InvalidDataException or EndOfStreamException)
+							{
+								GD.Print($"[atlas-handoff-verify] compiling {sx},{sz}: {ex.Message}");
+								return compiler.Compile(sx, sz, AtlasSectorCompiler.DefaultApron);
+							}
+						}
+					}
 				}
 			}
-			else if (atlasPreview != null || atlasTopologyPreview != null)
+			else if (atlasPreview != null || atlasTopologyPreview != null || atlasMapPreview != null ||
+			         compileSector != null || verifySector != null || verifyWilderness != null ||
+			         verifyAtlasHandoff != null || verifyAtlasWalkingHandoff ||
+			         compileAtlas || verifyAtlas || auditAtlasHydrology ||
+			         sampleAtlas != null)
 				throw new InvalidOperationException($"Map '{mapPath}' has no canonicalAtlasPath.");
 			if (map.CanonicalWorld == null)
 			{

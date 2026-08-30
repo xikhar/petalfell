@@ -1,5 +1,25 @@
 {
   "version": 1,
+  "vegetationSets": [
+    { "id": "alpine-sparse", "candidateSpacing": 20, "density": 0.16, "groveWavelength": 320, "scaleMin": 0.16, "scaleMax": 0.46, "maxSlope": 1, "minWetness": 0, "maxWetness": 180, "canopyPalette": ["leaf-mint", "leaf-lilac"] },
+    { "id": "highland-thin", "candidateSpacing": 18, "density": 0.24, "groveWavelength": 288, "scaleMin": 0.18, "scaleMax": 0.58, "maxSlope": 2, "minWetness": 0, "maxWetness": 200, "canopyPalette": ["leaf-lilac", "leaf-mint"] },
+    { "id": "scarp-sparse", "candidateSpacing": 22, "density": 0.10, "groveWavelength": 352, "scaleMin": 0.16, "scaleMax": 0.42, "maxSlope": 1, "minWetness": 0, "maxWetness": 160, "canopyPalette": ["leaf-cream", "leaf-lilac"] },
+    { "id": "meadow-river-mix", "candidateSpacing": 16, "density": 0.44, "groveWavelength": 256, "scaleMin": 0.24, "scaleMax": 0.86, "maxSlope": 2, "minWetness": 0, "maxWetness": 240, "canopyPalette": ["leaf-cream", "leaf-blush", "leaf-lilac"] },
+    { "id": "temperate-canopy", "candidateSpacing": 15, "density": 0.68, "groveWavelength": 240, "scaleMin": 0.46, "scaleMax": 1.00, "maxSlope": 2, "minWetness": 20, "maxWetness": 255, "canopyPalette": ["leaf-lilac", "leaf-mint", "leaf-cream"] },
+    { "id": "sakura-orchard", "candidateSpacing": 15, "density": 0.78, "groveWavelength": 256, "scaleMin": 0.42, "scaleMax": 1.00, "maxSlope": 2, "minWetness": 0, "maxWetness": 230, "canopyPalette": ["leaf-pink", "leaf-blush", "leaf-rose"] },
+    { "id": "fen-reed-alder", "candidateSpacing": 17, "density": 0.42, "groveWavelength": 224, "scaleMin": 0.28, "scaleMax": 0.72, "maxSlope": 1, "minWetness": 100, "maxWetness": 255, "canopyPalette": ["leaf-mint", "leaf-cream"] },
+    { "id": "shallows-sparse-grove", "candidateSpacing": 18, "density": 0.28, "groveWavelength": 288, "scaleMin": 0.22, "scaleMax": 0.76, "maxSlope": 1, "minWetness": 0, "maxWetness": 230, "canopyPalette": ["leaf-cream", "leaf-blush"] }
+  ],
+  "boulderSets": [
+    { "id": "alpine-frost-rock", "candidateSpacing": 22, "density": 0.34, "clusterWavelength": 352, "radiusMin": 1, "radiusMax": 2, "heightMin": 1, "heightMax": 3, "maxSlope": 5, "minWetness": 0, "maxWetness": 210, "stonePalette": ["stone", "stone-pale"] },
+    { "id": "highland-scree-rock", "candidateSpacing": 19, "density": 0.52, "clusterWavelength": 304, "radiusMin": 1, "radiusMax": 3, "heightMin": 1, "heightMax": 4, "maxSlope": 8, "minWetness": 0, "maxWetness": 220, "stonePalette": ["scree", "stone-pale", "stone"] },
+    { "id": "scarp-talus", "candidateSpacing": 18, "density": 0.58, "clusterWavelength": 288, "radiusMin": 1, "radiusMax": 3, "heightMin": 1, "heightMax": 4, "maxSlope": 10, "minWetness": 0, "maxWetness": 180, "stonePalette": ["stone-pale", "scree", "stone-warm"] },
+    { "id": "river-rounded-rock", "candidateSpacing": 24, "density": 0.26, "clusterWavelength": 384, "radiusMin": 1, "radiusMax": 2, "heightMin": 1, "heightMax": 2, "maxSlope": 3, "minWetness": 40, "maxWetness": 245, "stonePalette": ["stone-warm", "stone-pale"] },
+    { "id": "woodland-moss-rock", "candidateSpacing": 26, "density": 0.18, "clusterWavelength": 416, "radiusMin": 1, "radiusMax": 2, "heightMin": 1, "heightMax": 3, "maxSlope": 4, "minWetness": 40, "maxWetness": 255, "stonePalette": ["moss-stone", "stone-warm"] },
+    { "id": "bloom-pale-rock", "candidateSpacing": 28, "density": 0.12, "clusterWavelength": 448, "radiusMin": 1, "radiusMax": 2, "heightMin": 1, "heightMax": 2, "maxSlope": 3, "minWetness": 0, "maxWetness": 220, "stonePalette": ["stone-pale", "stone-warm"] },
+    { "id": "fen-low-stone", "candidateSpacing": 28, "density": 0.12, "clusterWavelength": 448, "radiusMin": 1, "radiusMax": 2, "heightMin": 1, "heightMax": 2, "maxSlope": 2, "minWetness": 120, "maxWetness": 250, "stonePalette": ["moss-stone", "stone"] },
+    { "id": "shallows-weathered-rock", "candidateSpacing": 22, "density": 0.30, "clusterWavelength": 352, "radiusMin": 1, "radiusMax": 2, "heightMin": 1, "heightMax": 3, "maxSlope": 4, "minWetness": 0, "maxWetness": 235, "stonePalette": ["stone-pale", "stone-warm"] }
+  ],
   "profiles": [
     {
       "id": "cold-shelf",
@@ -7,7 +27,9 @@
       "runtimeBiomes": ["SnowyHills", "Highland"],
       "terraceStep": 2,
       "erosionResponse": "wind-scoured",
-      "hydrology": { "floodplainStart": 0.70, "bankStart": 0.84, "floodplainRise": 6, "bankRise": 3, "surfaceDrop": 2, "waterDepth": 3 },
+      "relief": { "cellSize": 6, "cliffStep": 4, "slopeStart": 0.22, "slopeFull": 0.72, "ridgeStart": 0.58, "ridgeStrength": 16, "ridgeAngleDegrees": 4, "ridgeWavelength": 768, "ledgeWavelength": 144, "ledgeThreshold": 0.42, "ledgeHeight": 2, "shoreWidth": 6 },
+      "selection": { "bias": 0.20, "altitudeWeight": 1.35, "moistureWeight": -0.35, "slopeWeight": -0.15, "patchWeight": 0.30, "patchWavelength": 384 },
+      "hydrology": { "floodplainStart": 0.70, "bankStart": 0.84, "floodplainRise": 6, "bankRise": 3, "surfaceDrop": 2, "waterDepth": 3, "preserveCutRise": 12 },
       "noiseBands": [
         { "wavelength": 1536, "amplitude": 18 },
         { "wavelength": 384, "amplitude": 6 },
@@ -21,6 +43,7 @@
         "underwater": "stone-cold-wet"
       },
       "vegetationSetId": "alpine-sparse",
+      "boulderSetId": "alpine-frost-rock",
       "groundDetailSetId": "snow-windtrace",
       "atmosphereProfileId": "cold-clear",
       "shaderProfileId": "snow-highkey",
@@ -33,7 +56,9 @@
       "runtimeBiomes": ["Highland", "Plains"],
       "terraceStep": 3,
       "erosionResponse": "scree-and-fracture",
-      "hydrology": { "floodplainStart": 0.70, "bankStart": 0.84, "floodplainRise": 5, "bankRise": 2, "surfaceDrop": 2, "waterDepth": 4 },
+      "relief": { "cellSize": 6, "cliffStep": 6, "slopeStart": 0.18, "slopeFull": 0.62, "ridgeStart": 0.48, "ridgeStrength": 20, "ridgeAngleDegrees": -24, "ridgeWavelength": 640, "ledgeWavelength": 112, "ledgeThreshold": 0.24, "ledgeHeight": 3, "shoreWidth": 5 },
+      "selection": { "bias": -0.05, "altitudeWeight": 1.10, "moistureWeight": -0.60, "slopeWeight": 1.25, "patchWeight": 0.40, "patchWavelength": 320 },
+      "hydrology": { "floodplainStart": 0.70, "bankStart": 0.84, "floodplainRise": 5, "bankRise": 2, "surfaceDrop": 2, "waterDepth": 4, "preserveCutRise": 10 },
       "noiseBands": [
         { "wavelength": 1280, "amplitude": 16 },
         { "wavelength": 320, "amplitude": 7 },
@@ -47,6 +72,7 @@
         "underwater": "stone-pale-wet"
       },
       "vegetationSetId": "highland-thin",
+      "boulderSetId": "highland-scree-rock",
       "groundDetailSetId": "scree-and-heather",
       "atmosphereProfileId": "highland-distance",
       "shaderProfileId": "stone-dry-highkey",
@@ -59,7 +85,9 @@
       "runtimeBiomes": ["Highland"],
       "terraceStep": 4,
       "erosionResponse": "cut-face-and-talus",
-      "hydrology": { "floodplainStart": 0.76, "bankStart": 0.88, "floodplainRise": 4, "bankRise": 2, "surfaceDrop": 3, "waterDepth": 4 },
+      "relief": { "cellSize": 8, "cliffStep": 8, "slopeStart": 0.14, "slopeFull": 0.52, "ridgeStart": 0.44, "ridgeStrength": 24, "ridgeAngleDegrees": 18, "ridgeWavelength": 896, "ledgeWavelength": 160, "ledgeThreshold": 0.16, "ledgeHeight": 4, "shoreWidth": 4 },
+      "selection": { "bias": 0.00, "altitudeWeight": 0.75, "moistureWeight": -1.20, "slopeWeight": 1.60, "patchWeight": 0.28, "patchWavelength": 448 },
+      "hydrology": { "floodplainStart": 0.76, "bankStart": 0.88, "floodplainRise": 4, "bankRise": 2, "surfaceDrop": 3, "waterDepth": 4, "preserveCutRise": 8 },
       "noiseBands": [
         { "wavelength": 2048, "amplitude": 20 },
         { "wavelength": 512, "amplitude": 8 },
@@ -73,6 +101,7 @@
         "underwater": "stone-deep"
       },
       "vegetationSetId": "scarp-sparse",
+      "boulderSetId": "scarp-talus",
       "groundDetailSetId": "talus-and-blanks",
       "atmosphereProfileId": "dry-long-view",
       "shaderProfileId": "stone-dry-highkey",
@@ -85,7 +114,9 @@
       "runtimeBiomes": ["Meadow", "Forest", "Wetland"],
       "terraceStep": 2,
       "erosionResponse": "river-cut",
-      "hydrology": { "floodplainStart": 0.56, "bankStart": 0.76, "floodplainRise": 4, "bankRise": 2, "surfaceDrop": 1, "waterDepth": 4 },
+      "relief": { "cellSize": 6, "cliffStep": 4, "slopeStart": 0.28, "slopeFull": 0.82, "ridgeStart": 0.70, "ridgeStrength": 6, "ridgeAngleDegrees": 38, "ridgeWavelength": 512, "ledgeWavelength": 128, "ledgeThreshold": 0.50, "ledgeHeight": 2, "shoreWidth": 14 },
+      "selection": { "bias": 0.15, "altitudeWeight": -0.35, "moistureWeight": 1.45, "slopeWeight": -0.55, "patchWeight": 0.35, "patchWavelength": 288 },
+      "hydrology": { "floodplainStart": 0.56, "bankStart": 0.76, "floodplainRise": 4, "bankRise": 2, "surfaceDrop": 1, "waterDepth": 3, "preserveCutRise": 12 },
       "noiseBands": [
         { "wavelength": 1536, "amplitude": 10 },
         { "wavelength": 384, "amplitude": 4 },
@@ -99,6 +130,7 @@
         "underwater": "river-silt"
       },
       "vegetationSetId": "meadow-river-mix",
+      "boulderSetId": "river-rounded-rock",
       "groundDetailSetId": "grass-flower-reed",
       "atmosphereProfileId": "temperate-depth",
       "shaderProfileId": "meadow-highkey",
@@ -111,7 +143,9 @@
       "runtimeBiomes": ["Forest", "Meadow"],
       "terraceStep": 2,
       "erosionResponse": "root-held",
-      "hydrology": { "floodplainStart": 0.62, "bankStart": 0.80, "floodplainRise": 4, "bankRise": 2, "surfaceDrop": 1, "waterDepth": 3 },
+      "relief": { "cellSize": 6, "cliffStep": 4, "slopeStart": 0.30, "slopeFull": 0.90, "ridgeStart": 0.74, "ridgeStrength": 4, "ridgeAngleDegrees": -12, "ridgeWavelength": 448, "ledgeWavelength": 120, "ledgeThreshold": 0.56, "ledgeHeight": 2, "shoreWidth": 10 },
+      "selection": { "bias": 0.00, "altitudeWeight": -0.10, "moistureWeight": 0.85, "slopeWeight": -0.65, "patchWeight": 0.80, "patchWavelength": 224 },
+      "hydrology": { "floodplainStart": 0.62, "bankStart": 0.80, "floodplainRise": 4, "bankRise": 2, "surfaceDrop": 1, "waterDepth": 3, "preserveCutRise": 12 },
       "noiseBands": [
         { "wavelength": 1024, "amplitude": 9 },
         { "wavelength": 256, "amplitude": 4 },
@@ -125,6 +159,7 @@
         "underwater": "forest-silt"
       },
       "vegetationSetId": "temperate-canopy",
+      "boulderSetId": "woodland-moss-rock",
       "groundDetailSetId": "fern-moss-flower",
       "atmosphereProfileId": "woodland-soft",
       "shaderProfileId": "forest-highkey",
@@ -137,7 +172,9 @@
       "runtimeBiomes": ["Sakura", "Meadow"],
       "terraceStep": 2,
       "erosionResponse": "cultivated-terrace",
-      "hydrology": { "floodplainStart": 0.62, "bankStart": 0.80, "floodplainRise": 4, "bankRise": 2, "surfaceDrop": 1, "waterDepth": 3 },
+      "relief": { "cellSize": 6, "cliffStep": 4, "slopeStart": 0.32, "slopeFull": 0.92, "ridgeStart": 0.76, "ridgeStrength": 3, "ridgeAngleDegrees": 16, "ridgeWavelength": 512, "ledgeWavelength": 144, "ledgeThreshold": 0.60, "ledgeHeight": 2, "shoreWidth": 10 },
+      "selection": { "bias": 0.25, "altitudeWeight": -0.30, "moistureWeight": 0.25, "slopeWeight": -0.85, "patchWeight": 0.55, "patchWavelength": 256 },
+      "hydrology": { "floodplainStart": 0.62, "bankStart": 0.80, "floodplainRise": 4, "bankRise": 2, "surfaceDrop": 1, "waterDepth": 3, "preserveCutRise": 12 },
       "noiseBands": [
         { "wavelength": 1280, "amplitude": 8 },
         { "wavelength": 320, "amplitude": 3 },
@@ -151,6 +188,7 @@
         "underwater": "clear-silt"
       },
       "vegetationSetId": "sakura-orchard",
+      "boulderSetId": "bloom-pale-rock",
       "groundDetailSetId": "petal-grass-flower",
       "atmosphereProfileId": "blossom-haze",
       "shaderProfileId": "sakura-highkey",
@@ -163,7 +201,9 @@
       "runtimeBiomes": ["Wetland", "Forest"],
       "terraceStep": 1,
       "erosionResponse": "saturated-and-buried",
-      "hydrology": { "floodplainStart": 0.48, "bankStart": 0.68, "floodplainRise": 3, "bankRise": 1, "surfaceDrop": 1, "waterDepth": 2 },
+      "relief": { "cellSize": 4, "cliffStep": 2, "slopeStart": 0.38, "slopeFull": 1.00, "ridgeStart": 0.82, "ridgeStrength": 1, "ridgeAngleDegrees": 0, "ridgeWavelength": 384, "ledgeWavelength": 96, "ledgeThreshold": 0.72, "ledgeHeight": 1, "shoreWidth": 24 },
+      "selection": { "bias": 0.20, "altitudeWeight": -1.10, "moistureWeight": 1.80, "slopeWeight": -1.25, "patchWeight": 0.40, "patchWavelength": 192 },
+      "hydrology": { "floodplainStart": 0.48, "bankStart": 0.68, "floodplainRise": 3, "bankRise": 1, "surfaceDrop": 1, "waterDepth": 2, "preserveCutRise": 64 },
       "noiseBands": [
         { "wavelength": 1536, "amplitude": 4 },
         { "wavelength": 384, "amplitude": 2 },
@@ -177,6 +217,7 @@
         "underwater": "dark-silt"
       },
       "vegetationSetId": "fen-reed-alder",
+      "boulderSetId": "fen-low-stone",
       "groundDetailSetId": "reed-root-moss",
       "atmosphereProfileId": "fen-mist",
       "shaderProfileId": "wetland-highkey",
@@ -189,7 +230,9 @@
       "runtimeBiomes": ["Shore", "Wetland", "Meadow"],
       "terraceStep": 2,
       "erosionResponse": "tidal-undercut",
-      "hydrology": { "floodplainStart": 0.50, "bankStart": 0.70, "floodplainRise": 3, "bankRise": 1, "surfaceDrop": 1, "waterDepth": 3 },
+      "relief": { "cellSize": 6, "cliffStep": 4, "slopeStart": 0.24, "slopeFull": 0.76, "ridgeStart": 0.68, "ridgeStrength": 5, "ridgeAngleDegrees": -20, "ridgeWavelength": 576, "ledgeWavelength": 112, "ledgeThreshold": 0.40, "ledgeHeight": 2, "shoreWidth": 28 },
+      "selection": { "bias": 0.10, "altitudeWeight": -1.25, "moistureWeight": 1.35, "slopeWeight": -0.25, "patchWeight": 0.45, "patchWavelength": 320 },
+      "hydrology": { "floodplainStart": 0.50, "bankStart": 0.70, "floodplainRise": 3, "bankRise": 1, "surfaceDrop": 1, "waterDepth": 3, "preserveCutRise": 64 },
       "noiseBands": [
         { "wavelength": 1792, "amplitude": 6 },
         { "wavelength": 448, "amplitude": 3 },
@@ -203,6 +246,7 @@
         "underwater": "drowned-paving"
       },
       "vegetationSetId": "shallows-sparse-grove",
+      "boulderSetId": "shallows-weathered-rock",
       "groundDetailSetId": "sand-reed-petal",
       "atmosphereProfileId": "warm-water-haze",
       "shaderProfileId": "shallows-highkey",
