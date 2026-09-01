@@ -158,7 +158,7 @@ public static class Vegetation
 				int xx = x + rx, zz = z + rz;
 				if (xx < 0 || zz < 0 || xx >= S || zz >= S) { reserved = true; break; }
 				int ri = zz * S + xx;
-				if (grid.Heights[ri] > terrain.Level[ri]) { reserved = true; break; }
+				if (grid.MeshHeightAt(xx, zz) > terrain.Level[ri]) { reserved = true; break; }
 			}
 			if (reserved) continue;
 

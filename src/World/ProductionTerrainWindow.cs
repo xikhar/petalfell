@@ -31,7 +31,7 @@ public static class ProductionTerrainWindow
 		var watch = Stopwatch.StartNew();
 
 		ProductionTerrainGuide guide = ProductionTerrainGuide.CreateAtOrigin(
-			atlas, size, originX, originZ);
+			atlas, size, originX, originZ, worldSeed);
 		var planner = new Planner(worldSeed, size, map, guide);
 		long planMs = watch.ElapsedMilliseconds;
 		var terrain = new Terrain(worldSeed, size, planner, terrainOnly: true);
@@ -48,9 +48,12 @@ public static class ProductionTerrainWindow
 		GD.Print($"[production-terrain] full-atlas window {bounds} " +
 		         $"({originX},{originZ}+{size}) plan {planMs}ms terrain {terrainMs}ms " +
 		         $"sites {siteMs}ms flora {floraMs}ms; {terrain.Timings}");
-		GD.Print($"[production-terrain] old block grammar: {Vegetation.LastTreeCount} trees, " +
+		GD.Print($"[production-terrain] block grammar: {Vegetation.LastTreeCount} trees, " +
 		         $"{siteBuilds.Count} production site(s)");
-		return new AtlasPreparedWindow(window, bounds, default, siteBuilds);
+		GD.Print($"[production-hydrology] derived river-side bank cells " +
+		         $"+{terrain.ProductionRiverBankPositive}/-{terrain.ProductionRiverBankNegative}");
+		return new AtlasPreparedWindow(window, bounds, default, siteBuilds,
+			terrain.NaturalFormations);
 	}
 
 	private static AtlasSectorData Describe(Terrain terrain, WorldAtlasDefinition atlas,
@@ -93,7 +96,12 @@ public static class ProductionTerrainWindow
 			data.Curvature[i] = (byte)Math.Clamp(
 				128 + (left + right + north + south - height * 4) * 4, 0, 255);
 			bool bank = !water && NeighboursWater(terrain, x, z);
-			data.Hydrology[i] = bank ? (byte)2 : terrain.Wet[i] != 0 ? (byte)1 : (byte)0;
+			// Water is a distinct runtime ownership class. The direct terrain path
+			// previously left these cells as generic wet ground; rendering happened to
+			// use WaterSurface, but collision/map/runtime audits then observed mutually
+			// inconsistent water records.
+			data.Hydrology[i] = water ? (byte)3 : bank ? (byte)2 :
+				terrain.Wet[i] != 0 ? (byte)1 : (byte)0;
 			data.Wetness[i] = water ? (byte)255 : bank ? (byte)224 :
 				terrain.Wet[i] != 0 ? (byte)160 : (byte)0;
 			data.Surface[i] = water ? (byte)AtlasTerrainSurface.Underwater

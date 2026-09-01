@@ -94,7 +94,7 @@ public sealed class WorldAtlasDefinition
 			AtlasLayerFormat expected = layer.Kind switch
 			{
 				AtlasLayerKind.Elevation => AtlasLayerFormat.Gray16Png,
-				AtlasLayerKind.Region or AtlasLayerKind.Culture => AtlasLayerFormat.IndexedRgbPng,
+				AtlasLayerKind.Region => AtlasLayerFormat.IndexedRgbPng,
 				_ => AtlasLayerFormat.Gray8Png,
 			};
 			if (layer.Format != expected)
@@ -117,7 +117,14 @@ public sealed class WorldAtlasDefinition
 			else if (layer.Status == AtlasLayerStatus.Blockout)
 				report.Warning($"source layer '{layer.Id}' is a review blockout, not accepted canon");
 		}
-		foreach (AtlasLayerKind kind in Enum.GetValues<AtlasLayerKind>())
+		AtlasLayerKind[] requiredLayers =
+		{
+			AtlasLayerKind.Land,
+			AtlasLayerKind.Elevation,
+			AtlasLayerKind.Water,
+			AtlasLayerKind.Region,
+		};
+		foreach (AtlasLayerKind kind in requiredLayers)
 			if (!layerKinds.Contains(kind)) report.Error($"required source layer kind '{kind}' is missing");
 		if (loadedLayers.TryGetValue(AtlasLayerKind.Region, out var regionImage))
 		{
@@ -243,7 +250,7 @@ public sealed class WorldAtlasDefinition
 	}
 }
 
-public enum AtlasLayerKind { Land, Elevation, Water, Region, Culture, Abandonment, Wilderness }
+public enum AtlasLayerKind { Land, Elevation, Water, Region }
 public enum AtlasLayerFormat { Gray8Png, Gray16Png, IndexedRgbPng }
 public enum AtlasLayerStatus { Planned, Blockout, Accepted }
 

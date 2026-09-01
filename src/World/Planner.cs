@@ -177,8 +177,8 @@ public sealed class Planner
 			float nx = r.Cx / Size, nz = r.Cz / Size;
 			if (AtlasGuide != null)
 			{
-				// The production map replaces only the old macro field. The complete
-				// low-level legacy generator below Planner stays untouched.
+				// The production map owns the macro field. Planner retains the accepted
+				// low-level terrain grammar below that guide.
 				r.Elevation = AtlasGuide.ElevationAt(r.Cx, r.Cz);
 				float gx = GlobalX(r.Cx), gz = GlobalZ(r.Cz);
 				r.Temperature = Rng.Clamp(0.5f +

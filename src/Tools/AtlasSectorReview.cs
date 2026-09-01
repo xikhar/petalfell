@@ -67,6 +67,12 @@ public partial class AtlasSectorReview : Node3D
 		new("atlas_wide", 170f, 45f, 38f),
 		new("atlas_reverse", 170f, 225f, 36f),
 		new("atlas_far", 300f, 45f, 48f),
+		// Terrain review used to stop at daytime even though translucent depth,
+		// shoreline ink and broad water modulation all change with the day cycle.
+		// Use the same early-night key as domain review: it is oblique enough to
+		// model cliffs and shelves rather than reducing the frame to overhead moonlight.
+		new("atlas_night_wide", 170f, 45f, 38f, time: .90f),
+		new("atlas_night_far", 300f, 45f, 48f, time: .90f),
 	};
 	private static readonly Capture.Shot[] DomainShots =
 	{
@@ -95,6 +101,7 @@ public partial class AtlasSectorReview : Node3D
 	private ReferenceSiteDefinition _referenceSite;
 	private bool _playable;
 	private bool _directTerrain;
+	private string _playabilitySmoke;
 	private Vector2I? _requestedFocus;
 	private string _shotDirectory;
 	private HashSet<string> _only;
@@ -134,7 +141,15 @@ public partial class AtlasSectorReview : Node3D
 	private bool IsDomain => _domainId != null;
 	private bool IsSite => _siteId != null;
 	private bool IsAuthoredWindow => IsDomain || IsSite;
-	private int StreamRadius => IsSite
+	private bool IsTerrainFocusReview => _playable && _requestedFocus.HasValue;
+	private bool TerrainCaptureNeedsFarRing => IsTerrainFocusReview &&
+		_shotDirectory != null && (_only == null || _only.Contains("atlas_far"));
+	private int StreamRadius => IsTerrainFocusReview
+		// Most quick terrain iterations request one play/wide frame and need only the
+		// normal eight-chunk ring. A complete matrix includes the 300-block far shot,
+		// so load the ordinary capture ring only when that shot was actually requested.
+		? (TerrainCaptureNeedsFarRing ? CaptureStreamRadius : InteractiveStreamRadius)
+		: IsSite
 		? (_shotDirectory == null ? SiteInteractiveStreamRadius :
 			_referenceSite?.SiteId == Reference1SiteId ? Reference1CaptureStreamRadius :
 			SiteCaptureStreamRadius)
@@ -145,6 +160,21 @@ public partial class AtlasSectorReview : Node3D
 	{
 		get
 		{
+			// An explicit production terrain focus is a request to judge the world at
+			// that address, not to point the camera back at Bloom's default site even
+			// when Bloom is outside the loaded window.
+			if (IsTerrainFocusReview)
+			{
+				// Fixed composition shots deliberately ignore collision. This additional
+				// frame goes through CameraRig.Follow so a monumental wall cannot hide a
+				// playability regression behind an attractive manually placed overview.
+				var terrainShots = new List<Capture.Shot>
+				{
+					new("atlas_follow", 75f, 45f, 33.5f),
+				};
+				terrainShots.AddRange(SectorShots);
+				return terrainShots.ToArray();
+			}
 			if (IsSite)
 			{
 				PlanReferenceView siteView = _referenceSite?.ReferenceView;
@@ -221,24 +251,19 @@ public partial class AtlasSectorReview : Node3D
 
 	public static bool TryRun(Node owner, string defaultMapPath, string defaultSiteId = null)
 	{
-		string sector = null;
-		string domain = null;
 		string site = null;
 		string focus = null;
 		string mapPath = defaultMapPath;
-		bool legacyWorld = false;
-		bool compiledAtlas = false;
+		string playabilitySmoke = null;
 		var args = OS.GetCmdlineUserArgs();
 		for (int i = 0; i < args.Length; i++)
 		{
-			if (args[i] == "--review-sector" && i + 1 < args.Length) sector = args[++i];
-			else if (args[i].StartsWith("--review-sector=")) sector = args[i][16..];
-			else if (args[i] == "--review-domain" && i + 1 < args.Length) domain = args[++i];
-			else if (args[i].StartsWith("--review-domain=")) domain = args[i][16..];
-			else if (args[i] == "--review-site" && i + 1 < args.Length) site = args[++i];
+			if (args[i] == "--review-site" && i + 1 < args.Length) site = args[++i];
 			else if (args[i].StartsWith("--review-site=")) site = args[i][14..];
-			else if (args[i] == "--legacy-world" || args[i] == "--legacy-atlas-demo") legacyWorld = true;
-			else if (args[i] == "--compiled-atlas") compiledAtlas = true;
+			else if (args[i] == "--playability-smoke" && i + 1 < args.Length)
+				playabilitySmoke = args[++i];
+			else if (args[i].StartsWith("--playability-smoke="))
+				playabilitySmoke = args[i][20..];
 			else if (args[i] == "--review-focus" && i + 1 < args.Length) focus = args[++i];
 			else if (args[i].StartsWith("--review-focus=")) focus = args[i][15..];
 			else if (args[i] == "--terrain-focus" && i + 1 < args.Length) focus = args[++i];
@@ -246,18 +271,19 @@ public partial class AtlasSectorReview : Node3D
 			else if (args[i] == "--map-definition" && i + 1 < args.Length) mapPath = args[++i];
 			else if (args[i].StartsWith("--map-definition=")) mapPath = args[i][17..];
 		}
-		if (legacyWorld) return false;
-		bool directTerrain = !compiledAtlas && sector == null && domain == null && site == null;
-		bool playable = (compiledAtlas || directTerrain) && sector == null && domain == null &&
-		                site == null && defaultSiteId != null;
+		bool explicitSiteReview = site != null;
+		// Ordinary play and dedicated site review share the accepted production
+		// terrain. Retired sector/domain review modes are not runtime alternatives.
+		const bool directTerrain = true;
+		bool playable = directTerrain && !explicitSiteReview && defaultSiteId != null;
+		if (playabilitySmoke != null && playabilitySmoke is not ("land" or "water"))
+			throw new InvalidOperationException(
+				$"playability smoke mode '{playabilitySmoke}' must be land or water");
+		if (playabilitySmoke != null && (!playable || !directTerrain))
+			throw new InvalidOperationException(
+				"playability smoke requires the normal map-guided production terrain runtime");
 		if (playable) site = defaultSiteId;
-		int selections = (sector == null ? 0 : 1) + (domain == null ? 0 : 1) + (site == null ? 0 : 1);
-		if (selections == 0) return false;
-		if (selections != 1)
-			throw new InvalidOperationException("choose one of --review-sector, --review-domain or --review-site");
-
-		int sectorX = 0, sectorZ = 0;
-		if (sector != null) (sectorX, sectorZ) = ParsePair(sector, "sector address");
+		if (site == null) return false;
 		Vector2I? requestedFocus = null;
 		if (focus != null)
 		{
@@ -267,15 +293,12 @@ public partial class AtlasSectorReview : Node3D
 		(string shotDirectory, HashSet<string> only) = Capture.ParseArgs();
 		var review = new AtlasSectorReview
 		{
-			Name = site != null ? (playable ? "ProductionAtlasRuntime" : "AtlasSiteReview")
-				: domain == null ? "AtlasSectorReview" : "AtlasDomainReview",
+			Name = playable ? "ProductionAtlasRuntime" : "AtlasSiteReview",
 			_mapPath = mapPath,
-			_sectorX = sectorX,
-			_sectorZ = sectorZ,
-			_domainId = domain,
 			_siteId = site,
 			_playable = playable,
 			_directTerrain = directTerrain,
+			_playabilitySmoke = playabilitySmoke,
 			_requestedFocus = requestedFocus,
 			_shotDirectory = shotDirectory,
 			_only = only,
@@ -412,8 +435,7 @@ public partial class AtlasSectorReview : Node3D
 			_content = new Node3D { Name = "AtlasWindow", Position = _window.GlobalOrigin };
 			AddChild(_content);
 
-			// The legacy world has one water plane and can hide submerged ink by a
-			// uniform height. An atlas window has many surface heights; drawing its
+			// An atlas window has many surface heights; drawing its
 			// same ink passes before water lets the real geometry occlude every bed.
 			var ink = WorldMaterials.CreateInk(data.SeaLevel, priorityOffset: -6);
 			_inkLight = ink.Light;
@@ -501,8 +523,8 @@ public partial class AtlasSectorReview : Node3D
 			else PlaceInteractiveCamera();
 			if (_playable)
 			{
-				// These are the same controls as the legacy fixture, attached to the
-				// actual atlas camera, ink materials and clock. Keeping the map on a
+				// These controls use the actual atlas camera, ink materials and clock.
+				// Keeping the map on a
 				// separate L0/L1 surface means later sector handoff only replaces the
 				// teleport boundary; it does not have to rebuild cartography or UI.
 				_developerMenu = new DeveloperMenu { Name = "DeveloperSettings" };
@@ -529,10 +551,11 @@ public partial class AtlasSectorReview : Node3D
 			}
 			AtlasSectorStatistics stats = data.CoreStatistics();
 			Vector3 globalFocus = GlobalFocus();
-			GD.Print($"[atlas-review] {sourceDescription} " +
+			string runtimeLabel = _directTerrain ? "[production-runtime]" : "[atlas-review]";
+			GD.Print($"{runtimeLabel} {sourceDescription} " +
 			         $"window {data.Width}x{data.Depth} origin {data.OriginX},{data.OriginZ} " +
 			         $"focus {globalFocus.X:0},{globalFocus.Z:0} chunks {_streamer.LoadedCount}");
-			GD.Print($"[atlas-review] land {stats.LandCells * 100f / (data.CoreSize * data.CoreSize):0.0}% " +
+			GD.Print($"{runtimeLabel} land {stats.LandCells * 100f / (data.CoreSize * data.CoreSize):0.0}% " +
 			         $"water {stats.WaterCells * 100f / (data.CoreSize * data.CoreSize):0.0}% " +
 			         $"cliff {stats.CliffCells * 100f / (data.CoreSize * data.CoreSize):0.0}% " +
 			         $"shore {stats.ShoreCells * 100f / (data.CoreSize * data.CoreSize):0.0}% " +
@@ -550,10 +573,11 @@ public partial class AtlasSectorReview : Node3D
 					         $"{b.RubbleClusters} rubble clusters  " +
 					         $"{b.Stairs} stairs/{b.StairCells} cells  routes {b.RouteCells} cells  " +
 				         $"walls {b.Walls} landmarks {b.Landmarks} placed {b.PlacedBlocks} blocks");
-			GD.Print($"[atlas-wilderness] {wilderness.Trees} trees/{wilderness.Boulders} boulders " +
-			         $"from {wilderness.Candidates} candidates; rejected " +
-			         $"{wilderness.Excluded} authored/{wilderness.Unsuitable} terrain/" +
-			         $"{wilderness.Occupied} occupied; manifest {wilderness.ManifestHash:x16}");
+			if (!_directTerrain)
+				GD.Print($"[atlas-wilderness] {wilderness.Trees} trees/{wilderness.Boulders} boulders " +
+				         $"from {wilderness.Candidates} candidates; rejected " +
+				         $"{wilderness.Excluded} authored/{wilderness.Unsuitable} terrain/" +
+				         $"{wilderness.Occupied} occupied; manifest {wilderness.ManifestHash:x16}");
 			if (reclamation is AtlasDomainDressingStatistics d)
 				GD.Print($"[atlas-reclamation] {d.Trees} trees from {d.Candidates} authored candidates");
 			if (siteBuild is ReferenceSiteStatistics s)
@@ -561,9 +585,10 @@ public partial class AtlasSectorReview : Node3D
 				         $"{s.Voxels} voxel writes, source {_referenceSite.ReferencePath}");
 			_started = true;
 
-			if (_shotDirectory != null) await RunCapture();
+			if (_playabilitySmoke != null) await RunPlayabilitySmoke(_playabilitySmoke);
+			else if (_shotDirectory != null) await RunCapture();
 			else if (_playable)
-				GD.Print("[atlas-runtime] W/A/S/D move  hold Shift slow-walk  Space jump  Q/E orbit  K auto-zoom  mouse wheel zoom  M atlas map  Shift-click atlas reload/teleport  tilde developer settings  --legacy-world restores the retired fixture");
+				GD.Print("[atlas-runtime] W/A/S/D move  hold Shift slow-walk  Space jump  Q/E orbit  K auto-zoom  mouse wheel zoom  M atlas map  Shift-click atlas reload/teleport  tilde developer settings");
 			else GD.Print("[atlas-review] W/A/S/D pan  Q/E orbit  mouse wheel zoom");
 		}
 		catch (Exception ex)
@@ -690,6 +715,10 @@ public partial class AtlasSectorReview : Node3D
 			Name = _playable ? "Player" : "ScaleTraveller",
 			Position = spawn,
 			InputEnabled = _playable,
+			// Monumental production shelves can narrow to one cell between broad
+			// terraces. Route-owned movement uses the same cautious speed as Shift-walk
+			// so it stays centred; keyboard movement remains at ordinary full speed.
+			RouteSpeed = Controller.SlowWalkSpeed,
 		};
 		_content.AddChild(_player);
 		// The production atlas has a different water surface in each global cell.
@@ -743,7 +772,8 @@ public partial class AtlasSectorReview : Node3D
 
 	private async System.Threading.Tasks.Task RunCapture()
 	{
-		Vector2I captureSize = IsSite && _referenceSite?.ReferenceView != null
+		Vector2I captureSize = IsSite && !IsTerrainFocusReview &&
+			_referenceSite?.ReferenceView != null
 			? new Vector2I(_referenceSite.ReferenceView.SourceWidth,
 				_referenceSite.ReferenceView.SourceHeight)
 			: new Vector2I(1600, 900);
@@ -774,6 +804,8 @@ public partial class AtlasSectorReview : Node3D
 		foreach (Capture.Shot shot in ReviewShots)
 		{
 			if (_only != null && !_only.Contains(shot.Name)) continue;
+			bool playableFollow = shot.Name == "atlas_follow" &&
+				IsTerrainFocusReview && _player != null;
 			bool referenceTop = IsReferenceTopShot(shot);
 			Vector2I referenceTopSize = referenceTop ? ReferenceTopSize() : default;
 			captureViewport.Size = referenceTop ? referenceTopSize : captureSize;
@@ -808,10 +840,19 @@ public partial class AtlasSectorReview : Node3D
 				_environment.FogDepthEnd = Math.Max(700f * siteScale, shot.Distance * 2.00f);
 			}
 			Vector3 shotFocus = CaptureFocus(shot);
-			PlaceReviewCamera(_camera, shot, shotFocus, referenceTop);
+			if (playableFollow)
+			{
+				_camera.Yaw = _camera.TargetYaw = Mathf.DegToRad(shot.Yaw);
+				_camera.Pitch = Mathf.DegToRad(shot.Pitch);
+				_camera.Distance = _camera.TargetDistance = shot.Distance;
+			}
+			else PlaceReviewCamera(_camera, shot, shotFocus, referenceTop);
 			for (int i = 0; i < 24; i++)
 			{
-				PlaceReviewCamera(_camera, shot, shotFocus, referenceTop);
+				if (playableFollow)
+					_camera.Follow(_player.GetGlobalTransformInterpolated().Origin,
+						Vector3.Zero, 1.0 / 60.0);
+				else PlaceReviewCamera(_camera, shot, shotFocus, referenceTop);
 				captureCamera.GlobalTransform = _camera.GlobalTransform;
 				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 			}
@@ -825,6 +866,7 @@ public partial class AtlasSectorReview : Node3D
 
 	private Vector3 CaptureFocus(Capture.Shot shot)
 	{
+		if (IsTerrainFocusReview) return GlobalFocus();
 		if (IsSite)
 		{
 			if (IsReferenceTopShot(shot)) return ReferenceTopFocus();
@@ -1051,6 +1093,293 @@ public partial class AtlasSectorReview : Node3D
 		return MathF.Sqrt(gx * gx + gy * gy);
 	}
 
+	/// <summary>
+	/// Exercise the actual collision-bearing runtime rather than another heightfield
+	/// approximation. The deterministic authoring verifier proves graph connectivity;
+	/// this smoke proves that Controller can physically settle, follow one of those
+	/// routes and, when requested, cross deep production water through its atlas
+	/// water-column callback.
+	/// </summary>
+	private async System.Threading.Tasks.Task RunPlayabilitySmoke(string mode)
+	{
+		await WaitPhysicsFrames(18);
+		int startLocalX = Mathf.FloorToInt(_player.GlobalPosition.X) - _window.Data.OriginX;
+		int startLocalZ = Mathf.FloorToInt(_player.GlobalPosition.Z) - _window.Data.OriginZ;
+		if (!_player.IsOnFloor())
+			throw new InvalidOperationException(
+				$"production player did not settle on collision at {startLocalX},{startLocalZ}");
+		if (!IsLand(startLocalX, startLocalZ))
+			throw new InvalidOperationException("production playability smoke began in water");
+
+		List<Vector3> landRoute = FindSmokeRoute(startLocalX, startLocalZ,
+			water: false, minimumSteps: 24, requireHeightChange: true,
+			out int landMinY, out int landMaxY);
+		Vector3 landStart = _player.GlobalPosition;
+		_player.SetRoute(landRoute);
+		// Route-owned movement deliberately uses cautious walking speed so it can hold
+		// narrow stair cells. Forty-eight test cells plus physical ledge hops fit well
+		// inside fifteen seconds while a real deadlock still fails deterministically.
+		int landFrames = await FollowSmokeRoute(maxFrames: 900, requireSwimming: false);
+		float landDistance = new Vector2(_player.GlobalPosition.X - landStart.X,
+			_player.GlobalPosition.Z - landStart.Z).Length();
+		if (landDistance < 16f || !_player.IsOnFloor() || _player.Swimming)
+			throw new InvalidOperationException(
+				$"grounded production route failed: moved {landDistance:0.00}, " +
+				$"floor {_player.IsOnFloor()}, swimming {_player.Swimming}");
+
+		if (mode == "land")
+		{
+			GD.Print($"[production-playability-smoke] land moved {landDistance:0.00} " +
+			         $"blocks in {landFrames} physics frames across Y{landMinY}..{landMaxY}; " +
+			         $"settled {_player.GlobalPosition.Y:0.00}");
+			GetTree().Quit();
+			return;
+		}
+
+		Vector2I waterStart = FindNearestDeepWater(startLocalX, startLocalZ, 128);
+		List<Vector3> waterRoute = FindSmokeRoute(waterStart.X, waterStart.Y,
+			water: true, minimumSteps: 14, requireHeightChange: false,
+			out int waterMinY, out int waterMaxY);
+		int waterIndex = waterStart.Y * _window.Data.Width + waterStart.X;
+		float waterSurface = _window.Data.WaterSurface[waterIndex];
+		Vector3 waterGlobal = new(
+			_window.Data.OriginX + waterStart.X + .5f,
+			waterSurface - .85f,
+			_window.Data.OriginZ + waterStart.Y + .5f);
+		_streamer.UpdateAround(waterGlobal - _window.GlobalOrigin, prime: true);
+		_player.StopTravel();
+		_player.GlobalPosition = waterGlobal;
+		_player.Velocity = Vector3.Zero;
+		_player.ResetPhysicsInterpolation();
+		await WaitPhysicsFrames(6);
+		if (!_player.Swimming)
+			throw new InvalidOperationException(
+				$"deep production water at {waterStart.X},{waterStart.Y} did not enter swimming");
+
+		Vector3 swimStart = _player.GlobalPosition;
+		_player.SetRoute(waterRoute);
+		int swimFrames = await FollowSmokeRoute(maxFrames: 420, requireSwimming: true);
+		float swimDistance = new Vector2(_player.GlobalPosition.X - swimStart.X,
+			_player.GlobalPosition.Z - swimStart.Z).Length();
+		if (swimDistance < 8f || !_player.Swimming ||
+		    Math.Abs(_player.GlobalPosition.Y - (waterSurface - .85f)) > 1.35f)
+			throw new InvalidOperationException(
+				$"production swim failed: moved {swimDistance:0.00}, " +
+				$"swimming {_player.Swimming}, Y {_player.GlobalPosition.Y:0.00} " +
+				$"for surface {waterSurface:0.00}");
+
+		GD.Print($"[production-playability-smoke] water land-leg {landDistance:0.00} " +
+		         $"blocks/Y{landMinY}..{landMaxY}/{landFrames} frames; swim " +
+		         $"{swimDistance:0.00} blocks in {swimFrames} frames at surface " +
+		         $"{waterSurface:0.00} (route surface {waterMinY}..{waterMaxY})");
+		GetTree().Quit();
+	}
+
+	private async System.Threading.Tasks.Task<int> FollowSmokeRoute(int maxFrames,
+		bool requireSwimming)
+	{
+		int frames = 0;
+		while (_player.Route != null && frames < maxFrames)
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.PhysicsFrame);
+			frames++;
+			if (_player.GlobalPosition.Y < 0f || _player.GlobalPosition.Y >= _window.Grid.Height)
+				throw new InvalidOperationException(
+					$"production controller left the vertical world at {_player.GlobalPosition}");
+			if (requireSwimming && !_player.Swimming)
+				throw new InvalidOperationException(
+					$"production controller left deep water during swim route at {_player.GlobalPosition}");
+		}
+		if (_player.Route != null)
+		{
+			Vector3 next = _player.Route[Math.Min(_player.RouteIndex,
+				_player.Route.Count - 1)];
+			Vector3 previous = _player.Route[Math.Max(0, _player.RouteIndex - 1)];
+			Vector3 after = _player.Route[Math.Min(_player.Route.Count - 1,
+				_player.RouteIndex + 1)];
+			throw new InvalidOperationException(
+				$"production controller did not finish its route in {maxFrames} physics " +
+				$"frames: waypoint {_player.RouteIndex}/{_player.Route.Count}, position " +
+				$"{_player.GlobalPosition}, previous {previous}, next {next}, after {after}, " +
+				$"velocity {_player.Velocity}, floor " +
+				$"{_player.IsOnFloor()}, swimming {_player.Swimming}");
+		}
+		if (requireSwimming) await WaitPhysicsFrames(6);
+		else
+		{
+			// A route can consume its final waypoint while the controller is still in
+			// the physical arc of an automatic terrace hop. Eighteen fixed frames were
+			// shorter than AutoJumpMax and could call a safe crossing airborne. Wait for
+			// the real body to settle, but keep a hard bound so a missing landing or
+			// collision shelf remains a failure rather than being hidden by the smoke.
+			int settleFrames = 0;
+			while (!_player.IsOnFloor() && !_player.Swimming && settleFrames < 90)
+			{
+				await ToSignal(GetTree(), SceneTree.SignalName.PhysicsFrame);
+				settleFrames++;
+				if (_player.GlobalPosition.Y < 0f ||
+				    _player.GlobalPosition.Y >= _window.Grid.Height)
+					throw new InvalidOperationException(
+						$"production controller left the vertical world while settling at " +
+						$"{_player.GlobalPosition}");
+			}
+			if (!_player.IsOnFloor())
+				throw new InvalidOperationException(
+					$"production controller did not settle after its route: position " +
+					$"{_player.GlobalPosition}, velocity {_player.Velocity}, " +
+					$"swimming {_player.Swimming}");
+		}
+		return frames;
+	}
+
+	private async System.Threading.Tasks.Task WaitPhysicsFrames(int count)
+	{
+		for (int frame = 0; frame < count; frame++)
+			await ToSignal(GetTree(), SceneTree.SignalName.PhysicsFrame);
+	}
+
+	private List<Vector3> FindSmokeRoute(int startX, int startZ, bool water,
+		int minimumSteps, bool requireHeightChange, out int routeMinY, out int routeMaxY)
+	{
+		const int radius = 72;
+		const int maxDepth = 48;
+		int width = _window.Data.Width, depth = _window.Data.Depth;
+		int minX = Math.Max(2, startX - radius), maxX = Math.Min(width - 3, startX + radius);
+		int minZ = Math.Max(2, startZ - radius), maxZ = Math.Min(depth - 3, startZ + radius);
+		int boxWidth = maxX - minX + 1, boxDepth = maxZ - minZ + 1;
+		int[] parent = new int[boxWidth * boxDepth];
+		short[] steps = new short[parent.Length];
+		short[] pathMin = new short[parent.Length];
+		short[] pathMax = new short[parent.Length];
+		Array.Fill(parent, -2);
+		int[] queue = new int[parent.Length];
+		int BoxIndex(int x, int z) => (z - minZ) * boxWidth + x - minX;
+		(int x, int z) BoxPoint(int index) =>
+			(minX + index % boxWidth, minZ + index / boxWidth);
+
+		if (water ? !IsDeepWater(startX, startZ) : !IsLand(startX, startZ))
+			throw new InvalidOperationException(
+				$"invalid {(water ? "water" : "land")} smoke start {startX},{startZ}");
+		int start = BoxIndex(startX, startZ);
+		int startY = TraversalSurface(startX, startZ, water);
+		parent[start] = -1;
+		pathMin[start] = pathMax[start] = (short)startY;
+		int read = 0, write = 0;
+		queue[write++] = start;
+		int best = start, bestRange = 0, bestSteps = 0;
+		ReadOnlySpan<int> dx = stackalloc int[] { 1, -1, 0, 0 };
+		ReadOnlySpan<int> dz = stackalloc int[] { 0, 0, 1, -1 };
+
+		while (read < write)
+		{
+			int at = queue[read++];
+			(int x, int z) = BoxPoint(at);
+			int atSteps = steps[at];
+			int range = pathMax[at] - pathMin[at];
+			if (!requireHeightChange && atSteps >= minimumSteps)
+			{
+				best = at;
+				bestRange = range;
+				bestSteps = atSteps;
+				break;
+			}
+			if (atSteps >= minimumSteps &&
+			    (!requireHeightChange || range >= Terrain.Step) &&
+			    (range > bestRange || range == bestRange && atSteps > bestSteps))
+			{
+				best = at;
+				bestRange = range;
+				bestSteps = atSteps;
+			}
+			if (atSteps >= maxDepth) continue;
+			for (int d = 0; d < 4; d++)
+			{
+				int nx = x + dx[d], nz = z + dz[d];
+				if (nx < minX || nz < minZ || nx > maxX || nz > maxZ) continue;
+				int next = BoxIndex(nx, nz);
+				if (parent[next] != -2) continue;
+				if (water ? !IsDeepWater(nx, nz) : !IsLand(nx, nz)) continue;
+				int nextY = TraversalSurface(nx, nz, water);
+				int atY = TraversalSurface(x, z, water);
+				if (Math.Abs(nextY - atY) > Terrain.Step) continue;
+				parent[next] = at;
+				steps[next] = (short)(atSteps + 1);
+				pathMin[next] = (short)Math.Min(pathMin[at], nextY);
+				pathMax[next] = (short)Math.Max(pathMax[at], nextY);
+				queue[write++] = next;
+			}
+		}
+
+		if (best == start || bestSteps < minimumSteps ||
+		    requireHeightChange && bestRange < Terrain.Step)
+			throw new InvalidOperationException(
+				$"no {(water ? "deep-water" : "grounded terrace")} smoke route " +
+				$"of {minimumSteps} steps near {startX},{startZ}");
+
+		var reverse = new List<int>(bestSteps + 1);
+		for (int at = best; at >= 0; at = parent[at]) reverse.Add(at);
+		reverse.Reverse();
+		routeMinY = int.MaxValue;
+		routeMaxY = int.MinValue;
+		var route = new List<Vector3>(reverse.Count - 1);
+		for (int p = 1; p < reverse.Count; p++)
+		{
+			(int x, int z) = BoxPoint(reverse[p]);
+			int y = TraversalSurface(x, z, water);
+			routeMinY = Math.Min(routeMinY, y);
+			routeMaxY = Math.Max(routeMaxY, y);
+			route.Add(new Vector3(_window.Data.OriginX + x + .5f, y + .2f,
+				_window.Data.OriginZ + z + .5f));
+		}
+		return route;
+	}
+
+	private Vector2I FindNearestDeepWater(int startX, int startZ, int radius)
+	{
+		int width = _window.Data.Width, depth = _window.Data.Depth;
+		for (int r = 0; r <= radius; r++)
+		for (int dz = -r; dz <= r; dz++)
+		for (int dx = -r; dx <= r; dx++)
+		{
+			if (Math.Abs(dx) + Math.Abs(dz) != r) continue;
+			int x = startX + dx, z = startZ + dz;
+			if (x < 2 || z < 2 || x >= width - 2 || z >= depth - 2) continue;
+			if (IsDeepWater(x, z)) return new Vector2I(x, z);
+		}
+		throw new InvalidOperationException(
+			$"no deep production water within {radius} blocks of {startX},{startZ}");
+	}
+
+	private bool IsLand(int x, int z)
+	{
+		if (x < 0 || z < 0 || x >= _window.Data.Width || z >= _window.Data.Depth)
+			return false;
+		int index = z * _window.Data.Width + x;
+		if (_window.Data.Land[index] == 0) return false;
+		int ground = _window.Data.Height[index];
+		// Match Navigation's actual dry-cell contract. The smoke route must not call
+		// a tree trunk or an authored wall a traversable terrain waypoint merely
+		// because the heightfield underneath it is connected.
+		return !_window.Grid.SolidAt(x, ground, z) &&
+		       !_window.Grid.SolidAt(x, ground + 1, z);
+	}
+
+	private bool IsDeepWater(int x, int z)
+	{
+		if (x < 0 || z < 0 || x >= _window.Data.Width || z >= _window.Data.Depth)
+			return false;
+		int index = z * _window.Data.Width + x;
+		return _window.Data.Land[index] == 0 &&
+		       _window.Data.WaterSurface[index] - _window.Data.Height[index] >
+		       Controller.SwimDepth + .5f;
+	}
+
+	private int TraversalSurface(int x, int z, bool water)
+	{
+		int index = z * _window.Data.Width + x;
+		return water ? _window.Data.WaterSurface[index] : _window.Data.Height[index];
+	}
+
 	public override void _Process(double delta)
 	{
 		if (!_started || _player == null || _character == null) return;
@@ -1211,25 +1540,12 @@ public partial class AtlasSectorReview : Node3D
 				message => GD.PrintErr($"[atlas-walk-handoff] {message}"));
 			int globalX = Mathf.FloorToInt(globalPosition.X);
 			int globalZ = Mathf.FloorToInt(globalPosition.Z);
-			if (!AtlasRuntimeHandoff.TryResolveExactLanding(_window, globalX, globalZ,
-			    out AtlasRuntimeLanding oldLanding, out string oldRejection))
+			if (!AtlasRuntimeHandoff.TryResolveWalkingTransfer(_window,
+			    prepared.Window, globalX, globalZ, globalPosition.Y,
+			    out AtlasRuntimeLanding nextLanding, out string transferRejection))
 			{
 				RefuseWalkingTransition(transition, current, globalPosition,
-					$"current exact cell rejected ({oldRejection})");
-				return;
-			}
-			if (!AtlasRuntimeHandoff.TryResolveExactLanding(prepared.Window,
-			    globalX, globalZ, out AtlasRuntimeLanding nextLanding,
-			    out string nextRejection))
-			{
-				RefuseWalkingTransition(transition, current, globalPosition,
-					$"adjacent exact cell rejected ({nextRejection})");
-				return;
-			}
-			if (oldLanding.SurfaceY != nextLanding.SurfaceY)
-			{
-				RefuseWalkingTransition(transition, current, globalPosition,
-					$"exact seam surface changed {oldLanding.SurfaceY}->{nextLanding.SurfaceY}");
+					$"walking collision continuity rejected ({transferRejection})");
 				return;
 			}
 
@@ -1592,9 +1908,10 @@ public partial class AtlasSectorReview : Node3D
 		_walkingBlockedEdges = AtlasWindowEdge.None;
 		Vector3 globalLanding = _player.GlobalPosition;
 		_camera.Follow(globalLanding, Vector3.Zero, 1.0);
-		_atlasMap.SetPlayer(globalLanding);
-		// Map and developer surfaces are not reconstructed by a handoff. If either
-		// was open, it stays open with its current pan/zoom/slider state.
+		_atlasMap.CompleteTransport(globalLanding);
+		// A successful Shift-click returns straight to play. The existing map node
+		// keeps its pan/zoom state for the next opening; failed requests never reach
+		// this handoff and therefore leave the map open for another choice.
 		_player.InputEnabled = !_atlasMap.IsOpen && _developerMenu?.IsOpen != true;
 		string fallback = fallbackAddress
 			? $"requested address unresolved ({requestedRejection}); fallback source " +

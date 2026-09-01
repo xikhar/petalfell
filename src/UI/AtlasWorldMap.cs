@@ -10,10 +10,9 @@ namespace Petalfell.UI;
 /// <summary>
 /// Cartographic surface for the rectangular production atlas.
 ///
-/// This deliberately does not share the legacy <see cref="WorldMap"/> terrain
-/// dependency. The old map reads one complete square Terrain array; the atlas
-/// map reads compact registered L0/L1 images and permanent L2 topology, so it
-/// remains useful while runtime terrain is only a moving sector window.
+/// The production map reads compact registered L0/L1 images and permanent L2
+/// topology rather than a complete local heightfield, so it remains useful
+/// while runtime terrain is only a moving window.
 /// </summary>
 public partial class AtlasWorldMap : CanvasLayer
 {
@@ -72,6 +71,24 @@ public partial class AtlasWorldMap : CanvasLayer
 	}
 
 	public void SetPlayer(Vector3 globalAtlasPosition) => _player = globalAtlasPosition;
+
+	/// <summary>Close without discarding the current pan or zoom.</summary>
+	public void Close()
+	{
+		_open = false;
+		Visible = false;
+	}
+
+	/// <summary>
+	/// Commit the visible result of a successful transport. The runtime calls this
+	/// only after collision is primed and a safe landing has been installed, so a
+	/// rejected Shift-click leaves the map available for another selection.
+	/// </summary>
+	public void CompleteTransport(Vector3 globalAtlasPosition)
+	{
+		SetPlayer(globalAtlasPosition);
+		Close();
+	}
 
 	public void Toggle()
 	{

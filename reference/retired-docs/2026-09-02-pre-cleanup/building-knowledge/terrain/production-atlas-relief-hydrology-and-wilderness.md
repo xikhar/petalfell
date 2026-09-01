@@ -13,7 +13,9 @@
   The complete compiler-15 negative audit, compiler-16 positive baseline, and
   targeted compiler-19-through-22 capture history remain evidence for their own
   versions.
-  Current compiler-27 snow-front, highland, dry-scarp and river far captures
+  Live optional compiler source is version 28 and has not run a complete-atlas
+  batch, so it does not inherit the version-27 proof. Compiler-27 snow-front,
+  highland, dry-scarp and river far captures
   plus the normal-start comparison set have been visually inspected and show
   that the current terrain is materialised, but broad terraces, sparse
   wilderness and flat banks remain; materials, final reference parity,
@@ -26,7 +28,7 @@
 - **Last verified:** 2026-08-30 mechanically for the complete compiler-27 atlas
   and visually for the current compiler-27 snow-front, highland, dry-scarp,
   river and normal-start captures; no author-acceptance claim is made by this
-  entry
+  entry; live compiler source 28 remains unverified as a whole atlas
 - **Supersedes:** none
 - **Superseded by:** none
 - **Owning sources:**
@@ -257,6 +259,9 @@ baseline. Its representative snow-front, highland, dry-scarp, river and
 normal-start captures have been inspected, but broad terraces, sparse
 wilderness, flat banks, materials and final reference parity remain open. No
 terrain or wilderness claim in this entry is `author-accepted`.
+Compiler source 28 is newer code, not a newer proof: its checked-in manifest is
+still version 27 and it must complete the entire batch and independent verifier
+before this entry can promote any version-28 atlas-wide claim.
 
 ## Known failures
 

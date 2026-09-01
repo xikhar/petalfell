@@ -5,7 +5,8 @@ namespace Petalfell.Tools;
 
 /// <summary>
 /// Node-free mechanical checks for the walking-window planner and hysteresis.
-/// Terrain safety remains the responsibility of TryResolveExactLanding; these
+/// Runtime collision continuity remains the responsibility of
+/// TryResolveWalkingTransfer; these
 /// cases prove every directional address transition without opening Godot UI or
 /// allocating another continent-sized structure.
 /// </summary>

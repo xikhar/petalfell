@@ -53,7 +53,7 @@ public static class Palette
 	// Multi-height atlas water has no planar reflection pass to lift its body.
 	// The ordinary blue ramp plus the review sky rendered electric violet; this
 	// dustier, low-chroma periwinkle instead supplies the pale volume seen around
-	// Reference 1's bridge without changing the accepted single-plane legacy lake.
+	// Reference 1's bridge without flattening the shared water colour response.
 	public static readonly Color WaterAtlasBody = C(0xa4a9df);
 	public static readonly Color WaterWarm = C(0xe3c4c9);
 	public static readonly Color WaterSheen = C(0xe8e2f5);

@@ -296,7 +296,7 @@ public static class AtlasBatchAuthoring
 		string absolute = ProjectSettings.GlobalizePath(resourcePath);
 		if (!File.Exists(absolute))
 			throw new FileNotFoundException(
-				$"atlas manifest '{resourcePath}' does not exist; run compile-atlas first", absolute);
+				$"atlas manifest '{resourcePath}' does not exist", absolute);
 		return JsonSerializer.Deserialize<AtlasBatchManifest>(File.ReadAllText(absolute), JsonOptions)
 		       ?? throw new InvalidDataException($"atlas manifest '{resourcePath}' was empty");
 	}

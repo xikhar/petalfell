@@ -51,6 +51,8 @@ public partial class Controller : CharacterBody3D
 	/// to run while input is disabled.
 	/// </summary>
 	public bool InputEnabled { get; set; } = true;
+	/// <summary>Maximum horizontal speed while a route, rather than keyboard input, owns movement.</summary>
+	public float RouteSpeed { get; set; } = MaxSpeed;
 	public bool Swimming { get; private set; }
 	public bool Sitting { get; private set; }
 	public Vector3 Facing = Vector3.Forward;
@@ -63,6 +65,11 @@ public partial class Controller : CharacterBody3D
 	private Vector3 _sitFacing = Vector3.Forward;
 	/// <summary>An automatic hop cannot physically last longer than this.</summary>
 	private const float AutoJumpMax = 0.9f;
+	// A route waypoint is the centre of a real terrain cell. The former 1.05-block
+	// radius could accept the next cardinal cell before the capsule entered it,
+	// cutting corners off narrow mountain stairs and leaving the planned surface.
+	private const float RouteArrivalRadius = 0.58f;
+	private const float RouteArrivalHeight = 0.75f;
 	private Terrain _terrain;
 	private Func<int, int, WaterColumn?> _waterColumnAt;
 	private float _activeWaterSurface = Palette.WaterLevel;
@@ -70,6 +77,8 @@ public partial class Controller : CharacterBody3D
 	/// <summary>World-space destination from click-to-move, or null.</summary>
 	public System.Collections.Generic.List<Vector3> Route;
 	private int _routeIndex;
+	/// <summary>Current route waypoint, exposed for deterministic traversal diagnostics.</summary>
+	public int RouteIndex => _routeIndex;
 
 	public void Setup(Terrain terrain,
 		Func<int, int, WaterColumn?> waterColumnAt = null)
@@ -184,7 +193,13 @@ public partial class Controller : CharacterBody3D
 		var target = Route[_routeIndex];
 		var here = GlobalPosition;
 		var d = new Vector3(target.X - here.X, 0, target.Z - here.Z);
-		if (d.LengthSquared() < 1.1f)
+		// Crossing a waypoint's Y during an automatic jump is not arrival. Advancing
+		// in mid-air can discard the landing cell and aim at the next terrace before
+		// collision has established footing. Swimming is the deliberate exception:
+		// its body floats below the route's nominal water-surface Y.
+		bool reachedHeight = Swimming || IsOnFloor() &&
+			Math.Abs(target.Y - here.Y) <= RouteArrivalHeight;
+		if (d.LengthSquared() < RouteArrivalRadius * RouteArrivalRadius && reachedHeight)
 		{
 			_routeIndex++;
 			if (_routeIndex >= Route.Count) { Route = null; return Vector3.Zero; }
@@ -345,8 +360,13 @@ public partial class Controller : CharacterBody3D
 		}
 		else if (wish.LengthSquared() > 0.0001f)
 		{
-			float speedLimit = grounded && Input.IsActionPressed("slow_walk")
-				? SlowWalkSpeed : MaxSpeed;
+			// Click routes must hold the centre of narrow stair/shelf cells in the
+			// monumental atlas. Running at full keyboard speed carried the capsule off
+			// a one-cell Y154 summit shelf before it could turn toward the next waypoint.
+			// Manual input remains fast unless Shift is held. Production route owners
+			// set RouteSpeed to the same cautious walking speed.
+			float speedLimit = Route != null ? Mathf.Clamp(RouteSpeed, .1f, MaxSpeed) :
+				grounded && Input.IsActionPressed("slow_walk") ? SlowWalkSpeed : MaxSpeed;
 			flat += wish * accel * dt;
 			if (flat.Length() > speedLimit) flat = flat.Normalized() * speedLimit;
 		}

@@ -35,6 +35,13 @@ public sealed class VoxelGrid
 
 	/// <summary>Top solid block +1 per column, INCLUDING anything placed on it.</summary>
 	public readonly short[] Heights;
+	/// <summary>
+	/// Conservative mesh/collision ceiling for true overhangs whose walkable ground
+	/// remains below their roof. Ordinary placed geometry continues to raise
+	/// <see cref="Heights"/>; this second bound exists only because a heightfield
+	/// cannot describe both the floor under an arch and the stone above it.
+	/// </summary>
+	private readonly short[] _overhangCeilings;
 
 	/// <summary>First empty y of the bare terrain, before anything was built on it.</summary>
 	public readonly short[] Top;
@@ -100,6 +107,7 @@ public sealed class VoxelGrid
 		OriginX = originX;
 		OriginZ = originZ;
 		Heights = new short[size * size];
+		_overhangCeilings = new short[size * size];
 		Top = new short[size * size];
 		Cap = new byte[size * size];
 		Sub = new byte[size * size];
@@ -215,6 +223,31 @@ public sealed class VoxelGrid
 	{
 		if (x < 0 || z < 0 || x >= Size || z >= Size) return 0;
 		return Heights[z * Size + x];
+	}
+
+	/// <summary>
+	/// Highest level the chunk mesher must inspect, including a non-walkable roof
+	/// above the ordinary column surface.
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public int MeshHeightAt(int x, int z)
+	{
+		if (x < 0 || z < 0 || x >= Size || z >= Size) return 0;
+		int i = z * Size + x;
+		return Math.Max(Heights[i], _overhangCeilings[i]);
+	}
+
+	/// <summary>
+	/// Advertise additive overhang voxels without turning their roof into the
+	/// column's gameplay ground. AIR edits deliberately cannot lower this bound;
+	/// a conservative empty scan is harmless and keeps the operation deterministic.
+	/// </summary>
+	public void RaiseOverhangCeiling(int x, int z, int top)
+	{
+		if (x < 0 || z < 0 || x >= Size || z >= Size) return;
+		int i = z * Size + x;
+		if (top > _overhangCeilings[i])
+			_overhangCeilings[i] = (short)Math.Min(top, Height);
 	}
 
 	/// <summary>Fill a column from y0 (inclusive) to y1 (exclusive), updating Heights.</summary>

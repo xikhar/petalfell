@@ -51,30 +51,6 @@
       "status": "Accepted",
       "path": "res://content/chapter_01/continent/region.png",
       "blocksPerPixel": 8
-    },
-    {
-      "id": "culture",
-      "kind": "Culture",
-      "format": "IndexedRgbPng",
-      "status": "Planned",
-      "path": "res://content/chapter_01/continent/culture.png",
-      "blocksPerPixel": 8
-    },
-    {
-      "id": "abandonment",
-      "kind": "Abandonment",
-      "format": "Gray8Png",
-      "status": "Planned",
-      "path": "res://content/chapter_01/continent/abandonment.png",
-      "blocksPerPixel": 8
-    },
-    {
-      "id": "wilderness",
-      "kind": "Wilderness",
-      "format": "Gray8Png",
-      "status": "Planned",
-      "path": "res://content/chapter_01/continent/wilderness.png",
-      "blocksPerPixel": 8
     }
   ],
   "provinces": [

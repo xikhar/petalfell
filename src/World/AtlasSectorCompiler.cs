@@ -56,7 +56,7 @@ public sealed class AtlasSectorCompiler
 	private readonly Dictionary<string, Noise2D> _selectionNoise = new(StringComparer.Ordinal);
 	private readonly Noise2D _regionBlendNoise;
 	private readonly Noise2D _hydrologyEdgeNoise;
-	private readonly AtlasLegacyTerrainGrammar _legacyTerrain;
+	private readonly ProductionTerrainGrammar _legacyTerrain;
 	private readonly int[] _waterBody;
 	private readonly Dictionary<int, float> _inlandWaterBankHeight;
 	private readonly ushort[] _oceanDistance;
@@ -70,7 +70,7 @@ public sealed class AtlasSectorCompiler
 		_worldSeed = worldSeed;
 		_regionBlendNoise = new Noise2D(unchecked(worldSeed ^ Rng.StableHash("atlas:region-transition")));
 		_hydrologyEdgeNoise = new Noise2D(unchecked(worldSeed ^ Rng.StableHash("atlas:hydrology-edge")));
-		_legacyTerrain = new AtlasLegacyTerrainGrammar(worldSeed);
+		_legacyTerrain = new ProductionTerrainGrammar(worldSeed);
 		_profiles = atlas.BiomeCatalog.Profiles.ToDictionary(p => p.Id, StringComparer.Ordinal);
 		_profileIndices = atlas.BiomeCatalog.Profiles.Select((profile, index) => (profile.Id, index))
 			.ToDictionary(pair => pair.Id, pair => pair.index, StringComparer.Ordinal);
@@ -542,13 +542,13 @@ public sealed class AtlasSectorCompiler
 	private ReliefSample HeightForProfile(BiomeBuildProfile profile, int globalX, int globalZ,
 		float authoredElevation, float macroSlope)
 	{
-		int x = FloorDiv(globalX, AtlasLegacyTerrainGrammar.EdgeGrid) *
-			AtlasLegacyTerrainGrammar.EdgeGrid + AtlasLegacyTerrainGrammar.EdgeGrid / 2;
-		int z = FloorDiv(globalZ, AtlasLegacyTerrainGrammar.EdgeGrid) *
-			AtlasLegacyTerrainGrammar.EdgeGrid + AtlasLegacyTerrainGrammar.EdgeGrid / 2;
+		int x = FloorDiv(globalX, ProductionTerrainGrammar.EdgeGrid) *
+			ProductionTerrainGrammar.EdgeGrid + ProductionTerrainGrammar.EdgeGrid / 2;
+		int z = FloorDiv(globalZ, ProductionTerrainGrammar.EdgeGrid) *
+			ProductionTerrainGrammar.EdgeGrid + ProductionTerrainGrammar.EdgeGrid / 2;
 		int terraceStep = Math.Max(1, profile.TerraceStep);
 
-		// Compiler 27 layered several broad thresholded profile fields over the map
+		// An earlier sector pass layered broad thresholded profile fields over the map
 		// and then changed quantisers at their masks. Those masks became the visible
 		// geography: giant sparse shelves with hard cutoffs. The sunset terrain used
 		// a much simpler contract. Its macro planner supplied height; warped +/- one
@@ -1733,10 +1733,10 @@ public sealed class AtlasSectorCompiler
 	{
 		if (globalX < 0 || globalZ < 0 || globalX >= _atlas.Width || globalZ >= _atlas.Depth)
 			return false;
-		int qx = FloorDiv(globalX, AtlasLegacyTerrainGrammar.EdgeGrid) *
-			AtlasLegacyTerrainGrammar.EdgeGrid + AtlasLegacyTerrainGrammar.EdgeGrid / 2;
-		int qz = FloorDiv(globalZ, AtlasLegacyTerrainGrammar.EdgeGrid) *
-			AtlasLegacyTerrainGrammar.EdgeGrid + AtlasLegacyTerrainGrammar.EdgeGrid / 2;
+		int qx = FloorDiv(globalX, ProductionTerrainGrammar.EdgeGrid) *
+			ProductionTerrainGrammar.EdgeGrid + ProductionTerrainGrammar.EdgeGrid / 2;
+		int qz = FloorDiv(globalZ, ProductionTerrainGrammar.EdgeGrid) *
+			ProductionTerrainGrammar.EdgeGrid + ProductionTerrainGrammar.EdgeGrid / 2;
 		Vector2 warp = _legacyTerrain.GuideWarpAt(qx, qz);
 		int sampleX = Math.Clamp((int)MathF.Round(globalX + warp.X), 0, _atlas.Width - 1);
 		int sampleZ = Math.Clamp((int)MathF.Round(globalZ + warp.Y), 0, _atlas.Depth - 1);
@@ -1745,10 +1745,10 @@ public sealed class AtlasSectorCompiler
 
 	private bool TryGuidedLandElevation(int globalX, int globalZ, out float elevation)
 	{
-		int qx = FloorDiv(globalX, AtlasLegacyTerrainGrammar.EdgeGrid) *
-			AtlasLegacyTerrainGrammar.EdgeGrid + AtlasLegacyTerrainGrammar.EdgeGrid / 2;
-		int qz = FloorDiv(globalZ, AtlasLegacyTerrainGrammar.EdgeGrid) *
-			AtlasLegacyTerrainGrammar.EdgeGrid + AtlasLegacyTerrainGrammar.EdgeGrid / 2;
+		int qx = FloorDiv(globalX, ProductionTerrainGrammar.EdgeGrid) *
+			ProductionTerrainGrammar.EdgeGrid + ProductionTerrainGrammar.EdgeGrid / 2;
+		int qz = FloorDiv(globalZ, ProductionTerrainGrammar.EdgeGrid) *
+			ProductionTerrainGrammar.EdgeGrid + ProductionTerrainGrammar.EdgeGrid / 2;
 		Vector2 warp = _legacyTerrain.GuideWarpAt(qx, qz);
 		int sampleX = Math.Clamp((int)MathF.Round(globalX + warp.X), 0, _atlas.Width - 1);
 		int sampleZ = Math.Clamp((int)MathF.Round(globalZ + warp.Y), 0, _atlas.Depth - 1);

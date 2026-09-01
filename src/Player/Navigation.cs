@@ -37,16 +37,34 @@ public sealed class Navigation
 	public bool Walkable(int x, int z)
 	{
 		if (x < 1 || z < 1 || x >= _S - 1 || z >= _S - 1) return false;
-		return true;   // water is swimmable; only the map edge is truly closed
+		int i = z * _S + x;
+		// Water is intentionally swimmable. Dry routes, however, are planned after
+		// vegetation and authored overlays exist. Treating every land cell as open
+		// lets click navigation aim through a tree trunk or surviving wall and leaves
+		// the collision body pushing forever at an otherwise valid flat waypoint.
+		if (_t.Land[i] == 0) return true;
+		int ground = _t.Level[i];
+		return !_t.Grid.SolidAt(x, ground, z) &&
+		       !_t.Grid.SolidAt(x, ground + 1, z);
 	}
 
 	public float GroundY(int x, int z)
 	{
 		if (x < 0 || z < 0 || x >= _S || z >= _S) return Terrain.Sea;
-		return _t.Level[z * _S + x];
+		int i = z * _S + x;
+		// Navigation follows the surface the controller actually traverses. A wet
+		// column may have a sculpted bed thirty blocks below the water plane; using
+		// that bed here made an ordinary pool look like an impassable staircase to
+		// click-to-move even though the character swims across its continuous top.
+		// Authored fords remain land and therefore keep their real ground height.
+		return _t.Land[i] == 0 ? Terrain.Sea : _t.Level[i];
 	}
 
-	public bool IsWater(int x, int z) => GroundY(x, z) <= Terrain.Sea;
+	public bool IsWater(int x, int z)
+	{
+		if (x < 0 || z < 0 || x >= _S || z >= _S) return false;
+		return _t.Land[z * _S + x] == 0;
+	}
 
 	/// <summary>Nearest reachable cell to a requested destination, searched outward.</summary>
 	public (int x, int z) Snap(int x, int z)

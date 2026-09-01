@@ -2,20 +2,12 @@
 set -euo pipefail
 
 project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-command_name="${1:-preview}"
+command_name="${1:-audit}"
 output_path="${2:-res://../shots/world-authoring.svg}"
 
 case "$command_name" in
   audit)
     exec godot-mono --headless --path "$project_dir" -- --world-audit
-    ;;
-  preview)
-    exec godot-mono --headless --path "$project_dir" -- --world-audit --world-preview "$output_path"
-    ;;
-  preview-domain)
-    domain_id="${2:?usage: $0 preview-domain <domain-id> [preview-output]}"
-    domain_output="${3:-res://../shots/world-authoring-${domain_id}.svg}"
-    exec godot-mono --headless --path "$project_dir" -- --world-audit --world-domain "$domain_id" --world-preview "$domain_output"
     ;;
   atlas-preview)
 	atlas_output="${2:-res://../shots/world-atlas.svg}"
@@ -54,79 +46,53 @@ case "$command_name" in
 		reference_plan_output="${2:-$project_dir/../shots/reference-10-plan-overlay.svg}"
 		exec python3 "$project_dir/tools/reference-plan-overlay.py" "$reference_plan_output"
 		;;
-	compile-sector)
-	sector_address="${2:?usage: $0 compile-sector <x,z> [artifact-output] [preview-output]}"
-	sector_output="${3:-res://content/chapter_01/derived/sector-${sector_address/,/-}.pfs}"
-	sector_preview="${4:-res://../shots/atlas-sector-${sector_address/,/-}.png}"
-	exec godot-mono --headless --path "$project_dir" -- --world-audit --compile-sector "$sector_address" \
-	  --sector-output "$sector_output" --sector-preview "$sector_preview"
-	;;
-	verify-sector)
-	sector_address="${2:?usage: $0 verify-sector <x,z>}"
-	exec godot-mono --headless --path "$project_dir" -- --world-audit --verify-sector "$sector_address"
-	;;
-	verify-wilderness)
-	sector_address="${2:?usage: $0 verify-wilderness <x,z>}"
-	exec godot-mono --headless --path "$project_dir" -- --world-audit --verify-wilderness "$sector_address"
-	;;
-	verify-atlas-handoff)
-	atlas_point="${2:?usage: $0 verify-atlas-handoff <global-x,z> [derived-directory]}"
-	atlas_output="${3:-res://content/chapter_01/derived}"
+	verify-production-terrain)
+	atlas_point="${2:?usage: $0 verify-production-terrain <global-x,z>}"
 	exec godot-mono --headless --path "$project_dir" -- --world-audit \
-	  --verify-atlas-handoff "$atlas_point" --atlas-output "$atlas_output"
+	  --verify-production-terrain "$atlas_point"
 	;;
+	audit-production-terrain)
+	exec godot-mono --headless --path "$project_dir" -- --world-audit \
+	  --audit-production-terrain
+	;;
+	verify-production-playability)
+		atlas_point="${2:?usage: $0 verify-production-playability <global-x,z> [land|water]}"
+	playability_mode="${3:-land}"
+	if [[ "$playability_mode" != "land" && "$playability_mode" != "water" ]]; then
+		echo "playability mode must be land or water" >&2
+		exit 64
+	fi
+		exec godot-mono --headless --path "$project_dir" -- \
+		  --terrain-focus "$atlas_point" --playability-smoke "$playability_mode"
+		;;
+	review-production-terrain)
+		atlas_point="${2:?usage: $0 review-production-terrain <global-x,z>}"
+		exec godot-mono --path "$project_dir" -- --terrain-focus "$atlas_point"
+		;;
+	capture-production-terrain)
+		atlas_point="${2:?usage: $0 capture-production-terrain <global-x,z> [output] [shot-names]}"
+		atlas_slug="${atlas_point/,/-}"
+		terrain_shots="${3:-res://../shots/production-terrain-${atlas_slug}}"
+		args=(--terrain-focus "$atlas_point" --shots "$terrain_shots")
+		if [[ $# -ge 4 ]]; then args+=(--only "$4"); fi
+		exec godot-mono --path "$project_dir" --fullscreen -- "${args[@]}"
+		;;
 	verify-atlas-walking-handoff)
 	exec godot-mono --headless --path "$project_dir" -- --world-audit \
 	  --verify-atlas-walking-handoff
 	;;
-	compile-atlas)
-	atlas_output="${2:-res://content/chapter_01/derived}"
-	exec godot-mono --headless --path "$project_dir" -- --world-audit --compile-atlas \
-	  --atlas-output "$atlas_output"
+	verify-camera-obstruction)
+	exec godot-mono --headless --path "$project_dir" \
+	  --script res://tools/camera-obstruction-smoke.gd
 	;;
-	verify-atlas)
-	atlas_output="${2:-res://content/chapter_01/derived}"
-	exec godot-mono --headless --path "$project_dir" -- --world-audit --verify-atlas \
-	  --atlas-output "$atlas_output"
+	verify-atlas-map-transport)
+	exec godot-mono --headless --path "$project_dir" \
+	  --script res://tools/atlas-map-transport-smoke.gd
 	;;
-	audit-atlas-hydrology)
-	atlas_output="${2:-res://content/chapter_01/derived}"
-	exec godot-mono --headless --path "$project_dir" -- --world-audit \
-	  --audit-atlas-hydrology --atlas-output "$atlas_output"
+	verify-camera-auto-zoom)
+	exec godot-mono --headless --path "$project_dir" \
+	  --script res://tools/camera-auto-zoom-smoke.gd
 	;;
-	sample-atlas)
-	atlas_point="${2:?usage: $0 sample-atlas <global-x,z>}"
-	exec godot-mono --headless --path "$project_dir" -- --world-audit --sample-atlas "$atlas_point"
-	;;
-	review-sector)
-	sector_address="${2:?usage: $0 review-sector <x,z> [global-focus-x,z]}"
-	shift 2
-	args=(--review-sector "$sector_address")
-	if [[ $# -gt 0 ]]; then args+=(--review-focus "$1"); fi
-	exec godot-mono --path "$project_dir" -- "${args[@]}"
-	;;
-	capture-sector)
-	sector_address="${2:?usage: $0 capture-sector <x,z> [output] [global-focus-x,z]}"
-	sector_slug="${sector_address/,/-}"
-	sector_shots="${3:-res://../shots/atlas-runtime-${sector_slug}}"
-	args=(--review-sector "$sector_address" --shots "$sector_shots")
-	if [[ $# -ge 4 ]]; then args+=(--review-focus "$4"); fi
-		exec godot-mono --path "$project_dir" --fullscreen -- "${args[@]}"
-		;;
-	review-domain)
-		domain_id="${2:?usage: $0 review-domain <domain-id> [global-focus-x,z]}"
-		shift 2
-		args=(--review-domain "$domain_id")
-		if [[ $# -gt 0 ]]; then args+=(--review-focus "$1"); fi
-		exec godot-mono --path "$project_dir" -- "${args[@]}"
-		;;
-	capture-domain)
-		domain_id="${2:?usage: $0 capture-domain <domain-id> [output] [global-focus-x,z]}"
-		domain_shots="${3:-res://../shots/atlas-domain-${domain_id}}"
-		args=(--review-domain "$domain_id" --shots "$domain_shots")
-		if [[ $# -ge 4 ]]; then args+=(--review-focus "$4"); fi
-		exec godot-mono --path "$project_dir" --fullscreen -- "${args[@]}"
-		;;
 	review-site)
 		site_id="${2:?usage: $0 review-site <site-id>}"
 		exec godot-mono --path "$project_dir" -- --review-site "$site_id"
@@ -139,7 +105,7 @@ case "$command_name" in
 		exec godot-mono --path "$project_dir" --fullscreen -- "${args[@]}"
 		;;
   *)
-echo "usage: $0 audit | preview [output] | preview-domain <domain-id> [output] | atlas-preview [output] | atlas-topology-preview [output] | atlas-map-preview [output] | preview-atlas-domain <domain-id> [output] | preview-site-plan <site-id> [output] [--runtime-facing] | reference-top-grid [output] [source-pixel-x,y ...] | reference-plan-overlay [output] | sample-atlas <global-x,z> | compile-sector <x,z> [artifact] [preview] | verify-sector <x,z> | verify-wilderness <x,z> | verify-atlas-handoff <global-x,z> [derived-directory] | verify-atlas-walking-handoff | compile-atlas [output-directory] | verify-atlas [output-directory] | audit-atlas-hydrology [output-directory] | review-sector <x,z> [global-focus] | capture-sector <x,z> [output] [global-focus] | review-domain <domain-id> [global-focus] | capture-domain <domain-id> [output] [global-focus] | review-site <site-id> | capture-site <site-id> [output] [shot-names]" >&2
+echo "usage: $0 audit | atlas-preview [output] | atlas-topology-preview [output] | atlas-map-preview [output] | preview-atlas-domain <domain-id> [output] | preview-site-plan <site-id> [output] [--runtime-facing] | reference-top-grid [output] [source-pixel-x,y ...] | reference-plan-overlay [output] | verify-production-terrain <global-x,z> | audit-production-terrain | verify-production-playability <global-x,z> [land|water] | review-production-terrain <global-x,z> | capture-production-terrain <global-x,z> [output] [shot-names] | verify-atlas-walking-handoff | verify-camera-obstruction | verify-atlas-map-transport | verify-camera-auto-zoom | review-site <site-id> | capture-site <site-id> [output] [shot-names]" >&2
     exit 64
     ;;
 esac

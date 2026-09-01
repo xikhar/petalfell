@@ -110,11 +110,9 @@ public sealed class CanonicalWorldDefinition
 			if (domain.Boundary.Count < 3) report.Error($"domain '{domain.Id}' boundary needs at least three points");
 			foreach (var p in domain.Boundary)
 				if (!Inside(p)) report.Error($"domain '{domain.Id}' boundary point lies outside the world");
-			if (atlas != null)
+			if (atlas != null && !string.IsNullOrWhiteSpace(domain.PlanPath))
 			{
-				if (string.IsNullOrWhiteSpace(domain.PlanPath))
-					report.Warning($"domain '{domain.Id}' has no L3 planPath");
-				else if (domain.Plan == null)
+				if (domain.Plan == null)
 					report.Error($"domain '{domain.Id}' plan '{domain.PlanPath}' did not load");
 				else
 					report.Include(domain.Plan.Audit(atlas, this, domain), $"domain plan '{domain.Id}'");
@@ -229,8 +227,6 @@ public sealed class CanonicalWorldDefinition
 		foreach (var node in RouteNodes)
 			if (edges.TryGetValue(node.Id, out var links) && links.Count == 0)
 				report.Warning($"route node '{node.Id}' is unused");
-		if (Sites.Count < 30)
-			report.Warning($"topology is incomplete: {Sites.Count} sites authored, Chapter 1 target is 30–60");
 	}
 
 	private static bool PointInPolygon(BlockPoint p, List<BlockPoint> polygon)

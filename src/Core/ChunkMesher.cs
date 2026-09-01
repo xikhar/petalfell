@@ -131,7 +131,7 @@ public static class ChunkMesher
 		for (int x = x0 - 1; x <= x1; x++)
 		{
 			if (x < 0 || z < 0 || x >= grid.Size || z >= grid.Size) continue;
-			yTop = Math.Max(yTop, grid.Heights[z * grid.Size + x]);
+			yTop = Math.Max(yTop, grid.MeshHeightAt(x, z));
 		}
 		yTop = Math.Min(grid.Height, yTop + 1);
 

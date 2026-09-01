@@ -315,6 +315,142 @@ public static class TerrainShape
 		return mask;
 	}
 
+	/// <summary>
+	/// Cut the legacy stair shape from globally anchored, bounded candidates.
+	///
+	/// <see cref="CarveStairs"/> deliberately reasons about connectivity across one
+	/// complete heightfield. A moving production window is not a complete world:
+	/// changing its allocation changes component labels and can make a stair appear
+	/// in only one copy of the overlap. This pass retains the old tread/width/cut
+	/// primitive but makes placement a pure atlas-space operation. Candidates read
+	/// one immutable source field and merge their lowering proposals by minimum, so
+	/// neighbouring windows cannot influence either selection or application order.
+	/// </summary>
+	public static byte[] CarveAtlasStairs(short[] lev, int S, byte[] land,
+		int originX, int originZ, int seed, int tread = 2, int width = 3,
+		byte[] skip = null)
+	{
+		const int CandidateGrid = 72;
+		const int SearchRadius = 32;
+		const int MaxRise = 18;
+		const int MaxRun = 40;
+		int support = SearchRadius + MaxRun + width;
+		var source = (short[])lev.Clone();
+		var proposal = new short[lev.Length];
+		Array.Fill(proposal, short.MaxValue);
+		var mask = new byte[lev.Length];
+		int half = (width - 1) / 2;
+
+		uint Hash(int cellX, int cellZ, int salt)
+		{
+			unchecked
+			{
+				uint h = (uint)(cellX * 374761393 + cellZ * 668265263 +
+					salt * 1442695040 + seed * unchecked((int)0x9e3779b1));
+				h = (h ^ (h >> 13)) * 1274126177u;
+				return h ^ (h >> 16);
+			}
+		}
+
+		bool BroadShelf(int x, int z, int height)
+		{
+			int matching = 0;
+			for (int dz = -2; dz <= 2; dz++)
+			for (int dx = -2; dx <= 2; dx++)
+			{
+				int xx = x + dx, zz = z + dz;
+				if (xx < 0 || zz < 0 || xx >= S || zz >= S) continue;
+				int i = zz * S + xx;
+				if (land[i] != 0 && source[i] == height &&
+				    (skip == null || skip[i] == 0)) matching++;
+			}
+			return matching >= 8;
+		}
+
+		int minCellX = FloorDiv(originX - SearchRadius, CandidateGrid) - 1;
+		int maxCellX = FloorDiv(originX + S + SearchRadius, CandidateGrid) + 1;
+		int minCellZ = FloorDiv(originZ - SearchRadius, CandidateGrid) - 1;
+		int maxCellZ = FloorDiv(originZ + S + SearchRadius, CandidateGrid) + 1;
+		for (int cellZ = minCellZ; cellZ <= maxCellZ; cellZ++)
+		for (int cellX = minCellX; cellX <= maxCellX; cellX++)
+		{
+			// Roughly the old six-stairs-per-256-square cadence, without a window-wide
+			// maximum whose truncation would depend on which sectors happen to be loaded.
+			if (Hash(cellX, cellZ, 11) / 4294967296f > .58f) continue;
+			int jitterX = (int)(Hash(cellX, cellZ, 13) % 21) - 10;
+			int jitterZ = (int)(Hash(cellX, cellZ, 17) % 21) - 10;
+			int centreX = cellX * CandidateGrid + CandidateGrid / 2 + jitterX - originX;
+			int centreZ = cellZ * CandidateGrid + CandidateGrid / 2 + jitterZ - originZ;
+			// Partial search/run support would make the allocation edge choose a
+			// different boundary. The runtime never exposes this outer strip before it
+			// swaps windows, and its 128-block handoff margin is larger than support.
+			if (centreX < support || centreZ < support ||
+			    centreX >= S - support || centreZ >= S - support) continue;
+
+			int bestScore = int.MaxValue, bestTie = int.MaxValue;
+			int lowX = -1, lowZ = -1, stepX = 0, stepZ = 0;
+			for (int z = centreZ - SearchRadius; z <= centreZ + SearchRadius; z++)
+			for (int x = centreX - SearchRadius; x <= centreX + SearchRadius; x++)
+			{
+				int i = z * S + x;
+				if (land[i] == 0 || (skip != null && skip[i] != 0)) continue;
+				for (int direction = 0; direction < 2; direction++)
+				{
+					int nx = x + (direction == 0 ? 1 : 0);
+					int nz = z + (direction == 1 ? 1 : 0);
+					int j = nz * S + nx;
+					if (land[j] == 0 || (skip != null && skip[j] != 0)) continue;
+					int delta = source[j] - source[i];
+					int rise = Math.Abs(delta);
+					if (rise < 2 || rise > MaxRise) continue;
+					int lx = delta > 0 ? x : nx;
+					int lz = delta > 0 ? z : nz;
+					int hx = delta > 0 ? nx : x;
+					int hz = delta > 0 ? nz : z;
+					if (!BroadShelf(lx, lz, source[lz * S + lx]) ||
+					    !BroadShelf(hx, hz, source[hz * S + hx])) continue;
+					int distance = Math.Abs(x - centreX) + Math.Abs(z - centreZ);
+					int score = distance * 5 + rise * 7;
+					int globalEdgeX = originX + x, globalEdgeZ = originZ + z;
+					int tie = unchecked(globalEdgeZ * 16384 + globalEdgeX * 2 + direction);
+					if (score > bestScore || score == bestScore && tie >= bestTie) continue;
+					bestScore = score;
+					bestTie = tie;
+					lowX = lx;
+					lowZ = lz;
+					stepX = hx - lx;
+					stepZ = hz - lz;
+				}
+			}
+			if (lowX < 0) continue;
+
+			int low = source[lowZ * S + lowX];
+			int perpendicularX = stepZ, perpendicularZ = stepX;
+			for (int run = 1; run <= MaxRun; run++)
+			{
+				int x = lowX + stepX * run, z = lowZ + stepZ * run;
+				int i = z * S + x;
+				if (land[i] == 0 || (skip != null && skip[i] != 0)) break;
+				int target = low + (int)MathF.Ceiling(run / (float)tread);
+				if (source[i] <= target) break;
+				for (int across = -half; across <= half; across++)
+				{
+					int xx = x + perpendicularX * across;
+					int zz = z + perpendicularZ * across;
+					int at = zz * S + xx;
+					if (land[at] == 0 || (skip != null && skip[at] != 0) ||
+					    source[at] <= target) continue;
+					proposal[at] = (short)Math.Min(proposal[at], target);
+					mask[at] = 1;
+				}
+			}
+		}
+
+		for (int i = 0; i < lev.Length; i++)
+			if (proposal[i] != short.MaxValue) lev[i] = Math.Min(lev[i], proposal[i]);
+		return mask;
+	}
+
 	/// <summary>One staircase: from the low column, biting up into the high ground.</summary>
 	private static void CutStair(short[] lev, int S, byte[] land, byte[] mask,
 		int lx, int lz, int ux, int uz, int tread, int width, byte[] skip)
@@ -340,6 +476,12 @@ public static class TerrainShape
 				else if (w == 0) mask[j] = 1;
 			}
 		}
+	}
+
+	private static int FloorDiv(int value, int divisor)
+	{
+		int quotient = value / divisor;
+		return value < 0 && value % divisor != 0 ? quotient - 1 : quotient;
 	}
 
 	/// <summary>

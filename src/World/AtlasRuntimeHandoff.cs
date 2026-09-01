@@ -21,6 +21,13 @@ public static class AtlasRuntimeHandoff
 	public const int DefaultWalkingRearmMargin =
 		DefaultWalkingTriggerMargin + 4 * ChunkMesher.ChunkSize;
 	public const int DefaultWalkingCooldownFrames = 45;
+	// A map click is allowed to move sideways, unlike an exact walking handoff.
+	// Make that freedom useful: the earlier 3x3-only test could place the player on
+	// a six-cell summit chip with no route off it. Four thousand cells and a
+	// 48-block reach retain small swimmable islands while rejecting those stranded
+	// high shelves without flattening the terrain that created them.
+	private const int MinimumTeleportSupportCells = 4096;
+	private const int MinimumTeleportSupportRadius = 48;
 
 	/// <summary>
 	/// Materialise one edge-clamped playable mosaic with the same authored-site
@@ -175,10 +182,13 @@ public static class AtlasRuntimeHandoff
 		int minZ = data.OriginZ + data.Apron;
 		int maxX = minX + data.CoreSize;
 		int maxZ = minZ + data.CoreSize;
+		LandingSupportField support = BuildLandingSupportField(data);
 		if (TryResolveExactLanding(window, requestedGlobalX, requestedGlobalZ,
 		    out landing, out requestedRejection))
 		{
-			return true;
+			if (support.IsSupportedDry(requestedGlobalX, requestedGlobalZ))
+				return true;
+			requestedRejection = "stranded";
 		}
 
 		int maxRadius = Math.Max(
@@ -208,7 +218,8 @@ public static class AtlasRuntimeHandoff
 
 		bool TryCandidate(int x, int z, int radius, out AtlasRuntimeLanding result)
 		{
-			if (LandingRejection(window, x, z, minX, minZ, maxX, maxZ) == null)
+			if (support.IsSupportedDry(x, z) &&
+			    LandingRejection(window, x, z, minX, minZ, maxX, maxZ) == null)
 			{
 				result = MakeLanding(window, x, z, exactCell: false,
 					searchRadius: radius);
@@ -220,9 +231,107 @@ public static class AtlasRuntimeHandoff
 	}
 
 	/// <summary>
-	/// Validate one exact global column without searching. Walking handoff uses
-	/// this stricter contract so crossing a window edge can never move the player
-	/// sideways or invoke the map teleport's dry-land recovery policy.
+	/// Label the complete traversal surface once for a map teleport. Testing a
+	/// bounded flood from every ring candidate made recovery quadratic in the
+	/// search radius. Component size plus the four Manhattan extrema answers the
+	/// same support question in O(1) per candidate after one linear pass.
+	/// Water participates at its actual surface so a small low island remains
+	/// playable by swimming; only a dry cell may become the landing itself.
+	/// </summary>
+	private static LandingSupportField BuildLandingSupportField(AtlasSectorData data)
+	{
+		int width = data.Width, depth = data.Depth, count = width * depth;
+		var labels = new int[count];
+		var queue = new int[count];
+		var components = new List<LandingSupportComponent> { default };
+
+		int Surface(int index)
+		{
+			if (data.Land[index] != 0) return data.Height[index];
+			return data.WaterSurface[index] > 0
+				? data.WaterSurface[index]
+				: data.Height[index];
+		}
+
+		for (int start = 0; start < count; start++)
+		{
+			if (labels[start] != 0) continue;
+			int label = components.Count;
+			int read = 0, write = 0;
+			labels[start] = label;
+			queue[write++] = start;
+			int cells = 0;
+			int minSum = int.MaxValue, maxSum = int.MinValue;
+			int minDifference = int.MaxValue, maxDifference = int.MinValue;
+			while (read < write)
+			{
+				int at = queue[read++];
+				int x = at % width, z = at / width;
+				int sum = x + z, difference = x - z;
+				cells++;
+				minSum = Math.Min(minSum, sum);
+				maxSum = Math.Max(maxSum, sum);
+				minDifference = Math.Min(minDifference, difference);
+				maxDifference = Math.Max(maxDifference, difference);
+				int surface = Surface(at);
+
+				void Visit(int next)
+				{
+					if (labels[next] != 0 ||
+					    Math.Abs(Surface(next) - surface) > Terrain.Step) return;
+					labels[next] = label;
+					queue[write++] = next;
+				}
+
+				if (x > 0) Visit(at - 1);
+				if (x + 1 < width) Visit(at + 1);
+				if (z > 0) Visit(at - width);
+				if (z + 1 < depth) Visit(at + width);
+			}
+			components.Add(new LandingSupportComponent(cells, minSum, maxSum,
+				minDifference, maxDifference));
+		}
+		return new LandingSupportField(data, labels, components.ToArray());
+	}
+
+	private sealed class LandingSupportField
+	{
+		private readonly AtlasSectorData _data;
+		private readonly int[] _labels;
+		private readonly LandingSupportComponent[] _components;
+
+		public LandingSupportField(AtlasSectorData data, int[] labels,
+			LandingSupportComponent[] components)
+		{
+			_data = data;
+			_labels = labels;
+			_components = components;
+		}
+
+		public bool IsSupportedDry(int globalX, int globalZ)
+		{
+			int x = globalX - _data.OriginX, z = globalZ - _data.OriginZ;
+			if (x < 0 || z < 0 || x >= _data.Width || z >= _data.Depth) return false;
+			int index = z * _data.Width + x;
+			if (_data.Land[index] == 0) return false;
+			LandingSupportComponent component = _components[_labels[index]];
+			int sum = x + z, difference = x - z;
+			int radius = Math.Max(
+				Math.Max(component.MaxSum - sum, sum - component.MinSum),
+				Math.Max(component.MaxDifference - difference,
+					difference - component.MinDifference));
+			return component.Cells >= MinimumTeleportSupportCells &&
+			       radius >= MinimumTeleportSupportRadius;
+		}
+	}
+
+	private readonly record struct LandingSupportComponent(int Cells,
+		int MinSum, int MaxSum, int MinDifference, int MaxDifference);
+
+	/// <summary>
+	/// Validate one exact global column as a fresh dry landing without searching.
+	/// Map travel uses this before its deterministic sideways recovery; an
+	/// already-physical walking player uses collision continuity instead.
 	/// </summary>
 	public static bool TryResolveExactLanding(AtlasSectorWindow window,
 		int globalX, int globalZ, out AtlasRuntimeLanding landing,
@@ -244,6 +353,96 @@ public static class AtlasRuntimeHandoff
 		landing = MakeLanding(window, globalX, globalZ,
 			exactCell: true, searchRadius: 0);
 		return true;
+	}
+
+	/// <summary>
+	/// Prove that an already-physical player can move between two overlapping
+	/// runtime windows without changing the collision around their body.
+	///
+	/// This is intentionally not <see cref="TryResolveExactLanding"/>. A map
+	/// teleport needs a new dry, flat, empty spawn; a walking player may already be
+	/// beside a terrace, tree or ruin, in water, airborne, or standing under an
+	/// overhang. Rejecting those valid states created an invisible barrier at the
+	/// moving-window handoff line. The old window has already established that the
+	/// body is physical, so handoff only needs to prove the new owner describes the
+	/// same nearby collision and water.
+	/// </summary>
+	public static bool TryResolveWalkingTransfer(AtlasSectorWindow current,
+		AtlasSectorWindow next, int globalX, int globalZ, float globalY,
+		out AtlasRuntimeLanding landing, out string rejection)
+	{
+		if (current == null) throw new ArgumentNullException(nameof(current));
+		if (next == null) throw new ArgumentNullException(nameof(next));
+		if (!TryCoreCell(current, globalX, globalZ, out int currentX,
+		    out int currentZ) ||
+		    !TryCoreCell(next, globalX, globalZ, out int nextX, out int nextZ))
+		{
+			landing = default;
+			rejection = "outside-overlap";
+			return false;
+		}
+
+		int currentGround = current.Grid.HeightAt(currentX, currentZ);
+		int nextGround = next.Grid.HeightAt(nextX, nextZ);
+		if (currentGround != nextGround)
+		{
+			landing = default;
+			rejection = $"ground changed {currentGround}->{nextGround}";
+			return false;
+		}
+
+		// The capsule is 1.75 blocks high and 0.38 blocks wide. A 3x3x5 block
+		// neighbourhood is deliberately conservative: it also covers a floor snap,
+		// an automatic terrace hop and the adjacent cell touched near a block edge.
+		int minY = Math.Max(0, Mathf.FloorToInt(globalY) - 1);
+		int maxY = Math.Min(Math.Min(current.Grid.Height, next.Grid.Height),
+			Mathf.CeilToInt(globalY + 3f));
+		for (int dz = -1; dz <= 1; dz++)
+		for (int dx = -1; dx <= 1; dx++)
+		{
+			int gx = globalX + dx, gz = globalZ + dz;
+			if (!TryCoreCell(current, gx, gz, out int ax, out int az) ||
+			    !TryCoreCell(next, gx, gz, out int bx, out int bz))
+			{
+				landing = default;
+				rejection = $"body neighbourhood leaves overlap at {gx},{gz}";
+				return false;
+			}
+			int ai = az * current.Data.Width + ax;
+			int bi = bz * next.Data.Width + bx;
+			if (current.Grid.HeightAt(ax, az) != next.Grid.HeightAt(bx, bz) ||
+			    current.Data.WaterSurface[ai] != next.Data.WaterSurface[bi] ||
+			    current.Data.Land[ai] != next.Data.Land[bi])
+			{
+				landing = default;
+				rejection = $"surface neighbourhood changed at {gx},{gz}";
+				return false;
+			}
+			for (int y = minY; y < maxY; y++)
+				if (current.Grid.SolidAt(ax, y, az) != next.Grid.SolidAt(bx, y, bz))
+				{
+					landing = default;
+					rejection = $"collision changed at {gx},{y},{gz}";
+					return false;
+				}
+		}
+
+		landing = new AtlasRuntimeLanding(globalX, globalZ, nextX, nextZ,
+			nextGround, true, 0);
+		rejection = null;
+		return true;
+
+		static bool TryCoreCell(AtlasSectorWindow window, int gx, int gz,
+			out int localX, out int localZ)
+		{
+			AtlasSectorData data = window.Data;
+			int minX = data.OriginX + data.Apron;
+			int minZ = data.OriginZ + data.Apron;
+			localX = gx - data.OriginX;
+			localZ = gz - data.OriginZ;
+			return gx >= minX && gz >= minZ &&
+			       gx < minX + data.CoreSize && gz < minZ + data.CoreSize;
+		}
 	}
 
 	/// <summary>
@@ -612,10 +811,20 @@ public readonly record struct AtlasRuntimeLanding(int GlobalX, int GlobalZ,
 
 public sealed record AtlasPreparedWindow(AtlasSectorWindow Window,
 	AtlasMosaicBounds Bounds, AtlasWildernessDressingStatistics Wilderness,
-	IReadOnlyList<AtlasReferenceSiteBuild> SiteBuilds);
+	IReadOnlyList<AtlasReferenceSiteBuild> SiteBuilds,
+	NaturalFormationStatistics NaturalFormations = default);
 
 public readonly record struct AtlasReferenceSiteBuild(string SiteId,
 	ReferenceSiteStatistics Statistics);
+
+/// <summary>
+/// Deterministic natural overhangs placed by the direct map-guided terrain path.
+/// The hash covers candidate identity and every written voxel, so repeat builds
+/// verify the sparse 3-D overlay as well as the underlying heightfield.
+/// </summary>
+public readonly record struct NaturalFormationStatistics(int Arches, int Voxels,
+	ulong ManifestHash, int FirstGlobalX = -1, int FirstGlobalZ = -1,
+	int LastGlobalX = -1, int LastGlobalZ = -1);
 
 [Flags]
 public enum AtlasWindowEdge

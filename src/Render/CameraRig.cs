@@ -1,4 +1,3 @@
-using System;
 using Godot;
 
 namespace Petalfell.Render;
@@ -114,12 +113,14 @@ public partial class CameraRig : Camera3D
 		_smoothLead = Damp(_smoothLead, lead, 3.2f, dt);
 
 		var focus = _smoothFocus + _smoothLead;
-		var offset = new Vector3(
+		var direction = new Vector3(
 			Mathf.Sin(Yaw) * Mathf.Cos(Pitch),
 			Mathf.Sin(Pitch),
-			Mathf.Cos(Yaw) * Mathf.Cos(Pitch)) * Distance;
-
-		GlobalPosition = focus + offset;
+			Mathf.Cos(Yaw) * Mathf.Cos(Pitch));
+		// Distance belongs only to wheel input, K auto-zoom and the developer
+		// controls. Nearby terrain and props must not turn collision into an
+		// unsolicited zoom or a slow outward camera drift after the player leaves.
+		GlobalPosition = focus + direction * Distance;
 		LookAt(focus, Vector3.Up);
 	}
 }

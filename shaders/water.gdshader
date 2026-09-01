@@ -221,6 +221,28 @@ void fragment() {
 		: cam + dir * ((plane_y - cam.y) / denom);
 	float surface = -(VIEW_MATRIX * vec4(wpos, 1.0)).z;
 
+	// Continent-scale water needs a second visual wavelength. The original close
+	// water had excellent ripples but, from the atlas camera, their repeated sum
+	// became one uniform printed texture. Two independently advected, rotated
+	// noise fields make broad moving reaches without tilting the normal or feeding
+	// a high-power highlight (the failure mode documented at the top of this
+	// shader). They modulate colour and the small-scale domain only.
+	mat2 basin_rot = mat2(vec2(0.78, 0.63), vec2(-0.63, 0.78));
+	float basin_a = fbm(wpos.xz * 0.0065 + vec2(TIME * 0.0018, -TIME * 0.0011));
+	float basin_b = fbm(basin_rot * wpos.xz * 0.0105 +
+		vec2(-TIME * 0.0013 + 37.0, TIME * 0.0017 - 19.0));
+	float basin = (basin_a + basin_b) * 0.5 - 0.5;
+	vec2 basin_flow = vec2(basin_a - 0.5, basin_b - 0.5);
+
+	// The close-water wave stack is deliberately sub-block. At a 170-300 block
+	// atlas view those wavelengths are smaller than a pixel, so retaining their
+	// full displacement aliases the crossing directions into broad diagonal
+	// wallpaper. Keep the legacy surface byte-for-byte at ordinary play distance,
+	// then let only the non-periodic basin field carry the very far view.
+	float view_distance = length(wpos - cam);
+	float local_detail = mix(0.14, 1.0,
+		1.0 - smoothstep(105.0, 260.0, view_distance));
+
 	// A slow, shallow swell. The reference water is nearly still — glassy enough
 	// to hold a reflection — so this only breaks the surface up, never reads as
 	// chop.
@@ -235,7 +257,8 @@ void fragment() {
 	// to paint broad soft patches of lighter water that crawled across the lake
 	// as it animated: the drifting facets. The reference water is glassy; the
 	// swell only has to break the sheen up, not to visibly tilt the surface.
-	vec3 calm_world = normalize(vec3(swell.x * 0.055, 1.0, swell.y * 0.055));
+	vec3 calm_world = normalize(vec3(swell.x * 0.055 * local_detail, 1.0,
+		swell.y * 0.055 * local_detail));
 	vec3 calm_normal = normalize(mat3(VIEW_MATRIX) * calm_world);
 
 	// Five crossing ripples, four world units down to two thirds of one.
@@ -249,14 +272,16 @@ void fragment() {
 	//
 	// Held to a block or two and under, the identical maths reads as fine glitter
 	// and short travelling crest lines instead — which is what water does.
-	vec2 p = wpos.xz;
+	vec2 p = wpos.xz + basin_flow * 5.0;
 	vec3 wave = ripple(p, vec2( 0.940,  0.341), 1.55, 0.030, 1.00, TIME)
 	          + ripple(p, vec2(-0.416,  0.909), 2.41, 0.020, 1.25, TIME)
 	          + ripple(p, vec2( 0.707, -0.707), 3.77, 0.013, 1.55, TIME)
 	          + ripple(p, vec2(-0.860, -0.510), 5.83, 0.008, 1.90, TIME)
 	          + ripple(p, vec2( 0.190,  0.982), 9.11, 0.005, 2.30, TIME);
+	wave *= local_detail;
 	// For a height field the normal runs against the gradient.
-	vec3 ripple_world = normalize(vec3(swell.x * 0.055 - wave.y, 1.0, swell.y * 0.055 - wave.z));
+	vec3 ripple_world = normalize(vec3(swell.x * 0.055 * local_detail - wave.y,
+		1.0, swell.y * 0.055 * local_detail - wave.z));
 	vec3 ripple_normal = normalize(mat3(VIEW_MATRIX) * ripple_world);
 
 	// THE WAVE FILTER.
@@ -270,7 +295,8 @@ void fragment() {
 	//
 	// The Y component is negated because screen V runs down while world Z runs
 	// away from the camera.
-	vec2 flow = vec2(wave.y, -wave.z) + swell * 0.55;
+	vec2 flow = vec2(wave.y, -wave.z) + swell * (0.55 * local_detail) +
+		basin_flow * 0.075;
 
 	/* ---- what is under the water ---------------------------------- */
 
@@ -404,6 +430,11 @@ void fragment() {
 	float fresnel = fresnel_floor + (1.0 - fresnel_floor) * pow(1.0 - facing, 3.5);
 
 	vec3 col = mix(refracted, reflected, clamp(fresnel * reflect_strength, 0.0, 1.0));
+	// Low-power broad modulation survives a far zoom as uneven moving water
+	// masses, while remaining subtle enough that the translucent bed still owns
+	// the actual depth read.
+	col *= 1.0 + basin * 0.10;
+	col = mix(col, basin > 0.0 ? shallow : deep, abs(basin) * 0.035);
 
 	// One broad, soft sun sheen off the calm surface, and a fine glitter off the
 	// ripples. The wide lobe is the light on the lake; the tight one is the light
@@ -456,7 +487,8 @@ void fragment() {
 	// this shader was tuned when the surface was three times lighter, and every
 	// one of them had to come down.
 	float sheet = fbm(warp(wpos.xz * 0.075, 1.2) + vec2(TIME * 0.010, TIME * 0.006));
-	col = mix(col, sheen, smoothstep(0.66, 0.98, sheet) * 0.018);
+	col = mix(col, sheen, smoothstep(0.66, 0.98, sheet) *
+		mix(0.0035, 0.018, local_detail));
 
 	// A one-block lattice of lightness, so the surface belongs to the same blocky
 	// world rather than being a smooth sheet laid over it.

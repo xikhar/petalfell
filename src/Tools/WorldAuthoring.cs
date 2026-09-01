@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Godot;
+using Petalfell.Core;
 using Petalfell.UI;
 using Petalfell.World;
 
@@ -31,6 +32,8 @@ public static class WorldAuthoring
 		string verifySector = null;
 		string verifyWilderness = null;
 		string verifyAtlasHandoff = null;
+		string verifyProductionTerrain = null;
+		bool auditProductionTerrain = false;
 		bool verifyAtlasWalkingHandoff = false;
 		bool compileAtlas = false;
 		bool verifyAtlas = false;
@@ -45,40 +48,18 @@ public static class WorldAuthoring
 		for (int i = 0; i < args.Length; i++)
 		{
 			if (args[i] == "--world-audit") audit = true;
-			else if (args[i] == "--world-preview" && i + 1 < args.Length) preview = args[++i];
-			else if (args[i].StartsWith("--world-preview=")) preview = args[i][16..];
 			else if (args[i] == "--atlas-preview" && i + 1 < args.Length) atlasPreview = args[++i];
 			else if (args[i].StartsWith("--atlas-preview=")) atlasPreview = args[i][16..];
 			else if (args[i] == "--atlas-topology-preview" && i + 1 < args.Length) atlasTopologyPreview = args[++i];
 			else if (args[i].StartsWith("--atlas-topology-preview=")) atlasTopologyPreview = args[i][25..];
 			else if (args[i] == "--atlas-map-preview" && i + 1 < args.Length) atlasMapPreview = args[++i];
 			else if (args[i].StartsWith("--atlas-map-preview=")) atlasMapPreview = args[i][20..];
-			else if (args[i] == "--world-domain" && i + 1 < args.Length) domainId = args[++i];
-			else if (args[i].StartsWith("--world-domain=")) domainId = args[i][15..];
 			else if (args[i] == "--atlas-domain" && i + 1 < args.Length) atlasDomainId = args[++i];
 			else if (args[i].StartsWith("--atlas-domain=")) atlasDomainId = args[i][15..];
-			else if (args[i] == "--compile-sector" && i + 1 < args.Length) compileSector = args[++i];
-			else if (args[i].StartsWith("--compile-sector=")) compileSector = args[i][17..];
-			else if (args[i] == "--verify-sector" && i + 1 < args.Length) verifySector = args[++i];
-			else if (args[i].StartsWith("--verify-sector=")) verifySector = args[i][16..];
-			else if (args[i] == "--verify-wilderness" && i + 1 < args.Length) verifyWilderness = args[++i];
-			else if (args[i].StartsWith("--verify-wilderness=")) verifyWilderness = args[i][20..];
-			else if (args[i] == "--verify-atlas-handoff" && i + 1 < args.Length) verifyAtlasHandoff = args[++i];
-			else if (args[i].StartsWith("--verify-atlas-handoff=")) verifyAtlasHandoff = args[i][23..];
+			else if (args[i] == "--verify-production-terrain" && i + 1 < args.Length) verifyProductionTerrain = args[++i];
+			else if (args[i].StartsWith("--verify-production-terrain=")) verifyProductionTerrain = args[i][28..];
+			else if (args[i] == "--audit-production-terrain") auditProductionTerrain = true;
 			else if (args[i] == "--verify-atlas-walking-handoff") verifyAtlasWalkingHandoff = true;
-			else if (args[i] == "--compile-atlas") compileAtlas = true;
-			else if (args[i] == "--verify-atlas") verifyAtlas = true;
-			else if (args[i] == "--audit-atlas-hydrology") auditAtlasHydrology = true;
-			else if (args[i] == "--atlas-output" && i + 1 < args.Length) atlasOutput = args[++i];
-			else if (args[i].StartsWith("--atlas-output=")) atlasOutput = args[i][15..];
-			else if (args[i] == "--sample-atlas" && i + 1 < args.Length) sampleAtlas = args[++i];
-			else if (args[i].StartsWith("--sample-atlas=")) sampleAtlas = args[i][15..];
-			else if (args[i] == "--sector-output" && i + 1 < args.Length) sectorOutput = args[++i];
-			else if (args[i].StartsWith("--sector-output=")) sectorOutput = args[i][16..];
-			else if (args[i] == "--sector-preview" && i + 1 < args.Length) sectorPreview = args[++i];
-			else if (args[i].StartsWith("--sector-preview=")) sectorPreview = args[i][17..];
-			else if (args[i] == "--sector-apron" && i + 1 < args.Length) sectorApron = int.Parse(args[++i], CultureInfo.InvariantCulture);
-			else if (args[i].StartsWith("--sector-apron=")) sectorApron = int.Parse(args[i][15..], CultureInfo.InvariantCulture);
 			else if (args[i] == "--map-definition" && i + 1 < args.Length) mapPath = args[++i];
 			else if (args[i].StartsWith("--map-definition=")) mapPath = args[i][17..];
 		}
@@ -86,7 +67,9 @@ public static class WorldAuthoring
 		if (!audit && preview == null && atlasPreview == null && atlasTopologyPreview == null &&
 		    atlasMapPreview == null &&
 		    compileSector == null && verifySector == null && verifyWilderness == null &&
-		    verifyAtlasHandoff == null && !verifyAtlasWalkingHandoff &&
+		    verifyAtlasHandoff == null && verifyProductionTerrain == null &&
+		    !auditProductionTerrain &&
+		    !verifyAtlasWalkingHandoff &&
 		    !compileAtlas && !verifyAtlas && !auditAtlasHydrology &&
 		    sampleAtlas == null) return false;
 		int exit = 0;
@@ -150,6 +133,102 @@ public static class WorldAuthoring
 					         $"{result.SuppressedRepeats} suppressed repeats; " +
 					         $"{result.ReturnTransitions} rearmed return");
 				}
+				if (atlasReport.Valid && verifyProductionTerrain != null)
+				{
+					(int x, int z) = ParsePoint(verifyProductionTerrain);
+					if (x < 0 || z < 0 || x >= map.CanonicalAtlas.Width ||
+					    z >= map.CanonicalAtlas.Depth)
+						throw new InvalidOperationException(
+							$"production terrain address {x},{z} lies outside the atlas");
+					AtlasMosaicBounds bounds = AtlasRuntimeHandoff.WindowAround(
+						map.CanonicalAtlas, x, z, sectorSpan: 2);
+
+					AtlasPreparedWindow first = ProductionTerrainWindow.Build(map,
+						map.DefaultSeed, bounds,
+						message => GD.PrintErr($"[production-terrain-verify] {message}"));
+					first.Window.Data.Validate(map.CanonicalAtlas.BiomeCatalog.Profiles.Count);
+					string firstHash = first.Window.Data.ContentHash();
+					AtlasSectorStatistics stats = first.Window.Data.CoreStatistics();
+					if (!AtlasRuntimeHandoff.TryResolveLanding(first.Window, x, z,
+					    out AtlasRuntimeLanding landing, out string rejection))
+						throw new InvalidOperationException(
+							$"production terrain {x},{z} has no safe deterministic landing: {rejection}");
+					ProductionTraversalAudit traversal = AuditProductionTraversal(
+						first.Window.Data, landing);
+					if (traversal.ReachableCells < 4096 || traversal.MaxRadius < 48)
+						throw new InvalidOperationException(
+							$"production terrain landing {landing.GlobalX},{landing.GlobalZ} is locally stranded: " +
+							$"{traversal.ReachableCells} cells, radius {traversal.MaxRadius}");
+
+					AtlasPreparedWindow second = ProductionTerrainWindow.Build(map,
+						map.DefaultSeed, bounds,
+						message => GD.PrintErr($"[production-terrain-verify] {message}"));
+					second.Window.Data.Validate(map.CanonicalAtlas.BiomeCatalog.Profiles.Count);
+					string secondHash = second.Window.Data.ContentHash();
+					if (firstHash != secondHash)
+						throw new InvalidOperationException(
+							$"production terrain repeat mismatch {firstHash} != {secondHash}");
+					if (!first.SiteBuilds.SequenceEqual(second.SiteBuilds))
+						throw new InvalidOperationException(
+							"production site overlay statistics changed across the repeat build");
+					if (first.NaturalFormations != second.NaturalFormations)
+						throw new InvalidOperationException(
+							"production natural formations changed across the repeat build");
+					if (!AtlasRuntimeHandoff.TryResolveLanding(second.Window, x, z,
+					    out AtlasRuntimeLanding secondLanding, out string secondRejection) ||
+					    secondLanding != landing || secondRejection != rejection)
+						throw new InvalidOperationException(
+							"production landing changed across the repeat build");
+
+					int atlasColumns = map.CanonicalAtlas.Width / map.CanonicalAtlas.SectorSize;
+					int neighbourMinX = bounds.MinSectorX +
+						(bounds.MaxSectorX + 1 < atlasColumns ? 1 : -1);
+					var neighbourBounds = new AtlasMosaicBounds(neighbourMinX,
+						bounds.MinSectorZ, neighbourMinX + bounds.Span - 1,
+						bounds.MaxSectorZ);
+					AtlasPreparedWindow neighbour = ProductionTerrainWindow.Build(map,
+						map.DefaultSeed, neighbourBounds,
+						message => GD.PrintErr($"[production-terrain-verify] {message}"));
+					ProductionOverlapAudit overlap = CompareProductionOverlap(first,
+						neighbour, AtlasRuntimeHandoff.DefaultWalkingTriggerMargin);
+					ProductionWalkingTransferAudit walkingTransfer =
+						AuditProductionWalkingTransfer(first, neighbour,
+							AtlasRuntimeHandoff.DefaultWalkingTriggerMargin);
+
+					GD.Print($"[production-terrain-verify] {x},{z} bounds {bounds} " +
+					         $"repeat {firstHash}; landing {landing.GlobalX},{landing.GlobalZ}," +
+					         $"{landing.SurfaceY} exact {landing.ExactCell} radius {landing.SearchRadius} " +
+					         $"rejection {rejection ?? "none"}; traversal {traversal.ReachableCells} " +
+						         $"cells ({traversal.ReachableLand} land/{traversal.ReachableWater} water) " +
+						         $"radius {traversal.MaxRadius} extents {traversal.West}/{traversal.East}/" +
+						         $"{traversal.North}/{traversal.South} surface " +
+						         $"{traversal.MinSurface}..{traversal.MaxSurface} land-surface " +
+						         $"{traversal.MinLandSurface}..{traversal.MaxLandSurface}; " +
+						         $"land {stats.LandCells} " +
+					         $"water {stats.WaterCells} cliffs {stats.CliffCells} shores {stats.ShoreCells} " +
+					         $"water-steps {stats.WaterStepEdges} severe {stats.SevereWaterStepEdges} " +
+					         $"submerged-dry {stats.SubmergedDryBoundaryEdges} " +
+					         $"height {stats.MinHeight}..{stats.MaxHeight}; natural " +
+					         $"{first.NaturalFormations.Arches} arches/" +
+					         $"{first.NaturalFormations.Voxels} voxels/" +
+					         $"{first.NaturalFormations.ManifestHash:x16} first " +
+					         $"{first.NaturalFormations.FirstGlobalX}," +
+					         $"{first.NaturalFormations.FirstGlobalZ} last " +
+					         $"{first.NaturalFormations.LastGlobalX}," +
+					         $"{first.NaturalFormations.LastGlobalZ}; overlap " +
+					         $"{overlap.SafeCells} safe cells/{overlap.PlacedColumns} " +
+					         $"placed columns/{overlap.PlacedVoxels} placed voxels/" +
+					         $"{overlap.OverhangColumns} overhang columns/" +
+					         $"{overlap.OverhangVoxels} overhang voxels with " +
+					         $"{neighbourBounds}; walking transfer " +
+					         $"{walkingTransfer.TestedCells} cells, " +
+					         $"{walkingTransfer.LegacyRejectedCells} former invisible-wall " +
+					         $"cells ({walkingTransfer.LegacyRejectedWater} water/" +
+					         $"{walkingTransfer.LegacyRejectedDry} dry); sites " +
+					         $"{string.Join(',', first.SiteBuilds.Select(site => site.SiteId))}");
+				}
+				if (atlasReport.Valid && auditProductionTerrain)
+					AuditProductionTerrainAtlas(map);
 				if (atlasReport.Valid && (compileSector != null || verifySector != null ||
 				    verifyWilderness != null || verifyAtlasHandoff != null ||
 				    compileAtlas || verifyAtlas || auditAtlasHydrology || sampleAtlas != null))
@@ -316,7 +395,8 @@ public static class WorldAuthoring
 			}
 			else if (atlasPreview != null || atlasTopologyPreview != null || atlasMapPreview != null ||
 			         compileSector != null || verifySector != null || verifyWilderness != null ||
-			         verifyAtlasHandoff != null || verifyAtlasWalkingHandoff ||
+			         verifyAtlasHandoff != null || verifyProductionTerrain != null ||
+			         verifyAtlasWalkingHandoff ||
 			         compileAtlas || verifyAtlas || auditAtlasHydrology ||
 			         sampleAtlas != null)
 				throw new InvalidOperationException($"Map '{mapPath}' has no canonicalAtlasPath.");
@@ -379,6 +459,488 @@ public static class WorldAuthoring
 			throw new InvalidOperationException($"atlas point '{address}' must be x,z");
 		return (x, z);
 	}
+
+	/// <summary>
+	/// Measure the same two-block surface graph used by gameplay from one resolved
+	/// landing. Wet columns meet at the water plane rather than at their sculpted
+	/// beds; this catches locally stranded shelves without rejecting swimmable
+	/// lakes merely because their underwater terraces are deep.
+	/// </summary>
+	private static ProductionTraversalAudit AuditProductionTraversal(
+		AtlasSectorData data, AtlasRuntimeLanding landing)
+	{
+		int width = data.Width, depth = data.Depth;
+		int startX = landing.GlobalX - data.OriginX;
+		int startZ = landing.GlobalZ - data.OriginZ;
+		if (startX < 0 || startZ < 0 || startX >= width || startZ >= depth)
+			throw new InvalidOperationException("resolved production landing lies outside its window");
+
+		var seen = new bool[width * depth];
+		var queue = new int[width * depth];
+		int read = 0, write = 0;
+		int start = startZ * width + startX;
+		seen[start] = true;
+		queue[write++] = start;
+		int land = 0, water = 0, maxRadius = 0;
+		int minSurface = int.MaxValue, maxSurface = int.MinValue;
+		int minLandSurface = int.MaxValue, maxLandSurface = int.MinValue;
+		int minX = startX, maxX = startX, minZ = startZ, maxZ = startZ;
+
+		int Surface(int index) => data.Land[index] == 0
+			? Terrain.Sea : data.Height[index];
+		void Visit(int from, int nx, int nz)
+		{
+			if (nx < 1 || nz < 1 || nx >= width - 1 || nz >= depth - 1) return;
+			int next = nz * width + nx;
+			if (seen[next] || Math.Abs(Surface(next) - Surface(from)) > Terrain.Step) return;
+			seen[next] = true;
+			queue[write++] = next;
+		}
+
+		while (read < write)
+		{
+			int at = queue[read++];
+			int cx = at % width, cz = at / width;
+			int surface = Surface(at);
+			minSurface = Math.Min(minSurface, surface);
+			maxSurface = Math.Max(maxSurface, surface);
+			if (data.Land[at] == 0) water++;
+			else
+			{
+				land++;
+				minLandSurface = Math.Min(minLandSurface, surface);
+				maxLandSurface = Math.Max(maxLandSurface, surface);
+			}
+			maxRadius = Math.Max(maxRadius, Math.Abs(cx - startX) + Math.Abs(cz - startZ));
+			minX = Math.Min(minX, cx); maxX = Math.Max(maxX, cx);
+			minZ = Math.Min(minZ, cz); maxZ = Math.Max(maxZ, cz);
+			Visit(at, cx + 1, cz);
+			Visit(at, cx - 1, cz);
+			Visit(at, cx, cz + 1);
+			Visit(at, cx, cz - 1);
+		}
+
+		if (land == 0) minLandSurface = maxLandSurface = Terrain.Sea;
+		return new ProductionTraversalAudit(write, land, water, maxRadius,
+			startX - minX, maxX - startX, startZ - minZ, maxZ - startZ,
+			minSurface, maxSurface, minLandSurface, maxLandSurface);
+	}
+
+	private readonly record struct ProductionTraversalAudit(int ReachableCells,
+		int ReachableLand, int ReachableWater, int MaxRadius,
+		int West, int East, int North, int South,
+		int MinSurface, int MaxSurface, int MinLandSurface, int MaxLandSurface);
+
+	/// <summary>
+	/// Verify the region that remains playable while a walking handoff swaps two
+	/// overlapping two-sector windows. Base terrain needs exact identity only past
+	/// the runtime's walking-trigger safety margin; true overhang voxels are compared in
+	/// the whole intersection because a high silhouette can remain visible behind
+	/// the traveller even after its ground has left the playable core.
+	/// </summary>
+	private static ProductionOverlapAudit CompareProductionOverlap(
+		AtlasPreparedWindow a, AtlasPreparedWindow b, int safeMargin)
+	{
+		AtlasSectorData ad = a.Window.Data, bd = b.Window.Data;
+		var ag = a.Window.Grid;
+		var bg = b.Window.Grid;
+		int fullMinX = Math.Max(ad.OriginX, bd.OriginX);
+		int fullMinZ = Math.Max(ad.OriginZ, bd.OriginZ);
+		int fullMaxX = Math.Min(ad.OriginX + ad.Width, bd.OriginX + bd.Width);
+		int fullMaxZ = Math.Min(ad.OriginZ + ad.Depth, bd.OriginZ + bd.Depth);
+		if (fullMinX >= fullMaxX || fullMinZ >= fullMaxZ)
+			throw new InvalidOperationException(
+				$"production windows {a.Bounds} and {b.Bounds} do not overlap");
+
+		int safeMinX = Math.Max(ad.OriginX + safeMargin, bd.OriginX + safeMargin);
+		int safeMinZ = Math.Max(ad.OriginZ + safeMargin, bd.OriginZ + safeMargin);
+		int safeMaxX = Math.Min(ad.OriginX + ad.Width - safeMargin,
+			bd.OriginX + bd.Width - safeMargin);
+		int safeMaxZ = Math.Min(ad.OriginZ + ad.Depth - safeMargin,
+			bd.OriginZ + bd.Depth - safeMargin);
+		int safeCells = 0, placedColumns = 0, placedVoxels = 0;
+
+		for (int globalZ = safeMinZ; globalZ < safeMaxZ; globalZ++)
+		for (int globalX = safeMinX; globalX < safeMaxX; globalX++)
+		{
+			int ax = globalX - ad.OriginX, az = globalZ - ad.OriginZ;
+			int bx = globalX - bd.OriginX, bz = globalZ - bd.OriginZ;
+			int ai = az * ad.Width + ax, bi = bz * bd.Width + bx;
+			void Same(int av, int bv, string field)
+			{
+				if (av != bv) throw new InvalidOperationException(
+					$"production overlap {field} mismatch at {globalX},{globalZ}: {av} != {bv}");
+			}
+			Same(ad.Height[ai], bd.Height[bi], "height");
+			Same(ad.WaterSurface[ai], bd.WaterSurface[bi], "water-surface");
+			Same(ad.Land[ai], bd.Land[bi], "land");
+			Same(ad.Water[ai], bd.Water[bi], "water");
+			Same(ad.Hydrology[ai], bd.Hydrology[bi], "hydrology");
+			Same(ad.Profile[ai], bd.Profile[bi], "profile");
+			Same(ad.SecondaryProfile[ai], bd.SecondaryProfile[bi], "secondary-profile");
+			Same(ad.ProfileBlend[ai], bd.ProfileBlend[bi], "profile-blend");
+			Same(ad.Surface[ai], bd.Surface[bi], "surface");
+			if (ad.Slope[ai] != bd.Slope[bi])
+			{
+				string Cross(AtlasSectorData data, int localX, int localZ) =>
+					$"{data.Height[localZ * data.Width + localX]}/" +
+					$"{data.Height[localZ * data.Width + localX - 1]}/" +
+					$"{data.Height[localZ * data.Width + localX + 1]}/" +
+					$"{data.Height[(localZ - 1) * data.Width + localX]}/" +
+					$"{data.Height[(localZ + 1) * data.Width + localX]}";
+				string CapCross(VoxelGrid grid, int localX, int localZ) =>
+					$"{grid.Cap[localZ * grid.Size + localX]}/" +
+					$"{grid.Cap[localZ * grid.Size + localX - 1]}/" +
+					$"{grid.Cap[localZ * grid.Size + localX + 1]}/" +
+					$"{grid.Cap[(localZ - 1) * grid.Size + localX]}/" +
+					$"{grid.Cap[(localZ + 1) * grid.Size + localX]}";
+				throw new InvalidOperationException(
+					$"production overlap slope mismatch at {globalX},{globalZ}: " +
+					$"{ad.Slope[ai]} != {bd.Slope[bi]}; " +
+					$"height cross centre/w/e/n/s {Cross(ad, ax, az)} != {Cross(bd, bx, bz)}; " +
+					$"cap cross {CapCross(ag, ax, az)} != {CapCross(bg, bx, bz)}");
+			}
+			Same(ad.Aspect[ai], bd.Aspect[bi], "aspect");
+			Same(ad.Curvature[ai], bd.Curvature[bi], "curvature");
+			Same(ad.Wetness[ai], bd.Wetness[bi], "wetness");
+			Same(ag.Top[ai], bg.Top[bi], "grid-top");
+			Same(ag.Cap[ai], bg.Cap[bi], "grid-cap");
+			Same(ag.Sub[ai], bg.Sub[bi], "grid-substrate");
+			Same(ag.Deep[ai], bg.Deep[bi], "grid-deep");
+			Same(ag.Heights[ai], bg.Heights[bi], "grid-height");
+			Same(ag.MeshHeightAt(ax, az), bg.MeshHeightAt(bx, bz), "grid-mesh-height");
+			int meshTop = ag.MeshHeightAt(ax, az);
+			if (meshTop > ag.Top[ai])
+			{
+				placedColumns++;
+				for (int y = ag.Top[ai]; y < meshTop; y++)
+				{
+					byte av = ag.At(ax, y, az), bv = bg.At(bx, y, bz);
+					if (av != bv)
+						throw new InvalidOperationException(
+							$"production placed voxel mismatch at {globalX},{y},{globalZ}: {av} != {bv}");
+					if (av != Palette.AIR) placedVoxels++;
+				}
+			}
+			safeCells++;
+		}
+
+		int overhangColumns = 0, overhangVoxels = 0;
+		for (int globalZ = fullMinZ; globalZ < fullMaxZ; globalZ++)
+		for (int globalX = fullMinX; globalX < fullMaxX; globalX++)
+		{
+			int ax = globalX - ad.OriginX, az = globalZ - ad.OriginZ;
+			int bx = globalX - bd.OriginX, bz = globalZ - bd.OriginZ;
+			int aGround = ag.HeightAt(ax, az), bGround = bg.HeightAt(bx, bz);
+			int aMesh = ag.MeshHeightAt(ax, az), bMesh = bg.MeshHeightAt(bx, bz);
+			if (aMesh <= aGround && bMesh <= bGround) continue;
+			if (aGround != bGround || aMesh != bMesh)
+				throw new InvalidOperationException(
+					$"production overhang bound mismatch at {globalX},{globalZ}: " +
+					$"ground {aGround}/{bGround}, mesh {aMesh}/{bMesh}");
+			overhangColumns++;
+			for (int y = Math.Min(aGround, bGround); y < Math.Max(aMesh, bMesh); y++)
+			{
+				byte av = ag.At(ax, y, az), bv = bg.At(bx, y, bz);
+				if (av != bv)
+					throw new InvalidOperationException(
+						$"production overhang voxel mismatch at {globalX},{y},{globalZ}: {av} != {bv}");
+				if (av != Palette.AIR) overhangVoxels++;
+			}
+		}
+		return new ProductionOverlapAudit(safeCells, placedColumns, placedVoxels,
+			overhangColumns, overhangVoxels);
+	}
+
+	private readonly record struct ProductionOverlapAudit(int SafeCells,
+		int PlacedColumns, int PlacedVoxels, int OverhangColumns, int OverhangVoxels);
+
+	/// <summary>
+	/// Exercise the exact moving-window trigger line against two real production
+	/// windows. The old teleport-style validator rejected water, terrace edges and
+	/// occupied neighbours even when both owners described identical collision;
+	/// every such cell used to arm the runtime's invisible boundary clamp.
+	/// </summary>
+	private static ProductionWalkingTransferAudit AuditProductionWalkingTransfer(
+		AtlasPreparedWindow current, AtlasPreparedWindow next, int triggerMargin)
+	{
+		AtlasSectorData a = current.Window.Data, b = next.Window.Data;
+		bool east = b.OriginX > a.OriginX;
+		bool west = b.OriginX < a.OriginX;
+		if (!east && !west)
+			throw new InvalidOperationException(
+				$"walking transfer audit expects an east/west neighbour, got " +
+				$"{current.Bounds} -> {next.Bounds}");
+		int globalX = east ? a.OriginX + a.Width - triggerMargin
+			: a.OriginX + triggerMargin;
+		int minZ = Math.Max(a.OriginZ, b.OriginZ) + triggerMargin + 2;
+		int maxZ = Math.Min(a.OriginZ + a.Depth, b.OriginZ + b.Depth) -
+			triggerMargin - 2;
+		int tested = 0, legacyRejected = 0, rejectedWater = 0, rejectedDry = 0;
+		for (int globalZ = minZ; globalZ < maxZ; globalZ++)
+		{
+			int ax = globalX - a.OriginX, az = globalZ - a.OriginZ;
+			int ai = az * a.Width + ax;
+			bool water = a.WaterSurface[ai] > 0;
+			float playerY = water
+				? a.WaterSurface[ai] - .85f
+				: current.Window.Grid.HeightAt(ax, az) + .2f;
+			if (!AtlasRuntimeHandoff.TryResolveWalkingTransfer(current.Window,
+			    next.Window, globalX, globalZ, playerY, out _, out string rejection))
+				throw new InvalidOperationException(
+					$"walking transfer {current.Bounds}->{next.Bounds} rejected " +
+					$"identical trigger cell {globalX},{globalZ}: {rejection}");
+			tested++;
+			if (!AtlasRuntimeHandoff.TryResolveExactLanding(current.Window,
+			    globalX, globalZ, out _, out _))
+			{
+				legacyRejected++;
+				if (water) rejectedWater++;
+				else rejectedDry++;
+			}
+		}
+		if (tested == 0)
+			throw new InvalidOperationException("walking transfer audit tested no cells");
+		return new ProductionWalkingTransferAudit(tested, legacyRejected,
+			rejectedWater, rejectedDry);
+	}
+
+	private readonly record struct ProductionWalkingTransferAudit(int TestedCells,
+		int LegacyRejectedCells, int LegacyRejectedWater, int LegacyRejectedDry);
+
+	/// <summary>
+	/// Build every two-sector window the normal runtime can own exactly once. A
+	/// Walking-margin-sized fingerprint lattice turns the 165-window cross-product into a
+	/// bounded audit: chunks are compared only when they are beyond the handoff
+	/// margin in every dimension where their owners differ. Overhang fingerprints
+	/// compare everywhere because a high roof remains visible after its ground has
+	/// left the playable band. This proves the moving runtime directly; it neither
+	/// writes compiler artifacts nor allocates the continent as one heightfield.
+	/// </summary>
+	private static void AuditProductionTerrainAtlas(MapDefinition map)
+	{
+		WorldAtlasDefinition atlas = map.CanonicalAtlas;
+		const int span = 2;
+		int columns = atlas.Width / atlas.SectorSize;
+		int rows = atlas.Depth / atlas.SectorSize;
+		int chunkSize = AtlasRuntimeHandoff.DefaultWalkingTriggerMargin;
+		if (atlas.SectorSize % chunkSize != 0)
+			throw new InvalidOperationException(
+				$"production audit chunk {chunkSize} does not divide sector {atlas.SectorSize}");
+		int chunksPerSector = atlas.SectorSize / chunkSize;
+		int chunksPerWindow = span * chunksPerSector;
+		int atlasChunkColumns = atlas.Width / chunkSize;
+		int atlasChunkRows = atlas.Depth / chunkSize;
+		int expectedWindows = (columns - span + 1) * (rows - span + 1);
+		var owners = new Dictionary<int, List<ProductionChunkOwner>>(
+			atlasChunkColumns * atlasChunkRows);
+		long startMs = (long)Time.GetTicksMsec();
+		int windows = 0, fingerprints = 0, terrainComparisons = 0;
+		int overhangComparisons = 0, observedOverhangColumns = 0;
+		int observedOverhangVoxels = 0, observedSites = 0;
+		int minHeight = int.MaxValue, maxHeight = int.MinValue;
+		long observedCells = 0;
+
+		for (int minSectorZ = 0; minSectorZ <= rows - span; minSectorZ++)
+		{
+			for (int minSectorX = 0; minSectorX <= columns - span; minSectorX++)
+			{
+				var bounds = new AtlasMosaicBounds(minSectorX, minSectorZ,
+					minSectorX + span - 1, minSectorZ + span - 1);
+				AtlasPreparedWindow prepared = ProductionTerrainWindow.Build(map,
+					map.DefaultSeed, bounds,
+					message => GD.PrintErr($"[production-atlas-audit] {message}"));
+				AtlasSectorData data = prepared.Window.Data;
+				data.Validate(atlas.BiomeCatalog.Profiles.Count);
+				AtlasSectorStatistics stats = data.CoreStatistics();
+				if (stats.WaterStepEdges != 0 || stats.SevereWaterStepEdges != 0 ||
+				    stats.SubmergedDryBoundaryEdges != 0)
+					throw new InvalidOperationException(
+						$"production window {bounds} violates water invariants: " +
+						$"steps {stats.WaterStepEdges}, severe {stats.SevereWaterStepEdges}, " +
+						$"submerged-dry {stats.SubmergedDryBoundaryEdges}");
+				minHeight = Math.Min(minHeight, stats.MinHeight);
+				maxHeight = Math.Max(maxHeight, stats.MaxHeight);
+				observedCells += (long)data.Width * data.Depth;
+				observedSites += prepared.SiteBuilds.Count;
+
+				for (int localChunkZ = 0; localChunkZ < chunksPerWindow; localChunkZ++)
+				for (int localChunkX = 0; localChunkX < chunksPerWindow; localChunkX++)
+				{
+					int globalChunkX = minSectorX * chunksPerSector + localChunkX;
+					int globalChunkZ = minSectorZ * chunksPerSector + localChunkZ;
+					int key = globalChunkZ * atlasChunkColumns + globalChunkX;
+					ProductionChunkFingerprint fingerprint = FingerprintProductionChunk(
+						prepared, localChunkX, localChunkZ, chunkSize);
+					if (!owners.TryGetValue(key, out List<ProductionChunkOwner> existing))
+						owners[key] = existing = new List<ProductionChunkOwner>(4);
+					foreach (ProductionChunkOwner previous in existing)
+					{
+						if (OwnersSharePlayableChunk(previous.MinSectorX,
+						    previous.MinSectorZ, minSectorX, minSectorZ,
+						    globalChunkX, globalChunkZ, chunksPerSector,
+						    chunksPerWindow))
+						{
+							terrainComparisons++;
+							if (previous.Fingerprint.TerrainHash != fingerprint.TerrainHash)
+								throw new InvalidOperationException(
+									$"production terrain chunk {globalChunkX},{globalChunkZ} " +
+									$"mismatch between windows {previous.MinSectorX}," +
+									$"{previous.MinSectorZ} and {minSectorX},{minSectorZ}: " +
+									$"{previous.Fingerprint.TerrainHash:x16} != " +
+									$"{fingerprint.TerrainHash:x16}");
+						}
+						overhangComparisons++;
+						if (previous.Fingerprint.OverhangHash != fingerprint.OverhangHash)
+							throw new InvalidOperationException(
+								$"production overhang chunk {globalChunkX},{globalChunkZ} " +
+								$"mismatch between windows {previous.MinSectorX}," +
+								$"{previous.MinSectorZ} and {minSectorX},{minSectorZ}: " +
+								$"{previous.Fingerprint.OverhangHash:x16} != " +
+								$"{fingerprint.OverhangHash:x16}");
+					}
+					existing.Add(new ProductionChunkOwner(minSectorX, minSectorZ,
+						fingerprint));
+					fingerprints++;
+					observedOverhangColumns += fingerprint.OverhangColumns;
+					observedOverhangVoxels += fingerprint.OverhangVoxels;
+				}
+				windows++;
+			}
+
+			GD.Print($"[production-atlas-audit] row {minSectorZ + 1}/" +
+			         $"{rows - span + 1}: {windows}/{expectedWindows} windows, " +
+			         $"{terrainComparisons} safe chunk comparisons");
+			// Terrain windows own several continent-scale local arrays. Nothing from a
+			// completed row survives except compact fingerprints, so collect here rather
+			// than letting the authoring process retain generations of dead images.
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
+		}
+
+		int expectedChunks = atlasChunkColumns * atlasChunkRows;
+		if (windows != expectedWindows || owners.Count != expectedChunks)
+			throw new InvalidOperationException(
+				$"production audit coverage {windows}/{expectedWindows} windows and " +
+				$"{owners.Count}/{expectedChunks} chunks");
+		ulong manifest = 1469598103934665603UL;
+		foreach (int key in owners.Keys.OrderBy(key => key))
+		{
+			ProductionChunkOwner canonical = owners[key][0];
+			MixFingerprint(ref manifest, (ulong)(uint)key);
+			MixFingerprint(ref manifest, canonical.Fingerprint.TerrainHash);
+			MixFingerprint(ref manifest, canonical.Fingerprint.OverhangHash);
+		}
+		long elapsedMs = (long)Time.GetTicksMsec() - startMs;
+		GD.Print($"[production-atlas-audit] PASS {windows} windows/" +
+		         $"{owners.Count} global chunks/{fingerprints} fingerprints; " +
+		         $"{terrainComparisons} safe terrain and {overhangComparisons} " +
+		         $"all-overlap overhang comparisons; observed " +
+		         $"{observedCells} cells/{observedSites} site builds/" +
+		         $"{observedOverhangColumns} overhang columns/" +
+		         $"{observedOverhangVoxels} overhang voxels; height " +
+		         $"{minHeight}..{maxHeight}; manifest {manifest:x16}; " +
+		         $"{elapsedMs / 1000f:0.0}s");
+	}
+
+	private static ProductionChunkFingerprint FingerprintProductionChunk(
+		AtlasPreparedWindow prepared, int localChunkX, int localChunkZ, int chunkSize)
+	{
+		AtlasSectorData data = prepared.Window.Data;
+		VoxelGrid grid = prepared.Window.Grid;
+		int x0 = localChunkX * chunkSize, z0 = localChunkZ * chunkSize;
+		int globalChunkX = (data.OriginX + x0) / chunkSize;
+		int globalChunkZ = (data.OriginZ + z0) / chunkSize;
+		ulong terrain = 1469598103934665603UL;
+		ulong overhang = 1099511628211UL;
+		MixFingerprint(ref terrain, (ulong)(uint)globalChunkX);
+		MixFingerprint(ref terrain, (ulong)(uint)globalChunkZ);
+		MixFingerprint(ref overhang, (ulong)(uint)globalChunkX);
+		MixFingerprint(ref overhang, (ulong)(uint)globalChunkZ);
+		int overhangColumns = 0, overhangVoxels = 0;
+
+		for (int z = z0; z < z0 + chunkSize; z++)
+		for (int x = x0; x < x0 + chunkSize; x++)
+		{
+			int index = z * data.Width + x;
+			ulong dataA = data.Height[index] |
+				((ulong)data.WaterSurface[index] << 16) |
+				((ulong)data.Land[index] << 32) |
+				((ulong)data.Water[index] << 40) |
+				((ulong)data.Hydrology[index] << 48) |
+				((ulong)data.Profile[index] << 56);
+			ulong dataB = data.SecondaryProfile[index] |
+				((ulong)data.ProfileBlend[index] << 8) |
+				((ulong)data.Surface[index] << 16) |
+				((ulong)data.Slope[index] << 24) |
+				((ulong)data.Aspect[index] << 32) |
+				((ulong)data.Curvature[index] << 40) |
+				((ulong)data.Wetness[index] << 48) |
+				((ulong)grid.Cap[index] << 56);
+			int meshTop = grid.MeshHeightAt(x, z);
+			ulong gridData = (ushort)grid.Top[index] |
+				((ulong)(ushort)grid.Heights[index] << 16) |
+				((ulong)(ushort)meshTop << 32) |
+				((ulong)grid.Sub[index] << 48) |
+				((ulong)grid.Deep[index] << 56);
+			MixFingerprint(ref terrain, dataA);
+			MixFingerprint(ref terrain, dataB);
+			MixFingerprint(ref terrain, gridData);
+			for (int y = grid.Top[index]; y < meshTop; y++)
+				MixFingerprint(ref terrain,
+					((ulong)(uint)y << 8) | grid.At(x, y, z));
+
+			int ground = grid.HeightAt(x, z);
+			if (meshTop <= ground) continue;
+			overhangColumns++;
+			MixFingerprint(ref overhang,
+				((ulong)(uint)(x + data.OriginX) << 32) |
+				(uint)(z + data.OriginZ));
+			MixFingerprint(ref overhang,
+				((ulong)(ushort)ground << 16) | (ushort)meshTop);
+			for (int y = ground; y < meshTop; y++)
+			{
+				byte material = grid.At(x, y, z);
+				MixFingerprint(ref overhang,
+					((ulong)(uint)y << 8) | material);
+				if (material != Palette.AIR) overhangVoxels++;
+			}
+		}
+		return new ProductionChunkFingerprint(terrain, overhang,
+			overhangColumns, overhangVoxels);
+	}
+
+	private static bool OwnersSharePlayableChunk(int aSectorX, int aSectorZ,
+		int bSectorX, int bSectorZ, int globalChunkX, int globalChunkZ,
+		int chunksPerSector, int chunksPerWindow)
+	{
+		bool SafeDimension(int globalChunk, int aSector, int bSector)
+		{
+			if (aSector == bSector) return true;
+			int aLocal = globalChunk - aSector * chunksPerSector;
+			int bLocal = globalChunk - bSector * chunksPerSector;
+			return aLocal >= 1 && aLocal < chunksPerWindow - 1 &&
+			       bLocal >= 1 && bLocal < chunksPerWindow - 1;
+		}
+		return SafeDimension(globalChunkX, aSectorX, bSectorX) &&
+		       SafeDimension(globalChunkZ, aSectorZ, bSectorZ);
+	}
+
+	private static void MixFingerprint(ref ulong hash, ulong value)
+	{
+		unchecked
+		{
+			hash ^= value;
+			hash *= 1099511628211UL;
+			hash ^= hash >> 32;
+		}
+	}
+
+	private readonly record struct ProductionChunkFingerprint(ulong TerrainHash,
+		ulong OverhangHash, int OverhangColumns, int OverhangVoxels);
+
+	private readonly record struct ProductionChunkOwner(int MinSectorX,
+		int MinSectorZ, ProductionChunkFingerprint Fingerprint);
 
 	public static void WriteAtlasSvg(WorldAtlasDefinition atlas, string outputPath)
 	{
