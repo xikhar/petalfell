@@ -41,7 +41,7 @@ func _run() -> void:
 
 	var menu_script = load("res://src/Tools/DeveloperMenu.cs")
 	var menu = menu_script.new()
-	menu.Setup(null, null, rig, null)
+	menu.Setup(null, null, rig, null, null)
 	root.add_child(menu)
 	await process_frame
 	var speed_slider = _find_speed_slider(menu)
